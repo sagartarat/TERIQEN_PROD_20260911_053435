@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Agent Payment Reports{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/agent_payment_reports.css') }}">
+
+<div class="ap-report-page">
+
+    <div class="ap-page-header">
+        <h1>Agent Payment Reports</h1>
+        <p>Generate agent payment, outstanding, TDS and monthly payout analytics</p>
+    </div>
+
+    <div class="ap-card">
+        <div class="ap-card-header">
+            <h2 id="reportTitle">Agent Payment Detail Report</h2>
+        </div>
+
+        <div class="ap-card-body">
+            <div class="ap-filter-grid">
+
+                <div class="ap-field">
+                    <label>From Date</label>
+                    <input type="date" id="from_date">
+                </div>
+
+                <div class="ap-field">
+                    <label>To Date</label>
+                    <input type="date" id="to_date">
+                </div>
+
+                <div class="ap-field">
+                    <label>Agent</label>
+                    <input type="text" id="agent" list="agentList" placeholder="Agent code/name">
+                    <datalist id="agentList"></datalist>
+                </div>
+
+                <div class="ap-field">
+                    <label>Invoice Number</label>
+                    <input type="text" id="invoice_number" placeholder="Invoice number">
+                </div>
+
+                <div class="ap-field">
+                    <label>Payment No</label>
+                    <input type="text" id="payment_no" placeholder="Payment no">
+                </div>
+
+                <div class="ap-field">
+                    <label>Payment Mode</label>
+                    <select id="payment_mode">
+                        <option value="ALL">All</option>
+                    </select>
+                </div>
+
+                <div class="ap-field">
+                    <label>Payment Status</label>
+                    <select id="payment_status">
+                        <option value="ALL">All</option>
+                    </select>
+                </div>
+
+                <div class="ap-field">
+                    <label>Currency</label>
+                    <select id="currency_code">
+                        <option value="ALL">All</option>
+                    </select>
+                </div>
+
+                <div class="ap-field">
+                    <label>All Like Search</label>
+                    <input type="text" id="search" placeholder="Payment no, invoice, agent, patient, UTR">
+                </div>
+
+            </div>
+
+            <div class="ap-actions">
+                <button class="ap-btn ap-btn-light" onclick="clearAgentPaymentFilters()">Clear</button>
+                <button class="ap-btn ap-btn-primary" onclick="generateAgentPaymentReport()">Generate Report</button>
+                <button class="ap-btn ap-btn-success" onclick="exportAgentPaymentExcel()">Export Excel</button>
+                <button class="ap-btn ap-btn-danger" onclick="exportAgentPaymentPdf()">Export PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ap-kpi-grid">
+        <div class="ap-kpi"><div class="label">Total Payments</div><div class="value" id="kpi_total_payments">0</div></div>
+        <div class="ap-kpi"><div class="label">Invoices Paid</div><div class="value" id="kpi_invoices_paid">0</div></div>
+        <div class="ap-kpi"><div class="label">Unique Agents</div><div class="value" id="kpi_unique_agents_paid">0</div></div>
+        <div class="ap-kpi"><div class="label">Gross Paid</div><div class="value" id="kpi_total_paid_amount">0.00</div></div>
+        <div class="ap-kpi"><div class="label">TDS</div><div class="value" id="kpi_total_tds_amount">0.00</div></div>
+        <div class="ap-kpi"><div class="label">Net Transfer</div><div class="value" id="kpi_net_transfer_amount">0.00</div></div>
+    </div>
+
+    <div class="ap-tabs">
+        <button class="ap-tab active" data-report="payment_detail" onclick="changeAgentPaymentReport(this)">Payment Detail</button>
+        <button class="ap-tab" data-report="agent_outstanding" onclick="changeAgentPaymentReport(this)">Agent Outstanding</button>
+        <button class="ap-tab" data-report="agent_summary" onclick="changeAgentPaymentReport(this)">Agent Summary</button>
+        <button class="ap-tab" data-report="monthly_payment" onclick="changeAgentPaymentReport(this)">Monthly Payment</button>
+        <button class="ap-tab" data-report="tds_register" onclick="changeAgentPaymentReport(this)">TDS Register</button>
+    </div>
+
+    <div class="ap-card">
+        <div class="ap-card-header">
+            <h2 id="gridTitle">Agent Payment Detail Report Results</h2>
+        </div>
+
+        <div class="ap-table-wrap">
+            <table class="ap-table">
+                <thead id="reportHead"></thead>
+                <tbody id="reportBody">
+                    <tr>
+                        <td colspan="25" class="empty-row">
+                            No records available. Select filters and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/report_helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/agent_payment_reports.js') }}"></script>
+
+{% endblock %}

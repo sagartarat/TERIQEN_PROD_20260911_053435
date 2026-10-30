@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Dashboard{% endblock %}
+
+{% block content %}
+{% set summary = summary|default({}, true) %}
+{% set finance = finance|default({}, true) %}
+{% set operation_queue_rows = operation_queue_rows|default([], true) %}
+{% set invoice_rows = invoice_rows|default([], true) %}
+{% set quick_alerts = quick_alerts|default([], true) %}
+{% set operation_status_chart = operation_status_chart|default([], true) %}
+{% set finance_trend_chart = finance_trend_chart|default([], true) %}
+{% set dashboard_last_updated = dashboard_last_updated|default('', true) %}
+{% set selected_hospital = selected_hospital|default('', true) %}
+{% set selected_department = selected_department|default('', true) %}
+{% set selected_date_range = selected_date_range|default('', true) %}
+{% set now = now|default('', true) %}
+{% set operation_queue_pagination = operation_queue_pagination|default({}, true) %}
+{% set invoice_pagination = invoice_pagination|default({}, true) %}
+{% set sla_compliance = summary.sla_compliance|default(0, true) %}
+
+<div class="erp-dashboard-page">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/hospitaldashboard.css') }}">
+
+    <div class="erp-dashboard-shell">
+        <div class="erp-topbar">
+            <div class="erp-topbar-left">
+                <h1>Hospital ERP Dashboard</h1>
+                <p>
+                    Unified operational, SLA and finance control center
+                    {% if dashboard_last_updated %}
+                        • Last Updated: {{ dashboard_last_updated }}
+                    {% elif now %}
+                        • Last Updated: {{ now }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="erp-topbar-right">
+                {% if selected_hospital %}
+                    <div class="erp-chip">Hospital: {{ selected_hospital }}</div>
+                {% endif %}
+                {% if selected_department %}
+                    <div class="erp-chip">Department: {{ selected_department }}</div>
+                {% endif %}
+                {% if selected_date_range %}
+                    <div class="erp-chip">Date Range: {{ selected_date_range }}</div>
+                {% endif %}
+
+                <form method="get" action="{{ url_for('dashboard') }}" class="erp-filter-form">
+                    {% if selected_hospital %}
+                        <input type="hidden" name="hospital" value="{{ selected_hospital }}">
+                    {% endif %}
+                    {% if selected_department %}
+                        <input type="hidden" name="department" value="{{ selected_department }}">
+                    {% endif %}
+
+                    <select name="date_range" class="erp-filter-select">
+                        <option value="all" {% if selected_date_range == 'All Period' or request.args.get('date_range') == 'all' %}selected{% endif %}>All Period</option>
+                        <option value="today" {% if selected_date_range == 'Today' or request.args.get('date_range') == 'today' or (not request.args.get('date_range') and not selected_date_range) %}selected{% endif %}>Today</option>
+                        <option value="7d" {% if selected_date_range == '7 Days' or request.args.get('date_range') == '7d' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="month" {% if selected_date_range == 'Month' or request.args.get('date_range') == 'month' %}selected{% endif %}>Current Month</option>
+                        <option value="quarter" {% if selected_date_range == 'Quarter' or request.args.get('date_range') == 'quarter' %}selected{% endif %}>Current Quarter</option>
+                        <option value="year" {% if selected_date_range == 'Year' or request.args.get('date_range') == 'year' %}selected{% endif %}>Current Year</option>
+                    </select>
+
+                    <button type="submit" class="erp-action-btn erp-btn-outline">Apply</button>
+                </form>
+
+                <a href="{{ url_for('dashboard_export_excel', date_range=request.args.get('date_range', 'today'), hospital=request.args.get('hospital', ''), department=request.args.get('department', '')) }}" class="erp-action-btn erp-btn-outline">Export</a>
+                <button type="button" class="erp-action-btn erp-btn-light" onclick="window.location.reload();">Refresh</button>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="section-title-row">
+                <div>
+                    <h2>Operation &amp; SLA Snapshot</h2>
+                    <div class="section-subtitle">Live operational workload and SLA health indicators</div>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card blue">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Assigned</div>
+                        <div class="kpi-icon">A</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.assigned or 0 }}</div>
+                    <div class="kpi-foot">Records assigned to operation users</div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-top">
+                        <div class="kpi-label">In Progress</div>
+                        <div class="kpi-icon">P</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.in_progress or 0 }}</div>
+                    <div class="kpi-foot">Cases actively under processing</div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Closed</div>
+                        <div class="kpi-icon">C</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.closed_today or 0 }}</div>
+                    <div class="kpi-foot">Resolved in the selected period</div>
+                </div>
+
+                <div class="kpi-card amber">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Near Breach</div>
+                        <div class="kpi-icon">N</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.near_breach or 0 }}</div>
+                    <div class="kpi-foot">Records approaching SLA breach</div>
+                </div>
+
+                <div class="kpi-card red">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Breached</div>
+                        <div class="kpi-icon">B</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.breached or 0 }}</div>
+                    <div class="kpi-foot">Records that crossed SLA limit</div>
+                </div>
+
+                <div class="kpi-card red">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Escalated</div>
+                        <div class="kpi-icon">E</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.escalated or 0 }}</div>
+                    <div class="kpi-foot">Records escalated for urgent attention</div>
+                </div>
+
+                <div class="kpi-card purple">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Thread Groups</div>
+                        <div class="kpi-icon">T</div>
+                    </div>
+                    <div class="kpi-value">{{ summary.thread_groups or 0 }}</div>
+                    <div class="kpi-foot">Unique thread-based operational cases</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="section-title-row">
+                <div>
+                    <h2>Invoice &amp; Finance Snapshot</h2>
+                    <div class="section-subtitle">Billing volume, outstanding balances and payment status overview</div>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card purple">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Invoices Generated</div>
+                        <div class="kpi-icon">I</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.invoices_generated or 0 }}</div>
+                    <div class="kpi-foot">Total invoices generated in selected period</div>
+                </div>
+
+                <div class="kpi-card amber">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Pending Invoices</div>
+                        <div class="kpi-icon">PI</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.pending_invoices or 0 }}</div>
+                    <div class="kpi-foot">Invoices awaiting settlement</div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Paid Invoices</div>
+                        <div class="kpi-icon">PD</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.paid_invoices or 0 }}</div>
+                    <div class="kpi-foot">Successfully completed payments</div>
+                </div>
+
+                <div class="kpi-card amber">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Partially Paid</div>
+                        <div class="kpi-icon">PP</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.partially_paid or 0 }}</div>
+                    <div class="kpi-foot">Invoices with partial collections</div>
+                </div>
+
+                <div class="kpi-card purple">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Total Invoice Value</div>
+                        <div class="kpi-icon">₹</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.total_invoice_value or 0 }}</div>
+                    <div class="kpi-foot">Gross invoiced value</div>
+                </div>
+
+                <div class="kpi-card red">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Outstanding Amount</div>
+                        <div class="kpi-icon">OA</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.outstanding_amount or 0 }}</div>
+                    <div class="kpi-foot">Pending receivables requiring follow-up</div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Collections</div>
+                        <div class="kpi-icon">CT</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.collections_today or 0 }}</div>
+                    <div class="kpi-foot">Collections captured in selected period</div>
+                </div>
+
+                <div class="kpi-card blue">
+                    <div class="kpi-top">
+                        <div class="kpi-label">Payment Ratio</div>
+                        <div class="kpi-icon">%</div>
+                    </div>
+                    <div class="kpi-value">{{ finance.payment_ratio or 0 }}%</div>
+                    <div class="kpi-foot">Collected value against total invoice value</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="analytics-grid">
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Operation Status Distribution</h3>
+                        <span>Queue movement summary • {{ selected_date_range or "Today" }}</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="chart-placeholder">
+                            {% if operation_status_chart %}
+                                <div class="bar-group">
+                                    {% for item in operation_status_chart %}
+                                        {% set bar_color = item.color_class|default('blue', true) %}
+                                        {% set bar_height = item.height_pct|default(0, true) %}
+                                        <div class="bar-col">
+                                            <div class="bar-track">
+                                                <div class="bar {{ bar_color }}" style="--bar-height: {{ bar_height }}%;"></div>
+                                            </div>
+                                            <div class="bar-label">{{ item.label or '' }}{% if item.value is defined %}<br><strong>{{ item.value }}</strong>{% endif %}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="chart-empty-state">No operation chart data available.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>SLA Health</h3>
+                        <span>SLA status mix • {{ selected_date_range or "Today" }}</span>
+                    </div>
+                    <div class="panel-card-body">
+                        {% set within_sla_count = summary.within_sla|default(0, true)|int %}
+                        {% set near_breach_count = summary.near_breach|default(0, true)|int %}
+                        {% set breached_count = summary.breached|default(0, true)|int %}
+                        {% set escalated_count = summary.escalated|default(0, true)|int %}
+                        {% set sla_total_count = within_sla_count + near_breach_count + breached_count + escalated_count %}
+                        {% if sla_total_count > 0 %}
+                            {% set within_deg = ((within_sla_count / sla_total_count) * 360)|round(2) %}
+                            {% set near_deg = within_deg + ((near_breach_count / sla_total_count) * 360)|round(2) %}
+                            {% set breach_deg = near_deg + ((breached_count / sla_total_count) * 360)|round(2) %}
+                            {% set escalated_deg = 360 %}
+                        {% else %}
+                            {% set within_deg = 0 %}
+                            {% set near_deg = 0 %}
+                            {% set breach_deg = 0 %}
+                            {% set escalated_deg = 0 %}
+                        {% endif %}
+                        <div class="sla-circle-wrap">
+                            <div class="sla-donut" style="--within-deg: {{ within_deg }}deg; --near-deg: {{ near_deg }}deg; --breach-deg: {{ breach_deg }}deg; --escalated-deg: {{ escalated_deg }}deg;">
+                                <div class="sla-circle-center">
+                                    <div class="big">{{ sla_compliance }}%</div>
+                                    <div class="small">Compliance</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="legend-list">
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-green"></div>
+                                    <span>Within SLA</span>
+                                </div>
+                                <span>{{ summary.within_sla or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-amber"></div>
+                                    <span>Near Breach</span>
+                                </div>
+                                <span>{{ summary.near_breach or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-red"></div>
+                                    <span>Breached</span>
+                                </div>
+                                <span>{{ summary.breached or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-purple"></div>
+                                    <span>Escalated</span>
+                                </div>
+                                <span>{{ summary.escalated or 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Finance Collection Summary</h3>
+                        <span>Paid, pending and partial mix • {{ selected_date_range or "Today" }}</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="mini-stat-grid">
+                            <div class="mini-stat">
+                                <div class="label">Paid</div>
+                                <div class="value">{{ finance.paid_invoices or 0 }}</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="label">Pending</div>
+                                <div class="value">{{ finance.pending_invoices or 0 }}</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="label">Partial</div>
+                                <div class="value">{{ finance.partially_paid or 0 }}</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="label">Collections</div>
+                                <div class="value">{{ finance.collections_today or 0 }}</div>
+                            </div>
+                        </div>
+
+                        <div class="legend-list">
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-green"></div>
+                                    <span>Paid</span>
+                                </div>
+                                <span>{{ finance.paid_invoices or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-amber"></div>
+                                    <span>Partially Paid</span>
+                                </div>
+                                <span>{{ finance.partially_paid or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-red"></div>
+                                    <span>Outstanding</span>
+                                </div>
+                                <span>{{ finance.outstanding_amount or 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="work-grid">
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Live Operation Queue</h3>
+                        <span>Real-time queue visibility</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Thread ID</th>
+                                        <th>Patient Name</th>
+                                        <th>Passport No</th>
+                                        <th>Hospital</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th>Assigned To</th>
+                                        <th>SLA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if operation_queue_rows %}
+                                        {% for row in operation_queue_rows %}
+                                        <tr>
+                                            <td>
+                                                <a href="{{ url_for('operation_queue', thread_id=row.channel_thread_id) if row.channel_thread_id else '#' }}" class="thread-link">
+                                                    {{ row.channel_thread_id or '-' }}
+                                                </a>
+                                            </td>
+                                            <td>{{ row.patient_name or row.patgiven_nm or '-' }}</td>
+                                            <td>{{ row.patpassport_no or '-' }}</td>
+                                            <td>{{ row.hospital_shrtnm or '-' }}</td>
+                                            <td>
+                                                {% set status_val = (row.wrkflw_status or '')|upper %}
+                                                <span class="badge-pill {% if status_val == 'OPEN' %}badge-grey{% elif status_val == 'ASSIGNED' %}badge-blue{% elif status_val == 'IN PROGRESS' %}badge-green{% elif status_val == 'MANUAL REVIEW' %}badge-amber{% elif status_val == 'CLOSED' %}badge-purple{% else %}badge-grey{% endif %}">
+                                                    {{ row.wrkflw_status or '-' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% set priority_val = (row.priority_status or '')|upper %}
+                                                <span class="badge-pill {% if priority_val == 'HIGH' %}badge-red{% elif priority_val == 'MEDIUM' %}badge-amber{% elif priority_val == 'LOW' %}badge-blue{% else %}badge-grey{% endif %}">
+                                                    {{ row.priority_status or '-' }}
+                                                </span>
+                                            </td>
+                                            <td>{{ row.assigned_to or '-' }}</td>
+                                            <td>
+                                                {% if row.sla_state %}
+                                                    {% set sla_val = (row.sla_state or '')|upper %}
+                                                    <span class="badge-pill {% if sla_val == 'BREACHED' %}badge-red{% elif sla_val == 'NEAR BREACH' %}badge-amber{% elif sla_val == 'ESCALATED' %}badge-purple{% else %}badge-green{% endif %}">
+                                                        {{ row.sla_state }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge-pill badge-grey">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="8" style="text-align:center; color:#7d8fa8;">No operation queue records available.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if operation_queue_pagination %}
+                        <div class="pagination-strip">
+                            {% if operation_queue_pagination.prev_url %}
+                                <a href="{{ operation_queue_pagination.prev_url }}" class="page-btn">&laquo;</a>
+                            {% endif %}
+
+                            {% for page_item in operation_queue_pagination.pages or [] %}
+                                {% if page_item.url %}
+                                    <a href="{{ page_item.url }}" class="page-btn {% if page_item.active %}active{% endif %}">
+                                        {{ page_item.label }}
+                                    </a>
+                                {% else %}
+                                    <span class="page-btn {% if page_item.active %}active{% endif %}">
+                                        {{ page_item.label }}
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if operation_queue_pagination.next_url %}
+                                <a href="{{ operation_queue_pagination.next_url }}" class="page-btn">&raquo;</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Quick Alerts &amp; Exceptions</h3>
+                        <span>Immediate action items</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="alerts-list">
+                            {% if quick_alerts %}
+                                {% for alert in quick_alerts %}
+                                    <div class="alert-card {{ alert.color_class or '' }}">
+                                        <div class="alert-title">{{ alert.title or '-' }}</div>
+                                        <div class="alert-desc">{{ alert.description or '' }}</div>
+                                        <div class="alert-meta">
+                                            {% if alert.badge_label %}
+                                                <span class="badge-pill {{ alert.badge_class or 'badge-grey' }}">{{ alert.badge_label }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert-card">
+                                    <div class="alert-title">No alerts available</div>
+                                    <div class="alert-desc">There are currently no alert or exception records to display.</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="finance-grid">
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Invoice Management Summary</h3>
+                        <span>Outstanding invoices only</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice No</th>
+                                        <th>Patient Name</th>
+                                        <th>Hospital</th>
+                                        <th>Invoice Value</th>
+                                        <th>Paid Amount</th>
+                                        <th>Balance</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if invoice_rows %}
+                                        {% for row in invoice_rows %}
+                                        <tr>
+                                            <td>
+                                                {% if row.invoice_no %}
+                                                    <a class="thread-link" href="{{ row.invoice_url or ('/invoice-print-pdf/' ~ row.invoice_no) }}" target="_blank" rel="noopener">
+                                                        {{ row.invoice_no }}
+                                                    </a>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ row.patient_name or '-' }}</td>
+                                            <td>{{ row.hospital_name or row.hospital_shrtnm or '-' }}</td>
+                                            <td>{{ row.invoice_value or 0 }}</td>
+                                            <td>{{ row.paid_amount or 0 }}</td>
+                                            <td>{{ row.balance_amount or 0 }}</td>
+                                            <td>
+                                                {% set inv_status = (row.invoice_status or '')|upper %}
+                                                <span class="badge-pill {% if inv_status in ['PAID', 'MATCHED'] %}badge-green{% elif inv_status in ['PARTIALLY PAID', 'PARTIAL MATCH'] %}badge-amber{% elif inv_status in ['PENDING', 'GENERATED', 'UNPAID'] %}badge-red{% else %}badge-grey{% endif %}">
+                                                    {{ row.invoice_status or '-' }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7" style="text-align:center; color:#7d8fa8;">No outstanding invoice records available.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if invoice_pagination %}
+                        <div class="pagination-strip">
+                            {% if invoice_pagination.prev_url %}
+                                <a href="{{ invoice_pagination.prev_url }}" class="page-btn">&laquo;</a>
+                            {% endif %}
+
+                            {% for page_item in invoice_pagination.pages or [] %}
+                                {% if page_item.url %}
+                                    <a href="{{ page_item.url }}" class="page-btn {% if page_item.active %}active{% endif %}">
+                                        {{ page_item.label }}
+                                    </a>
+                                {% else %}
+                                    <span class="page-btn {% if page_item.active %}active{% endif %}">
+                                        {{ page_item.label }}
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if invoice_pagination.next_url %}
+                                <a href="{{ invoice_pagination.next_url }}" class="page-btn">&raquo;</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <h3>Collections &amp; Outstanding Trend</h3>
+                        <span>Financial movement view • {{ selected_date_range or "Today" }}</span>
+                    </div>
+                    <div class="panel-card-body">
+                        <div class="chart-placeholder">
+                            {% if finance_trend_chart %}
+                                <div class="bar-group">
+                                    {% for item in finance_trend_chart %}
+                                        {% set bar_color = item.color_class|default('blue', true) %}
+                                        {% set bar_height = item.height_pct|default(0, true) %}
+                                        <div class="bar-col">
+                                            <div class="bar-track">
+                                                <div class="bar {{ bar_color }}" style="--bar-height: {{ bar_height }}%;"></div>
+                                            </div>
+                                            <div class="bar-label">{{ item.label or '' }}{% if item.value is defined %}<br><strong>{{ item.value }}</strong>{% endif %}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="chart-empty-state">No finance trend data available.</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="legend-list">
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-purple"></div>
+                                    <span>Total Invoice Value</span>
+                                </div>
+                                <span>{{ finance.total_invoice_value or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-green"></div>
+                                    <span>Collections</span>
+                                </div>
+                                <span>{{ finance.collections_today or 0 }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left">
+                                    <div class="legend-dot dot-red"></div>
+                                    <span>Outstanding Amount</span>
+                                </div>
+                                <span>{{ finance.outstanding_amount or 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

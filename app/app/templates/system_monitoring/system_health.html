@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}System Health{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set overall_status = (health_summary.overall_status|default('UNKNOWN'))|upper %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">System Health</div>
+      <div class="sm-breadcrumb">System Monitoring / System Health</div>
+      <div class="sm-page-subtitle">Health checks for application services, database connectivity, scheduler heartbeat and external dependencies.</div>
+    </div>
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.system_health') }}"><i class="fa-solid fa-rotate"></i> Run Health Check</a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.operations_control_center') }}"><i class="fa-solid fa-gauge-high"></i> Control Center</a>
+    </div>
+  </div>
+
+  <div class="sm-health-banner {{ overall_status|lower }}">
+    <div class="sm-health-main">
+      <div class="sm-health-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+      <div>
+        <div class="sm-health-name">OVERALL STATUS: {{ overall_status }}</div>
+        <div class="sm-health-message">{{ health_summary.message|default('No overall health message available.') }}</div>
+      </div>
+    </div>
+    <div class="sm-health-time">Checked: {{ health_summary.checked_on|default('-') }}</div>
+  </div>
+
+  <div class="sm-summary-grid">
+    <div class="sm-summary-card"><div class="sm-summary-label">Checks</div><div class="sm-summary-value">{{ health_summary.total_checks|default(0) }}</div><div class="sm-summary-sub">Registered health checks</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Healthy</div><div class="sm-summary-value">{{ health_summary.healthy_count|default(0) }}</div><div class="sm-summary-sub">Responding normally</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Warning</div><div class="sm-summary-value">{{ health_summary.warning_count|default(0) }}</div><div class="sm-summary-sub">Degraded checks</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Down</div><div class="sm-summary-value">{{ health_summary.down_count|default(0) }}</div><div class="sm-summary-sub">Unavailable services</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Scheduler Heartbeat</div><div class="sm-summary-value">{{ health_summary.scheduler_heartbeat_age_seconds|default('-') }}</div><div class="sm-summary-sub">Seconds since heartbeat</div></div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Service Health Checks</div>
+        <div class="sm-section-subtitle">Application components and external dependencies</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if health_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Response Time</th>
+            <th>Last Checked</th>
+            <th>Last Success</th>
+            <th>Failure Count</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in health_rows %}
+          <tr>
+            <td><span class="sm-cell-title">{{ row.service_name or '-' }}</span><span class="sm-cell-sub">{{ row.service_code or '-' }}</span></td>
+            <td>{{ row.category or '-' }}</td>
+            <td><span class="sm-status {{ (row.status or 'UNKNOWN')|lower }}">{{ row.status or 'UNKNOWN' }}</span></td>
+            <td>{% if row.response_time_ms is not none %}{{ row.response_time_ms }} ms{% else %}-{% endif %}</td>
+            <td>{{ row.last_checked_on or '-' }}</td>
+            <td>{{ row.last_success_on or '-' }}</td>
+            <td>{{ row.failure_count|default(0, true) }}</td>
+            <td>{{ row.status_detail or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <strong>No health checks configured</strong>
+        Health-check results will appear after service checks are registered.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Infrastructure Metrics</div>
+        <div class="sm-section-subtitle">Optional application runtime and database indicators</div>
+      </div>
+    </div>
+
+    <div class="sm-detail-grid">
+      {% for item in infrastructure_metrics|default([]) %}
+      <div class="sm-detail-item">
+        <div class="sm-detail-label">{{ item.label or item.metric_code }}</div>
+        <div class="sm-detail-value">
+          {{ item.value if item.value is not none else '-' }}
+          {% if item.unit %} {{ item.unit }}{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="sm-empty" style="grid-column:1/-1;">
+        <i class="fa-solid fa-server"></i>
+        <strong>No infrastructure metrics available</strong>
+        Optional runtime metrics can be added later without changing this page structure.
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

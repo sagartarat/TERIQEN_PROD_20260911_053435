@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Department Mapping{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/hospital_department_mapping.css') }}">
+
+<div class="erp-page">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flashPopupOverlay" class="flash-popup-overlay">
+                <div class="flash-popup-box">
+                    {% for category, message in messages %}
+                        <div class="flash-popup-icon {% if category == 'success' %}success{% elif category == 'danger' %}danger{% else %}warning{% endif %}">
+                            {% if category == 'success' %}✓{% elif category == 'danger' %}!{% else %}i{% endif %}
+                        </div>
+
+                        <div class="flash-popup-title">
+                            {% if category == 'success' %}Success{% elif category == 'danger' %}Error{% else %}Information{% endif %}
+                        </div>
+
+                        <div class="flash-popup-message">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+
+                    <button type="button" class="flash-popup-btn" onclick="closeFlashPopup()">OK</button>
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="erp-header">
+        <div>
+            <h2>Hospital Department Mapping</h2>
+            <p>Map active departments to hospitals and view existing mapped departments in a controlled ERP screen.</p>
+        </div>
+        <div class="erp-badge">ERP Master Control</div>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-label">Hospitals Available</div>
+            <div class="kpi-value">{{ hospitals|length if hospitals else 0 }}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Available Departments</div>
+            <div class="kpi-value">{{ departments|length if departments else 0 }}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Mapped Departments</div>
+            <div class="kpi-value">{{ mapped_departments|length if mapped_departments else 0 }}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Selected Hospital</div>
+            <div class="kpi-value" style="font-size:16px;">
+                {{ selected_hospital if selected_hospital else 'Not Selected' }}
+            </div>
+        </div>
+    </div>
+
+    <form method="POST"
+          action="{{ url_for('hospital_department_mapping') }}"
+          id="mappingForm"
+          onsubmit="prepareSelectedDepartments()">
+
+        <div id="selectedHiddenInputs"></div>
+
+        <div class="erp-grid">
+
+            <div class="erp-card">
+                <div class="erp-card-header">Hospital Setup</div>
+
+                <div class="erp-card-body">
+
+                    <div class="field">
+                        <label>Hospital <span class="required">*</span></label>
+
+                        <div class="hospital-view-row">
+                            <select name="hospital_name"
+                                    id="hospital_name"
+                                    required>
+                                <option value="">-- Select Hospital --</option>
+                                {% for hospital in hospitals %}
+                                    <option value="{{ hospital.short_name }}"
+                                        {% if selected_hospital == hospital.short_name %}selected{% endif %}>
+                                        {{ hospital.short_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+
+                            <button type="button"
+                                    class="btn-primary"
+                                    onclick="viewMappedDepartments()"
+                                    style="white-space:nowrap;">
+                                View
+                            </button>
+                        </div>
+
+                        <div class="help-text">
+                            Select a hospital and click View to display mapped departments.
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Mapping Status</label>
+                        <select name="mapping_status" id="mapping_status">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Remarks</label>
+                        <textarea name="remarks" id="remarks" placeholder="Enter remarks for this mapping..."></textarea>
+                    </div>
+
+                    <div class="summary-box">
+                        <div class="summary-line">
+                            Hospital:
+                            <b id="summaryHospital">
+                                {{ selected_hospital if selected_hospital else 'Not Selected' }}
+                            </b>
+                        </div>
+                        <div class="summary-line">Selected Departments for Save: <b id="summaryDeptCount">0</b></div>
+                        <div class="summary-line">Existing Mapped Departments: <b>{{ mapped_departments|length if mapped_departments else 0 }}</b></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="erp-card">
+                <div class="erp-card-header">
+                    Department Assignment
+                    <span id="selectedBadge">0 Selected</span>
+                </div>
+
+                <div class="erp-card-body">
+
+                    <div class="transfer-layout">
+
+                        <div class="transfer-box">
+                            <div class="transfer-title">
+                                <span>Available Departments</span>
+                                <span id="availableCount">0</span>
+                            </div>
+
+                            <div class="transfer-search">
+                                <input type="text"
+                                       id="availableSearch"
+                                       placeholder="Search available department..."
+                                       onkeyup="filterTransferList('available')">
+                            </div>
+
+                            <div class="transfer-list" id="availableList">
+                                {% for dept in departments %}
+                                    <div class="dept-item"
+                                         data-name="{{ dept.department_name }}"
+                                         data-search="{{ dept.department_name|lower }}"
+                                         onclick="toggleDeptItem(this)">
+                                        {{ dept.department_name }}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-box" id="availableEmptyMsg">No active department available for mapping.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="transfer-actions">
+                            <button type="button" class="move-btn" onclick="moveSelected('availableList', 'selectedList')">&gt;</button>
+                            <button type="button" class="move-btn" onclick="moveAll('availableList', 'selectedList')">&gt;&gt;</button>
+                            <button type="button" class="move-btn secondary" onclick="moveSelected('selectedList', 'availableList')">&lt;</button>
+                            <button type="button" class="move-btn secondary" onclick="moveAll('selectedList', 'availableList')">&lt;&lt;</button>
+                        </div>
+
+                        <div class="transfer-box">
+                            <div class="transfer-title">
+                                <span>Mapped / Selected Departments</span>
+                                <span id="mappedCount">0</span>
+                            </div>
+
+                            <div class="transfer-search">
+                                <input type="text"
+                                       id="selectedSearch"
+                                       placeholder="Search selected department..."
+                                       onkeyup="filterTransferList('selected')">
+                            </div>
+
+                            <div class="transfer-list" id="selectedList">
+                                {% if mapped_departments %}
+                                    {% for dept in mapped_departments %}
+                                        <div class="dept-item"
+                                             data-name="{{ dept.department_name }}"
+                                             data-search="{{ dept.department_name|lower }}"
+                                             onclick="toggleDeptItem(this)">
+                                            {{ dept.department_name }}
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-list" id="selectedEmptyMsg">
+                                        No department selected for save.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="help-text">
+                        To remove a mapped department from the hospital, select it on the right side, click &lt;, and then click Save Mapping.
+                    </div>
+
+                    <div class="action-bar">
+                        <button type="button" class="btn-secondary" onclick="clearForm()">Clear Screen</button>
+                        <button type="submit" class="btn-primary">Save Mapping</button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </form>
+
+    <div class="erp-card" style="margin-top:16px;">
+        <div class="erp-card-header">
+            <span>View Mapped Departments</span>
+            <span>{{ selected_hospital if selected_hospital else 'Select Hospital' }}</span>
+        </div>
+
+        <div class="erp-card-body">
+            {% if selected_hospital %}
+                <div class="view-toolbar">
+                    <div class="view-title">
+                        Existing mapped departments for: {{ selected_hospital }}
+                    </div>
+
+                    <input type="text"
+                           id="viewSearch"
+                           class="view-search"
+                           placeholder="Search mapped department..."
+                           onkeyup="filterViewTable()">
+                </div>
+
+                {% if mapped_departments %}
+                    <div class="view-table-wrap">
+                        <table class="view-table" id="mappedDeptTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">#</th>
+                                    <th>Hospital</th>
+                                    <th>Mapped Department</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for dept in mapped_departments %}
+                                    <tr data-search="{{ (selected_hospital ~ ' ' ~ dept.department_name ~ ' ' ~ dept.dept_status ~ ' ' ~ (dept.remarks or ''))|lower }}">
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ selected_hospital }}</td>
+                                        <td style="font-weight:900; color:#123c69;">{{ dept.department_name }}</td>
+                                        <td>
+                                            <span class="status-pill {% if dept.dept_status and dept.dept_status|lower != 'active' %}inactive{% endif %}">
+                                                {{ dept.dept_status or 'Active' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ dept.remarks or '' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-list">
+                        No mapped departments found for {{ selected_hospital }}.
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-list">
+                    Please select a Hospital from the Hospital LOV and click View to see mapped departments.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function closeFlashPopup() {
+        const popup = document.getElementById("flashPopupOverlay");
+        if (popup) {
+            popup.style.display = "none";
+        }
+    }
+
+    function viewMappedDepartments() {
+        const hospital = document.getElementById("hospital_name").value;
+
+        if (!hospital) {
+            alert("Please select a Hospital first.");
+            return;
+        }
+
+        window.location.href =
+            "{{ url_for('hospital_department_mapping') }}" +
+            "?hospital_name=" + encodeURIComponent(hospital);
+    }
+
+    function toggleDeptItem(item) {
+        item.classList.toggle("selected");
+    }
+
+    function removeEmptyMessages() {
+        const selectedMsg = document.getElementById("selectedEmptyMsg");
+        if (selectedMsg) {
+            selectedMsg.remove();
+        }
+
+        const availableMsg = document.getElementById("availableEmptyMsg");
+        if (availableMsg) {
+            availableMsg.remove();
+        }
+    }
+
+    function showSelectedEmptyIfNeeded() {
+        const selectedList = document.getElementById("selectedList");
+        const hasItems = selectedList.querySelectorAll(".dept-item").length > 0;
+
+        if (!hasItems && !document.getElementById("selectedEmptyMsg")) {
+            const div = document.createElement("div");
+            div.className = "empty-list";
+            div.id = "selectedEmptyMsg";
+            div.innerText = "No department selected for save.";
+            selectedList.appendChild(div);
+        }
+    }
+
+    function showAvailableEmptyIfNeeded() {
+        const availableList = document.getElementById("availableList");
+        const hasItems = availableList.querySelectorAll(".dept-item").length > 0;
+
+        if (!hasItems && !document.getElementById("availableEmptyMsg")) {
+            const div = document.createElement("div");
+            div.className = "empty-box";
+            div.id = "availableEmptyMsg";
+            div.innerText = "No active department available for mapping.";
+            availableList.appendChild(div);
+        }
+    }
+
+    function sortList(listId) {
+        const list = document.getElementById(listId);
+        const items = Array.from(list.querySelectorAll(".dept-item"));
+
+        items.sort(function(a, b) {
+            return a.getAttribute("data-name").localeCompare(b.getAttribute("data-name"));
+        });
+
+        items.forEach(function(item) {
+            list.appendChild(item);
+        });
+    }
+
+    function moveSelected(fromListId, toListId) {
+        const fromList = document.getElementById(fromListId);
+        const toList = document.getElementById(toListId);
+        const items = Array.from(fromList.querySelectorAll(".dept-item.selected"));
+
+        if (items.length === 0) {
+            return;
+        }
+
+        removeEmptyMessages();
+
+        items.forEach(function(item) {
+            item.classList.remove("selected");
+            item.style.display = "";
+            toList.appendChild(item);
+        });
+
+        sortList(fromListId);
+        sortList(toListId);
+        showSelectedEmptyIfNeeded();
+        showAvailableEmptyIfNeeded();
+        refreshSummary();
+        filterTransferList("available");
+        filterTransferList("selected");
+    }
+
+    function moveAll(fromListId, toListId) {
+        const fromList = document.getElementById(fromListId);
+        const toList = document.getElementById(toListId);
+        const items = Array.from(fromList.querySelectorAll(".dept-item"));
+
+        if (items.length === 0) {
+            return;
+        }
+
+        removeEmptyMessages();
+
+        items.forEach(function(item) {
+            item.classList.remove("selected");
+            item.style.display = "";
+            toList.appendChild(item);
+        });
+
+        sortList(fromListId);
+        sortList(toListId);
+        showSelectedEmptyIfNeeded();
+        showAvailableEmptyIfNeeded();
+        refreshSummary();
+        filterTransferList("available");
+        filterTransferList("selected");
+    }
+
+    function filterTransferList(type) {
+        const searchInputId = type === "available" ? "availableSearch" : "selectedSearch";
+        const listId = type === "available" ? "availableList" : "selectedList";
+
+        const searchValue = document.getElementById(searchInputId).value.toLowerCase().trim();
+        const list = document.getElementById(listId);
+        const items = list.querySelectorAll(".dept-item");
+
+        items.forEach(function(item) {
+            const name = item.getAttribute("data-search") || "";
+            item.style.display = name.includes(searchValue) ? "" : "none";
+        });
+    }
+
+    function filterViewTable() {
+        const searchInput = document.getElementById("viewSearch");
+
+        if (!searchInput) {
+            return;
+        }
+
+        const searchValue = searchInput.value.toLowerCase().trim();
+        const rows = document.querySelectorAll("#mappedDeptTable tbody tr");
+
+        rows.forEach(function(row) {
+            const searchText = row.getAttribute("data-search") || "";
+            row.style.display = searchText.includes(searchValue) ? "" : "none";
+        });
+    }
+
+    function getMappedDepartments() {
+        const selectedList = document.getElementById("selectedList");
+        const items = selectedList.querySelectorAll(".dept-item");
+
+        return Array.from(items).map(function(item) {
+            return item.getAttribute("data-name");
+        });
+    }
+
+    function prepareSelectedDepartments() {
+        const container = document.getElementById("selectedHiddenInputs");
+        container.innerHTML = "";
+
+        const mappedDepartments = getMappedDepartments();
+
+        mappedDepartments.forEach(function(deptName) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "department_names";
+            input.value = deptName;
+            container.appendChild(input);
+        });
+
+        return true;
+    }
+
+    function refreshSummary() {
+        const hospital = document.getElementById("hospital_name").value || "Not Selected";
+        const selectedCount = getMappedDepartments().length;
+        const availableCount = document.querySelectorAll("#availableList .dept-item").length;
+
+        document.getElementById("summaryHospital").innerText = hospital;
+        document.getElementById("summaryDeptCount").innerText = selectedCount;
+
+        document.getElementById("selectedBadge").innerText = selectedCount + " Selected";
+        document.getElementById("availableCount").innerText = availableCount;
+        document.getElementById("mappedCount").innerText = selectedCount;
+    }
+
+    function clearForm() {
+        window.location.href = "{{ url_for('hospital_department_mapping') }}";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        sortList("availableList");
+        sortList("selectedList");
+        refreshSummary();
+        showSelectedEmptyIfNeeded();
+        showAvailableEmptyIfNeeded();
+    });
+</script>
+
+{% endblock %}

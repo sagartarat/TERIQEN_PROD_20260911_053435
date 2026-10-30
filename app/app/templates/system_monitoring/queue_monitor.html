@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Queue Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Queue Monitor</div>
+      <div class="sm-breadcrumb">System Monitoring / Queue Monitor</div>
+      <div class="sm-page-subtitle">Monitor queue backlog, processing age, retries, failures and stuck records.</div>
+    </div>
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.queue_monitor') }}"><i class="fa-solid fa-rotate"></i> Refresh</a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.operations_control_center') }}"><i class="fa-solid fa-gauge-high"></i> Control Center</a>
+    </div>
+  </div>
+
+  <form class="sm-filter-bar" method="get" action="{{ url_for('system_monitoring.queue_monitor') }}">
+    <div class="sm-filter-field">
+      <label>Queue</label>
+      <select name="queue_code">
+        <option value="">All Queues</option>
+        {% for item in queue_options|default([]) %}
+        <option value="{{ item.queue_code }}" {% if filters.queue_code|default('') == item.queue_code %}selected{% endif %}>{{ item.queue_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for item in status_options|default([]) %}
+        <option value="{{ item }}" {% if filters.status|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>Reference</label>
+      <input type="text" name="reference" value="{{ filters.reference|default('') }}" placeholder="ID / Thread / Message / Patient">
+    </div>
+    <div class="sm-filter-field">
+      <label>Minimum Age (min)</label>
+      <input type="number" min="0" name="min_age" value="{{ filters.min_age|default('') }}">
+    </div>
+    <div class="sm-filter-field">
+      <label>Only Stuck</label>
+      <select name="stuck">
+        <option value="">All</option>
+        <option value="Y" {% if filters.stuck|default('') == 'Y' %}selected{% endif %}>Yes</option>
+        <option value="N" {% if filters.stuck|default('') == 'N' %}selected{% endif %}>No</option>
+      </select>
+    </div>
+    <div class="sm-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a class="btn btn-light" href="{{ url_for('system_monitoring.queue_monitor') }}">Clear</a>
+    </div>
+  </form>
+
+  <div class="sm-summary-grid">
+    <div class="sm-summary-card"><div class="sm-summary-label">Pending</div><div class="sm-summary-value">{{ summary.pending|default(0) }}</div><div class="sm-summary-sub">Waiting in queues</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Processing</div><div class="sm-summary-value">{{ summary.processing|default(0) }}</div><div class="sm-summary-sub">Currently processing</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Failed</div><div class="sm-summary-value">{{ summary.failed|default(0) }}</div><div class="sm-summary-sub">Failed queue items</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Stuck</div><div class="sm-summary-value">{{ summary.stuck|default(0) }}</div><div class="sm-summary-sub">Beyond configured threshold</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Oldest Pending</div><div class="sm-summary-value">{% if summary.oldest_pending_minutes is not none %}{{ summary.oldest_pending_minutes }}m{% else %}-{% endif %}</div><div class="sm-summary-sub">Oldest queue age</div></div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Queue Health Summary</div>
+        <div class="sm-section-subtitle">Backlog and health by queue source</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if queue_summary_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Queue</th>
+            <th>Pending</th>
+            <th>Processing</th>
+            <th>Completed</th>
+            <th>Failed</th>
+            <th>Retry Pending</th>
+            <th>Stuck</th>
+            <th>Oldest Pending</th>
+            <th>Throughput / Hr</th>
+            <th>Health</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in queue_summary_rows %}
+          <tr>
+            <td><span class="sm-cell-title">{{ row.queue_name or '-' }}</span><span class="sm-cell-sub">{{ row.queue_code or '-' }}</span></td>
+            <td>{{ row.pending_count|default(0, true) }}</td>
+            <td>{{ row.processing_count|default(0, true) }}</td>
+            <td>{{ row.completed_count|default(0, true) }}</td>
+            <td>{{ row.failed_count|default(0, true) }}</td>
+            <td>{{ row.retry_pending_count|default(0, true) }}</td>
+            <td>{{ row.stuck_count|default(0, true) }}</td>
+            <td>{% if row.oldest_pending_minutes is not none %}{{ row.oldest_pending_minutes }} min{% else %}-{% endif %}</td>
+            <td>{{ row.throughput_per_hour|default(0, true) }}</td>
+            <td><span class="sm-status {{ (row.health_status or 'UNKNOWN')|lower }}">{{ row.health_status or 'UNKNOWN' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-layer-group"></i>
+        <strong>No queue summary available</strong>
+        Queue health will appear after queue sources are configured.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Queue Records</div>
+        <div class="sm-section-subtitle">Individual monitored queue records</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if queue_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Queue</th>
+            <th>Record ID</th>
+            <th>Reference</th>
+            <th>Thread / Correlation</th>
+            <th>Status</th>
+            <th>Attempts</th>
+            <th>Created</th>
+            <th>Last Attempt</th>
+            <th>Age</th>
+            <th>Stuck</th>
+            <th>Error / Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in queue_rows %}
+          <tr>
+            <td>{{ row.queue_name or row.queue_code or '-' }}</td>
+            <td>{{ row.record_id or '-' }}</td>
+            <td>{{ row.reference_type or '-' }}{% if row.reference_id %} / {{ row.reference_id }}{% endif %}</td>
+            <td>{{ row.correlation_id or row.channel_thread_id or '-' }}</td>
+            <td><span class="sm-status {{ (row.status or 'UNKNOWN')|lower }}">{{ row.status or 'UNKNOWN' }}</span></td>
+            <td>{{ row.attempt_count|default(0, true) }}</td>
+            <td>{{ row.created_on or '-' }}</td>
+            <td>{{ row.last_attempt_on or '-' }}</td>
+            <td>{% if row.age_minutes is not none %}{{ row.age_minutes }} min{% else %}-{% endif %}</td>
+            <td>
+              {% if row.is_stuck %}
+                <span class="sm-status warning">YES</span>
+              {% else %}
+                <span class="sm-status success">NO</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.error_message or row.remarks %}
+                {{ (row.error_message or row.remarks)|truncate(90, True, '...') }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-inbox"></i>
+        <strong>No queue records found</strong>
+        No queue records match the current filters.
+      </div>
+      {% endif %}
+    </div>
+
+    {% include "system_monitoring/_pagination.html" %}
+  </section>
+
+</div>
+{% endblock %}

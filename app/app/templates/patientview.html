@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Patient View / Modify{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/patientview.css') }}">
+
+<div class="pv-page">
+
+  <div class="pv-hero">
+    <div class="pv-page-header">
+      <div class="pv-title-block">
+        <h1>Patient View / Modify</h1>
+        <p>Search, review, modify, or delete patient records through a premium enterprise workspace aligned with File Upload, Partner Creation, and Partner View screens.</p>
+      </div>
+
+      <div class="pv-header-actions">
+        <a class="pv-btn pv-btn-light" href="{{ url_for('patient_creation') }}">
+          <i class="fa-solid fa-user-plus"></i> New Patient
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      <div class="pv-alert {% if category == 'success' %}pv-alert-success{% else %}pv-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="pv-panel">
+    <div class="pv-panel-header">
+      <div>
+        <h2>Patient Search</h2>
+        <small>Apply filters to quickly find patient records.</small>
+      </div>
+    </div>
+
+    <div class="pv-panel-body">
+      <div class="pv-panel-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <span>Search by passport number, given name, or country. Use View / Modify / Delete actions from the grid.</span>
+      </div>
+
+      <div class="pv-filter-grid">
+        <div class="pv-detail-item">
+          <label class="pv-label" for="searchPassport">Passport No</label>
+          <input class="pv-input" id="searchPassport" type="text" placeholder="Search Passport No...">
+        </div>
+
+        <div class="pv-detail-item">
+          <label class="pv-label" for="searchName">Given Name</label>
+          <input class="pv-input" id="searchName" type="text" placeholder="Search Given Name...">
+        </div>
+
+        <div class="pv-detail-item">
+          <label class="pv-label" for="searchCountry">Country</label>
+          <select class="pv-select" id="searchCountry">
+            <option value="">All Countries</option>
+            {% if countries %}
+              {% for c in countries %}
+                <option value="{{ c.country_name }}">{{ c.country_name }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+
+        <div class="pv-detail-item">
+          <label class="pv-label">&nbsp;</label>
+          <button class="pv-btn pv-btn-ghost" type="button" id="btnReset">
+            <i class="fa-solid fa-rotate"></i> Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pv-panel">
+    <div class="pv-panel-header">
+      <div>
+        <h2>Patients List</h2>
+        <small>Search by Passport No / Given Name / Country and view or modify a patient.</small>
+      </div>
+    </div>
+
+    <div class="pv-panel-body">
+      <div class="pv-table-wrap">
+        <div class="pv-table-scroll" id="tableScroll">
+          <table id="patientTable">
+            <thead>
+              <tr>
+                <th>Passport No</th>
+                <th>Given Name</th>
+                <th>Sur Name</th>
+                <th>Country</th>
+                <th>Contact No</th>
+                <th>Passport Expiry</th>
+                <th>Gender</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% if patients and patients|length > 0 %}
+                {% for p in patients %}
+                  <tr class="data-row">
+                    <td class="col-passport">{{ p.passport_no or "" }}</td>
+                    <td class="col-given">{{ p.patient_givennm or "" }}</td>
+                    <td>{{ p.patient_surnm or "" }}</td>
+                    <td class="col-country">{{ p.patient_country or "" }}</td>
+                    <td>{{ p.patient_contno or "" }}</td>
+                    <td>{{ p.passport_expirydt or "" }}</td>
+                    <td>{{ p.patient_gender or "" }}</td>
+
+                    <td>
+                      <span class="status-pill">
+                        <span class="status-dot"></span>
+                        {{ (p.patient_status or "Active") }}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div class="actions">
+                        <a class="icon-btn view" title="View"
+                           href="{{ url_for('patient_creation') }}?mode=view&key={{ p.passport_no }}">
+                          <i class="fa-solid fa-eye"></i>
+                        </a>
+
+                        <a class="icon-btn edit" title="Modify"
+                           href="{{ url_for('patient_creation') }}?mode=modify&key={{ p.passport_no }}">
+                          <i class="fa-solid fa-pen"></i>
+                        </a>
+
+                        <form method="POST"
+                              action="{{ url_for('patient_delete', passport_no=p.passport_no) }}"
+                              style="display:inline;"
+                              onsubmit="return confirm('Delete this patient?');">
+                          {% if csrf_token is defined %}
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          {% endif %}
+                          <button class="icon-btn delete" type="submit" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr class="no-data-row">
+                  <td colspan="9" class="no-data">
+                    No patients found.
+                    <div class="muted">Create a patient from Patient Creation screen first.</div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <div class="pager-left">
+            <span class="pager-info" id="pagerInfo">Showing 0–0 of 0</span>
+            <label class="muted" style="font-weight:800;">Rows:</label>
+            <select class="page-size" id="pageSize">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+
+          <div class="pager-right" id="pagerButtons">
+            <button class="page-btn" id="btnPrev" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="page-btn" id="btnNext" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/patientview.js') }}"></script>
+
+{% endblock %}

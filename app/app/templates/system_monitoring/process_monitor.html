@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Process Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Process Monitor</div>
+      <div class="sm-breadcrumb">System Monitoring / Process Monitor</div>
+      <div class="sm-page-subtitle">Monitor business-processing workload, failures, retries and manual-review state.</div>
+    </div>
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.process_monitor') }}"><i class="fa-solid fa-rotate"></i> Refresh</a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.operations_control_center') }}"><i class="fa-solid fa-gauge-high"></i> Control Center</a>
+    </div>
+  </div>
+
+  <form class="sm-filter-bar" method="get" action="{{ url_for('system_monitoring.process_monitor') }}">
+    <div class="sm-filter-field">
+      <label>Search</label>
+      <input type="text" name="q" value="{{ filters.q|default('') }}" placeholder="Process or reference">
+    </div>
+    <div class="sm-filter-field">
+      <label>Module</label>
+      <select name="module">
+        <option value="">All Modules</option>
+        {% for item in module_options|default([]) %}
+        <option value="{{ item }}" {% if filters.module|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>Process Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for item in status_options|default([]) %}
+        <option value="{{ item }}" {% if filters.status|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>From</label>
+      <input type="datetime-local" name="from_time" value="{{ filters.from_time|default('') }}">
+    </div>
+    <div class="sm-filter-field">
+      <label>To</label>
+      <input type="datetime-local" name="to_time" value="{{ filters.to_time|default('') }}">
+    </div>
+    <div class="sm-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a class="btn btn-light" href="{{ url_for('system_monitoring.process_monitor') }}">Clear</a>
+    </div>
+  </form>
+
+  <div class="sm-summary-grid">
+    <div class="sm-summary-card"><div class="sm-summary-label">Pending</div><div class="sm-summary-value">{{ summary.pending|default(0) }}</div><div class="sm-summary-sub">Waiting for processing</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Processing</div><div class="sm-summary-value">{{ summary.processing|default(0) }}</div><div class="sm-summary-sub">Currently executing</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Retry Pending</div><div class="sm-summary-value">{{ summary.retry_pending|default(0) }}</div><div class="sm-summary-sub">Awaiting retry</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Manual Review</div><div class="sm-summary-value">{{ summary.manual_review|default(0) }}</div><div class="sm-summary-sub">Requires human review</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Failed</div><div class="sm-summary-value">{{ summary.failed|default(0) }}</div><div class="sm-summary-sub">Unresolved failures</div></div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Process Summary</div>
+        <div class="sm-section-subtitle">Aggregated health and workload by process</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if process_summary_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Process</th>
+            <th>Module</th>
+            <th>Pending</th>
+            <th>Processing</th>
+            <th>Success</th>
+            <th>Retry</th>
+            <th>Manual Review</th>
+            <th>Failed</th>
+            <th>Oldest Pending</th>
+            <th>Average Duration</th>
+            <th>Health</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in process_summary_rows %}
+          <tr>
+            <td><span class="sm-cell-title">{{ row.process_name or '-' }}</span><span class="sm-cell-sub">{{ row.process_code or '-' }}</span></td>
+            <td>{{ row.module_name or '-' }}</td>
+            <td>{{ row.pending_count|default(0, true) }}</td>
+            <td>{{ row.processing_count|default(0, true) }}</td>
+            <td>{{ row.success_count|default(0, true) }}</td>
+            <td>{{ row.retry_pending_count|default(0, true) }}</td>
+            <td>{{ row.manual_review_count|default(0, true) }}</td>
+            <td>{{ row.failed_count|default(0, true) }}</td>
+            <td>{% if row.oldest_pending_minutes is not none %}{{ row.oldest_pending_minutes }} min{% else %}-{% endif %}</td>
+            <td>{% if row.avg_duration_ms is not none %}{{ row.avg_duration_ms }} ms{% else %}-{% endif %}</td>
+            <td><span class="sm-status {{ (row.health_status or 'UNKNOWN')|lower }}">{{ row.health_status or 'UNKNOWN' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-gears"></i>
+        <strong>No process summary available</strong>
+        No process monitoring data matches the current selection.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Process Execution Records</div>
+        <div class="sm-section-subtitle">Individual business records processed by monitored processes</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if process_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Execution</th>
+            <th>Process</th>
+            <th>Reference</th>
+            <th>Parent Reference</th>
+            <th>Status</th>
+            <th>Attempt</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Duration</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in process_rows %}
+          <tr>
+            <td>{{ row.execution_id or row.id }}</td>
+            <td><span class="sm-cell-title">{{ row.process_name or row.process_code or '-' }}</span><span class="sm-cell-sub">{{ row.module_name or '-' }}</span></td>
+            <td>{{ row.reference_type or '-' }}{% if row.reference_id %} / {{ row.reference_id }}{% endif %}</td>
+            <td>{{ row.parent_reference_type or '-' }}{% if row.parent_reference_id %} / {{ row.parent_reference_id }}{% endif %}</td>
+            <td><span class="sm-status {{ (row.process_status or 'UNKNOWN')|lower }}">{{ row.process_status or 'UNKNOWN' }}</span></td>
+            <td>{{ row.attempt_no|default(0, true) }}</td>
+            <td>{{ row.started_on or '-' }}</td>
+            <td>{{ row.completed_on or '-' }}</td>
+            <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+            <td>
+              {% if row.error_message %}
+                <span title="{{ row.error_message }}">{{ row.error_message|truncate(80, True, '...') }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-list-check"></i>
+        <strong>No process execution records</strong>
+        No process records match the current filters.
+      </div>
+      {% endif %}
+    </div>
+
+    {% include "system_monitoring/_pagination.html" %}
+  </section>
+
+</div>
+{% endblock %}

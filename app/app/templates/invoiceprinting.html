@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Printing{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoiceprinting.css') }}">
+
+<div class="ip-page">
+  <div class="ip-topbar">
+    <div class="ip-title-wrap">
+      <h1>Invoice Printing</h1>
+      <p>Track invoice print readiness, monitor hospital-wise counts, and print selected invoices from one control desk.</p>
+    </div>
+
+    <div class="ip-top-meta">
+      <div class="ip-mini-chip">Finance Operations</div>
+      <div class="ip-mini-chip">Print Control Desk</div>
+    </div>
+  </div>
+
+  <div class="ip-card">
+    <div class="ip-card-head">
+      <div>
+        <h2>Search & Filter</h2>
+        <p>Use Invoice Number LOV, Hospital Name LOV, date range, and print status. Search runs automatically on change.</p>
+      </div>
+    </div>
+    <div class="ip-card-body">
+      <div class="ip-filter-grid">
+        <div class="ip-field">
+          <label for="invoiceSearch">Invoice Number</label>
+          <select id="invoiceSearch" class="ip-select">
+            <option value="">All Invoice Numbers</option>
+          </select>
+        </div>
+
+        <div class="ip-field">
+          <label for="hospitalFilter">Hospital Name</label>
+          <select id="hospitalFilter" class="ip-select">
+            <option value="">All Hospitals</option>
+          </select>
+        </div>
+
+        <div class="ip-field">
+          <label for="fromDate">From Date</label>
+          <input type="date" id="fromDate" class="ip-input">
+        </div>
+
+        <div class="ip-field">
+          <label for="toDate">To Date</label>
+          <input type="date" id="toDate" class="ip-input">
+        </div>
+
+        <div class="ip-field">
+          <label for="printStatusFilter">Print Status</label>
+          <select id="printStatusFilter" class="ip-select">
+            <option value="ALL">All</option>
+            <option value="PRINTED">Printed</option>
+            <option value="PENDING">Yet to Print</option>
+          </select>
+        </div>
+
+        <div class="ip-filter-actions">
+          <button type="button" class="ip-btn ip-btn-light" onclick="clearFilters()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ip-dashboard-grid">
+    <div class="ip-stats">
+      <div class="ip-stat">
+        <div class="ip-stat-label">Total Invoices</div>
+        <div class="ip-stat-value" id="statTotalInvoices">0</div>
+        <div class="ip-stat-note">Unique invoice numbers in current result</div>
+      </div>
+
+      <div class="ip-stat">
+        <div class="ip-stat-label">Printed Invoices</div>
+        <div class="ip-stat-value" id="statPrintedInvoices">0</div>
+        <div class="ip-stat-note">Invoice groups already printed</div>
+      </div>
+
+      <div class="ip-stat">
+        <div class="ip-stat-label">Yet to Print</div>
+        <div class="ip-stat-value" id="statPendingInvoices">0</div>
+        <div class="ip-stat-note">Invoice groups pending for print</div>
+      </div>
+    </div>
+
+    <div class="ip-card">
+      <div class="ip-card-head">
+        <div>
+          <h2>Operational Highlights</h2>
+          <p>Quick view of the current invoice-group selection.</p>
+        </div>
+      </div>
+      <div class="ip-card-body">
+        <div class="ip-highlight-panel">
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Selected Invoice</div>
+            <div class="ip-highlight-v" id="highlightInvoiceNumber">-</div>
+          </div>
+
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Selected Hospital</div>
+            <div class="ip-highlight-v" id="highlightHospitalName">-</div>
+          </div>
+
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Rows in Invoice</div>
+            <div class="ip-highlight-v" id="highlightRowCount">0</div>
+          </div>
+
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Print Status</div>
+            <div class="ip-highlight-v" id="highlightPrintStatus">-</div>
+          </div>
+
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Grouped Total</div>
+            <div class="ip-highlight-v" id="highlightInvoiceTotal">0.00</div>
+          </div>
+
+          <div class="ip-highlight">
+            <div class="ip-highlight-k">Selection Mode</div>
+            <div class="ip-highlight-v">Invoice Number Based</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ip-card">
+    <div class="ip-card-head">
+      <div>
+        <h2>Invoice Grid</h2>
+        <p>Select any row of an invoice. All rows with the same invoice number will be selected and printed together.</p>
+      </div>
+
+      <div class="ip-status-tabs">
+        <button type="button" class="ip-chip active" data-status-tab="ALL" onclick="setQuickStatus('ALL', this)">All</button>
+        <button type="button" class="ip-chip" data-status-tab="PRINTED" onclick="setQuickStatus('PRINTED', this)">Printed</button>
+        <button type="button" class="ip-chip" data-status-tab="PENDING" onclick="setQuickStatus('PENDING', this)">Yet to Print</button>
+      </div>
+    </div>
+
+    <div class="ip-card-body">
+      <div class="ip-grid-wrap">
+        <table class="ip-table">
+          <thead>
+            <tr>
+              <th style="width:50px;">Select</th>
+              <th>Invoice Number</th>
+              <th>Invoice Date</th>
+              <th>Hospital Name</th>
+              <th>Net Invoice Amount</th>
+              <th>GST Amount</th>
+              <th>TDS Amount</th>
+              <th>Total Invoice Amount</th>
+              <th>Narration</th>
+              <th>Print Status</th>
+              <th>Printed On</th>
+              <th>Printed By</th>
+            </tr>
+          </thead>
+          <tbody id="invoiceGridBody">
+            <tr>
+              <td colspan="12" class="ip-empty">No records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ip-actions-bar">
+        <div class="ip-selection-note" id="selectionNote">Select any row to pick the full invoice group.</div>
+        <div>
+          <button type="button" class="ip-btn ip-btn-secondary" onclick="printSelectedInvoice()">Print Selected Invoice</button>
+        </div>
+      </div>
+
+      <div class="ip-actions-bar">
+        <div class="ip-selection-note" id="paginationInfo">Showing 0 to 0 of 0 records</div>
+        <div class="ip-pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ip-summary-grid">
+    <div class="ip-card">
+      <div class="ip-card-head">
+        <div>
+          <h2>Hospital-wise Invoice Print Summary</h2>
+          <p>Pending and printed invoice counts by hospital.</p>
+        </div>
+      </div>
+      <div class="ip-card-body">
+        <div class="ip-summary-table-wrap">
+          <table class="ip-summary-table">
+            <thead>
+              <tr>
+                <th>Hospital Name</th>
+                <th>Pending to Print</th>
+                <th>Printed</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="hospitalSummaryBody">
+              <tr>
+                <td colspan="4" class="ip-empty">No summary available.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ip-card">
+      <div class="ip-card-head">
+        <div>
+          <h2>Selected Invoice Snapshot</h2>
+          <p>Grouped snapshot for all rows of the selected invoice number.</p>
+        </div>
+      </div>
+      <div class="ip-card-body">
+        <div id="selectedInvoiceDetails">
+          <div class="ip-kv">
+            <div class="ip-kv-key">Invoice Number</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Invoice Date</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Hospital Name</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Rows in Invoice</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Net Invoice Amount</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">GST Amount</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">TDS Amount</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Total Invoice Amount</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Narration</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Print Status</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Printed On</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+          <div class="ip-kv">
+            <div class="ip-kv-key">Printed By</div>
+            <div class="ip-kv-value">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="ip-modal-backdrop" id="narrationModalBackdrop"></div>
+<div class="ip-modal" id="narrationModal" aria-hidden="true">
+  <div class="ip-modal-card">
+    <div class="ip-modal-head">
+      <h3>Invoice Narration Required</h3>
+    </div>
+    <div class="ip-modal-body">
+      <div class="ip-field">
+        <label for="customNarrationInput">Narration</label>
+        <textarea id="customNarrationInput" class="ip-textarea" maxlength="2000" placeholder="Write invoice narration here..."></textarea>
+      </div>
+      <p style="margin:10px 0 0; color:var(--ip-text-soft); font-size:12px; font-weight:700;">This narration will be saved against the invoice and printed using the custom_narration placeholder.</p>
+    </div>
+    <div class="ip-modal-actions">
+      <button type="button" class="ip-btn ip-btn-light" onclick="closeNarrationModal()">Cancel</button>
+      <button type="button" class="ip-btn ip-btn-primary" onclick="confirmNarrationAndPrint()">Save Narration & Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="ip-toast-wrap" id="toastWrap"></div>
+
+<script src="{{ url_for('static', filename='js/pages/invoiceprinting.js') }}"></script>
+
+{% endblock %}

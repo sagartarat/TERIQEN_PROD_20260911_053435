@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Lead Generation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/leadgeneration.css') }}">
+
+<form id="leadForm" method="POST" enctype="multipart/form-data" novalidate>
+  <div class="hidden-db-fields" id="workflowHiddenFields">
+    <input type="hidden" id="h_attn1passport_no" name="attn1passport_no">
+    <input type="hidden" id="h_attn1pat_relation" name="attn1pat_relation">
+    <input type="hidden" id="h_attn1_givennm" name="attn1_givennm">
+    <input type="hidden" id="h_attn1_surnm" name="attn1_surnm">
+    <input type="hidden" id="h_attn1_dob" name="attn1_dob">
+    <input type="hidden" id="h_attn1_country" name="attn1_country">
+    <input type="hidden" id="h_attn1_gender" name="attn1_gender">
+    <input type="hidden" id="h_attn1_contno" name="attn1_contno">
+    <input type="hidden" id="h_attn1_age" name="attn1_age">
+    <input type="hidden" id="h_attn1pass_expirydt" name="attn1pass_expirydt">
+    <input type="hidden" id="h_attn1_address" name="attn1_address">
+    <input type="hidden" id="h_attn1_email" name="attn1_email">
+
+    <input type="hidden" id="h_attn2passport_no" name="attn2passport_no">
+    <input type="hidden" id="h_attn2pat_relation" name="attn2pat_relation">
+    <input type="hidden" id="h_attn2_givennm" name="attn2_givennm">
+    <input type="hidden" id="h_attn2_surnm" name="attn2_surnm">
+    <input type="hidden" id="h_attn2_dob" name="attn2_dob">
+    <input type="hidden" id="h_attn2_country" name="attn2_country">
+    <input type="hidden" id="h_attn2_gender" name="attn2_gender">
+    <input type="hidden" id="h_attn2_contno" name="attn2_contno">
+    <input type="hidden" id="h_attn2_age" name="attn2_age">
+    <input type="hidden" id="h_attn2pass_expirydt" name="attn2pass_expirydt">
+    <input type="hidden" id="h_attn2_address" name="attn2_address">
+    <input type="hidden" id="h_attn2_email" name="attn2_email">
+
+    <input type="hidden" id="h_attn3passport_no" name="attn3passport_no">
+    <input type="hidden" id="h_attn3pat_relation" name="attn3pat_relation">
+    <input type="hidden" id="h_attn3_givennm" name="attn3_givennm">
+    <input type="hidden" id="h_attn3_surnm" name="attn3_surnm">
+    <input type="hidden" id="h_attn3_dob" name="attn3_dob">
+    <input type="hidden" id="h_attn3_country" name="attn3_country">
+    <input type="hidden" id="h_attn3_gender" name="attn3_gender">
+    <input type="hidden" id="h_attn3_contno" name="attn3_contno">
+    <input type="hidden" id="h_attn3_age" name="attn3_age">
+    <input type="hidden" id="h_attn3pass_expirydt" name="attn3pass_expirydt">
+    <input type="hidden" id="h_attn3_address" name="attn3_address">
+    <input type="hidden" id="h_attn3_email" name="attn3_email">
+  </div>
+
+  <div class="lg-page">
+
+  <div class="topbar">
+    <div>
+      <div class="page-title">Lead Generation</div>
+      <div class="breadcrumb">Home / Lead Generation</div>
+    </div>
+
+    <div class="lg-actions">
+      <button class="lg-btn" type="button" onclick="openPreview()">
+        <i class="fa-solid fa-eye"></i> Preview
+      </button>
+      <button class="lg-btn danger" type="button" onclick="resetAll()">
+        <i class="fa-solid fa-rotate-left"></i> Reset
+      </button>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      <div class="lg-alert {% if category == 'success' %}lg-alert-success{% else %}lg-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <section class="card lg-card">
+    <div class="card-head">
+      <div class="wizard-head" style="width:100%;">
+        <div class="stepper">
+          <div class="step active" id="step1"><span class="dot">1</span> Patient</div>
+          <div class="step" id="step2"><span class="dot">2</span> Attenders</div>
+          <div class="step" id="step3"><span class="dot">3</span> Hospital</div>
+        </div>
+        <div class="muted" style="font-weight:900;">Use Preview anytime to verify.</div>
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <div id="panel1">
+        <div class="section-title">Pick / Enter Patient</div>
+
+        <div class="qs">
+          <input class="input" id="patientSearch" placeholder="Search patient by Passport / Name / Contact..." />
+          <button class="lg-btn" type="button" onclick="scrollToDetails()">
+            <i class="fa-solid fa-arrow-down"></i> Details
+          </button>
+        </div>
+
+        <div class="table-scroll lead-grid" id="patientGridBox">
+          <table>
+            <thead>
+              <tr>
+                <th>Passport</th>
+                <th>Given Name</th>
+                <th>Short Name</th>
+                <th>DOB</th>
+                <th>Country</th>
+                <th>Gender</th>
+                <th>Passport Expiry Date</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Address</th>
+              </tr>
+            </thead>
+            <tbody id="patientTable"></tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <div class="pager-left">
+            <button class="page-btn" id="patientPrev" type="button" onclick="patientPrevPage()"><i class="fa-solid fa-angle-left"></i></button>
+            <button class="page-btn" id="patientNext" type="button" onclick="patientNextPage()"><i class="fa-solid fa-angle-right"></i></button>
+            <div class="pager-info" id="patientMeta">—</div>
+          </div>
+          <div class="pager-right">
+            <div class="pager-info">Rows per page</div>
+            <select class="page-size" id="patientPageSize" onchange="setPatientPageSize(this.value)">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hint">Tip: Click passport in the grid to auto-fill Patient Details below.</div>
+
+        <div class="details-wrap" id="patientDetailsBox">
+          <div class="details-head">
+            <div class="title"><i class="fa-solid fa-user"></i> Patient Details</div>
+            <div class="mini">Pick from grid OR type manually</div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field"><label>Passport No <span class="req">*</span></label><input id="patient_passport" name="patpassport_no"></div>
+            <div class="field"><label>Given Name <span class="req">*</span></label><input id="patient_given" name="patgiven_nm"></div>
+            <div class="field"><label>Short Name</label><input id="patient_sur" name="patsur_nm"></div>
+
+            <div class="field"><label>DOB <span class="req">*</span></label><input type="date" id="patient_dob" name="patient_dob"></div>
+            <div class="field"><label>Age</label><input id="patient_age" name="patient_age" readonly></div>
+            <div class="field">
+              <label>Gender <span class="req">*</span></label>
+              <select id="patient_gender" name="patient_gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+
+            <div class="field"><label>Country <span class="req">*</span></label><input id="patient_country" name="patient_country"></div>
+
+            <div class="field"><label>Passport Expiry Date</label><input type="date" id="patient_passport_expiry" name="patpass_expirydt"></div>
+
+            <div class="field"><label>Contact</label><input id="patient_contact" name="patient_contno"></div>
+            <div class="field"><label>Email</label><input id="patient_email" name="patient_email"></div>
+
+            <div class="field" style="grid-column:1/-1;"><label>Address</label><textarea id="patient_address" name="patient_address"></textarea></div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px;">
+            <button class="lg-btn" type="button" onclick="openDocsViewer('patient')"><i class="fa-solid fa-file-lines"></i> View Documents</button>
+            <button class="lg-btn" type="button" onclick="clearPatientForm()"><i class="fa-solid fa-eraser"></i> Clear</button>
+            <button class="lg-btn" type="button" onclick="scrollToGrid()"><i class="fa-solid fa-arrow-up"></i> Back to Grid</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel2" style="display:none;">
+        <div class="section-title">Attenders (Optional)</div>
+
+        <div class="hint">Add up to 3 attenders. Relationship field is mandatory for every added attender.</div>
+
+        <div class="chips" id="attenderChips"></div>
+
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="lg-btn primary" type="button" onclick="openAttenderModal()"><i class="fa-solid fa-user-plus"></i> Add Attender</button>
+          <button class="lg-btn" type="button" onclick="removeAllAttenders()"><i class="fa-solid fa-trash"></i> Clear Attenders</button>
+        </div>
+      </div>
+
+      <div id="panel3" style="display:none;">
+        <div class="section-title">Hospital & Appointment</div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Hospital <span class="req">*</span></label>
+            <select id="hospital" name="hospital_shrtnm" onchange="populateCity(); loadHospitalDepts();">
+              <option value="">Select Hospital</option>
+            </select>
+          </div>
+
+          <div class="field"><label>Hospital City</label><input id="hospitalCity" name="hospital_city" readonly></div>
+
+          <div class="field">
+            <label>Hospital Dept</label>
+            <select id="hospitalDept" name="hospital_dept" multiple size="4" style="min-height:110px;"></select>
+          </div>
+
+          <div class="field">
+            <label>Agent <span class="req">*</span></label>
+            <select id="agent" name="agent_shrtnm">
+              <option value="">Select Agent</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>IVAC <span class="req">*</span></label>
+            <select id="ivac" name="ivac_center">
+              <option value="">Select IVAC</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Doctor <span class="req">*</span></label>
+            <input id="doctor" name="doctor_nm" placeholder="{{ doctor_hint|default('Please enter multiple Doctors name with comma separated') }}">
+          </div>
+
+          <div class="field"><label>VIL Date</label><input type="date" id="vilDate" name="vil_date"></div>
+          <div class="field"><label>Appointment Date</label><input type="date" id="apptDate" name="appointment_dt"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Remarks</label><textarea id="remarks" name="wrkflw_remarks"></textarea></div>
+        </div>
+
+        <div class="hint">For Hospital Department, you can select multiple options using Ctrl / Cmd + Click.</div>
+
+        <div class="section-title" style="margin-top:16px;">Upload Documents</div>
+
+        <div class="upload-box">
+          <div class="upload-row">
+            <div class="file-input-wrap">
+              <input id="docFiles" name="lead_documents" type="file" multiple />
+            </div>
+
+            <div class="upload-meta">
+              <span class="badge" id="docTotalBadge"><i class="fa-solid fa-database"></i> Total: <span id="docTotalText">0 B</span> / 10 MB</span>
+              <span class="badge" id="docCountBadge"><i class="fa-solid fa-file"></i> Files: <span id="docCountText">0</span></span>
+              <button class="lg-btn" type="button" onclick="clearAllDocs()"><i class="fa-solid fa-trash"></i> Clear Files</button>
+            </div>
+          </div>
+
+          <div class="upload-note">Total upload size must be within <b>10 MB</b>. Remove files if it exceeds the limit.</div>
+
+          <div class="doc-list">
+            <div class="doc-list-head">
+              <div>List of Documents Uploaded</div>
+              <div class="muted" style="font-weight:900;" id="docHint">No documents selected</div>
+            </div>
+            <div class="doc-list-body" id="docListBody"></div>
+          </div>
+        </div>
+
+        <div class="hint">Use Preview before submitting to avoid mistakes.</div>
+      </div>
+
+      <div class="lg-sticky">
+        <div class="lg-status" id="statusText">Step 1 of 3 • Patient</div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="lg-btn" type="button" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+          <button class="lg-btn primary" id="nextBtn" type="button" onclick="goNext()">Next <i class="fa-solid fa-arrow-right"></i></button>
+          <button class="lg-btn primary" id="submitBtn" type="button" onclick="submitForm()" style="display:none;"><i class="fa-solid fa-paper-plane"></i> Submit</button>
+          <button class="lg-btn" type="button" onclick="openPreview()"><i class="fa-solid fa-eye"></i> Preview</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  </div>
+</form>
+
+<div class="overlay" id="drawerOverlay" onclick="closePreview(event)">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-head">
+      <div class="drawer-title"><i class="fa-solid fa-eye"></i> Lead Preview</div>
+      <button class="lg-btn" type="button" onclick="closePreview()"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+
+    <div class="kv" id="previewKV"></div>
+
+    <div class="mini-title">People</div>
+    <div class="table-scroll" style="max-height:240px;">
+      <table class="smalltable" style="min-width:700px;">
+        <thead><tr><th>Role</th><th>Relationship</th><th>Passport</th><th>Name</th><th>Contact</th></tr></thead>
+        <tbody id="previewPeople"></tbody>
+      </table>
+    </div>
+
+    <div class="mini-title">Documents</div>
+    <div class="table-scroll" style="max-height:220px;">
+      <table class="smalltable" style="min-width:560px;">
+        <thead><tr><th>#</th><th>File Name</th><th>Size</th></tr></thead>
+        <tbody id="previewDocs"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modalOverlay" onclick="closeAttenderModal(event)">
+  <div class="drawer wide" onclick="event.stopPropagation()">
+    <div class="drawer-head">
+      <div class="drawer-title"><i class="fa-solid fa-user-plus"></i> Add Attender</div>
+      <button class="lg-btn" type="button" onclick="closeAttenderModal()"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+
+    <div class="qs">
+      <input class="input" id="attSearch" placeholder="Search by Passport / Name / Contact..." />
+      <button class="lg-btn" type="button" onclick="openDocsViewer('attender')"><i class="fa-solid fa-file-lines"></i> View Docs</button>
+      <button class="lg-btn" type="button" onclick="clearAttenderForm()"><i class="fa-solid fa-eraser"></i> Clear</button>
+      <button class="lg-btn primary" type="button" onclick="saveAttenderFromForm()"><i class="fa-solid fa-check"></i> Add</button>
+    </div>
+
+    <div class="table-scroll lead-grid" style="max-height:220px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Passport</th><th>Given</th><th>Short</th><th>DOB</th><th>Country</th><th>Gender</th>
+            <th>Passport Expiry</th><th>Contact</th><th>Email</th><th>Address</th>
+          </tr>
+        </thead>
+        <tbody id="attTable"></tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      <div class="pager-left">
+        <button class="page-btn" id="attPrev" type="button" onclick="attPrevPage()"><i class="fa-solid fa-angle-left"></i></button>
+        <button class="page-btn" id="attNext" type="button" onclick="attNextPage()"><i class="fa-solid fa-angle-right"></i></button>
+        <div class="pager-info" id="attMeta">—</div>
+      </div>
+      <div class="pager-right">
+        <div class="pager-info">Rows per page</div>
+        <select class="page-size" id="attPageSize" onchange="setAttPageSize(this.value)">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <div class="form-grid">
+      <div class="field"><label>Passport No</label><input id="att_passport"></div>
+      <div class="field"><label>Given Name</label><input id="att_given"></div>
+      <div class="field"><label>Short Name</label><input id="att_sur"></div>
+
+      <div class="field"><label>DOB</label><input type="date" id="att_dob"></div>
+      <div class="field"><label>Age</label><input id="att_age" readonly></div>
+      <div class="field">
+        <label>Gender</label>
+        <select id="att_gender">
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Others">Others</option>
+        </select>
+      </div>
+
+      <div class="field"><label>Country</label><input id="att_country"></div>
+      <div class="field"><label>Passport Expiry Date</label><input type="date" id="att_passport_expiry"></div>
+      <div class="field"><label>Relationship <span class="req">*</span></label><input id="att_relationship" placeholder="Enter relationship"></div>
+
+      <div class="field"><label>Contact</label><input id="att_contact"></div>
+      <div class="field"><label>Email</label><input id="att_email"></div>
+
+      <div class="field" style="grid-column:1/-1;"><label>Address</label><textarea id="att_address"></textarea></div>
+    </div>
+
+    <div class="hint">Adds as Attender 1/2/3 automatically. Relationship field is mandatory.</div>
+  </div>
+</div>
+
+<div class="overlay" id="docsOverlay" onclick="closeDocsViewer(event)">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-head">
+      <div class="drawer-title"><i class="fa-solid fa-folder-open"></i> Documents</div>
+      <button class="lg-btn" type="button" onclick="closeDocsViewer()"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+
+    <div class="hint" id="docsTitle" style="margin-top:0;">—</div>
+
+    <div class="table-scroll" style="max-height:420px;margin-top:10px;">
+      <table class="smalltable" style="min-width:520px;">
+        <thead>
+          <tr><th>#</th><th>File Name</th><th>Type</th><th>Size</th><th>Action</th></tr>
+        </thead>
+        <tbody id="docsTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="patients-json" type="application/json">
+  {{ (patients | default([], true)) | tojson }}
+</script>
+<script id="hospitals-json" type="application/json">
+  {{ (hospitals | default([], true)) | tojson }}
+</script>
+<script id="agents-json" type="application/json">
+  {{ (agents | default([], true)) | tojson }}
+</script>
+<script id="ivacs-json" type="application/json">
+  {{ (ivacs | default([], true)) | tojson }}
+</script>
+<script id="flash-messages-json" type="application/json">
+  []
+</script>
+
+<script src="{{ url_for('static', filename='js/pages/leadgeneration.js') }}"></script>
+
+{% endblock %}

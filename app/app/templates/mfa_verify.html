@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>TERIQEN - Verification</title>
+  <style>body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;display:grid;place-items:center;min-height:100vh}.card{background:#fff;border:1px solid #dfe6ee;border-radius:14px;padding:28px;width:min(420px,90vw);box-shadow:0 12px 40px #0001}input{width:100%;box-sizing:border-box;padding:14px;font-size:22px;letter-spacing:5px;text-align:center;margin:14px 0;border:1px solid #cbd5e1;border-radius:9px}button{width:100%;padding:13px;border:0;border-radius:9px;background:#0b6e99;color:#fff;font-weight:700}.msg{margin:8px 0;color:#b42318}</style>
+</head>
+<body>
+  <div class="card">
+    <h2>Sign-in verification</h2>
+    <p>Enter the 6-digit code sent to your registered email.</p>
+    {% with messages=get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}<div class="msg">{{ message }}</div>{% endfor %}
+    {% endwith %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input name="otp_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+      <button type="submit">Verify &amp; Sign In</button>
+    </form>
+  </div>
+  <script>
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) window.location.reload();
+    });
+  </script>
+</body>
+</html>

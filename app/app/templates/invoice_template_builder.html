@@ -1,0 +1,2042 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if print_mode and invoice %}
+Tax Invoice | {{ invoice.get('invoice_number', '') }}
+{% else %}
+Invoice Template Builder
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if (template_data or {}).get('paper_size') == 'A4 Landscape' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoice_template_builder.css') }}">
+{% else %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoice_template_builder-2.css') }}">
+{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoice_template_builder-3.css') }}">
+
+{#
+  Fresh/New mode fix:
+  If user opens Invoice Template Builder directly without a template_code in the URL,
+  the form must open blank even if backend sends a default template_data such as INV_STD_DEFAULT.
+  Existing edit/view/print flow remains unchanged because td is preserved whenever template_code is present
+  or when the page is opened in print mode.
+#}
+{% set requested_template_code = request.args.get('template_code', '') if request is defined else '' %}
+{% set page_mode = page_mode or 'builder' %}
+{% set is_print_mode = print_mode or page_mode == 'print' %}
+{% set is_view_mode = (page_mode == 'view') and (not is_print_mode) %}
+{% set is_new_template_mode = (not is_print_mode) and (not requested_template_code) and (not is_view_mode) %}
+{% set td = {} if is_new_template_mode else (template_data or {}) %}
+{% set item_columns = td.get('item_columns', []) %}
+{% set field_library = field_library or {} %}
+{% set template_rows = template_grid_rows if template_grid_rows is defined and template_grid_rows else template_list %}
+{% set runtime = invoice_runtime_data or {} %}
+{% set runtime_invoice = runtime.get('invoice', invoice or {}) %}
+{% set runtime_items = runtime.get('items', items or []) %}
+{% set runtime_bill_to = runtime.get('bill_to', bill_to or {}) %}
+{% set runtime_company = runtime.get('company', company or {}) %}
+{% set runtime_placeholders = runtime.get('placeholders', runtime_placeholders or {}) %}
+
+<div class="invoice-template-page {% if is_print_mode %}itb-print-mode{% endif %}" id="invoiceTemplatePageRoot" data-invoice-number="{{ runtime_invoice.get('invoice_number') or (invoice.get('invoice_number') if invoice else '') }}">
+  <div class="itb-shell">
+
+    {% if success_message and not is_print_mode %}
+      <div class="itb-alert itb-alert-success">{{ success_message }}</div>
+    {% endif %}
+    {% if error_message and not is_print_mode %}
+      <div class="itb-alert itb-alert-error">{{ error_message }}</div>
+    {% endif %}
+
+    {% if not is_print_mode %}
+    <div class="itb-alert itb-alert-info itb-mode-banner" id="screenModeBanner" style="display:none;">
+      <span class="itb-badge" id="screenModeBadge"></span>
+      <span id="screenModeText"></span>
+    </div>
+
+    <div class="itb-page-title">
+      <div class="itb-page-title-left">
+        <h1>Invoice Template Builder</h1>
+        <p>Maintain invoice template, insert placeholders, and review template in side flap preview.</p>
+      </div>
+
+      <div class="itb-toolbar">
+        <button type="button" class="itb-btn itb-btn-light js-editable-only" id="clearBtn" onclick="clearTemplateForm()">Clear</button>
+        <button type="button" class="itb-btn itb-btn-danger js-editable-only" id="deleteBtn" onclick="deleteCurrentTemplate()">Delete</button>
+        <button type="button" class="itb-btn itb-btn-warning" id="previewBtn" onclick="previewTemplate()">Preview</button>
+        <button type="button" class="itb-btn itb-btn-primary js-editable-only" id="saveBtn" onclick="saveTemplate()">Save Template</button>
+      </div>
+    </div>
+
+    <div class="itb-card">
+      <div class="itb-card-head">
+        <div>
+          <h2>Template Master</h2>
+          <div class="meta">Maintain invoice layout master information</div>
+        </div>
+      </div>
+      <div class="itb-card-body">
+        <div class="itb-form-grid">
+           <div class="itb-field">
+           <label class="itb-label">Template Code</label>
+
+        <input
+        type="text"
+        class="itb-input"
+        id="template_code"
+        value="{{ td.get('template_code', '') }}"
+        {% if td.get('template_code') and not is_new_template_mode %}readonly{% endif %}
+         >
+        </div>
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Template Name</label>
+            <input type="text" class="itb-input js-master-input" id="template_name" value="{{ td.get('template_name', '') }}">
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Template Category</label>
+            <select class="itb-select js-master-input" id="template_category">
+              <option value="" {% if not td.get('template_category') %}selected{% endif %}>-- Select --</option>
+              <option value="Invoice Print" {% if td.get('template_category') == 'Invoice Print' %}selected{% endif %}>Invoice Print</option>
+              <option value="Credit Note Print" {% if td.get('template_category') == 'Credit Note Print' %}selected{% endif %}>Credit Note Print</option>
+              <option value="Debit Note Print" {% if td.get('template_category') == 'Debit Note Print' %}selected{% endif %}>Debit Note Print</option>
+            </select>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Paper Size</label>
+            <select class="itb-select js-master-input" id="paper_size">
+              <option value="" {% if not td.get('paper_size') %}selected{% endif %}>-- Select --</option>
+              <option value="A4 Portrait" {% if td.get('paper_size') == 'A4 Portrait' %}selected{% endif %}>A4 Portrait</option>
+              <option value="A4 Landscape" {% if td.get('paper_size') == 'A4 Landscape' %}selected{% endif %}>A4 Landscape</option>
+              <option value="Letter Portrait" {% if td.get('paper_size') == 'Letter Portrait' %}selected{% endif %}>Letter Portrait</option>
+            </select>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Status</label>
+            {% set current_template_status = (td.get('template_status', '') or '')|upper %}
+            <select class="itb-select js-master-input" id="template_status">
+              <option value="" {% if not current_template_status %}selected{% endif %}>-- Select --</option>
+              <option value="ACTIVE" {% if current_template_status == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+              <option value="INACTIVE" {% if current_template_status == 'INACTIVE' %}selected{% endif %}>INACTIVE</option>
+              <option value="DRAFT" {% if current_template_status == 'DRAFT' %}selected{% endif %}>DRAFT</option>
+            </select>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Applicable Module</label>
+            <select class="itb-select js-master-input" id="applicable_module">
+              <option value="" {% if not td.get('applicable_module') %}selected{% endif %}>-- Select --</option>
+              <option value="Invoice Management" {% if td.get('applicable_module') == 'Invoice Management' %}selected{% endif %}>Invoice Management</option>
+              <option value="Finance" {% if td.get('applicable_module') == 'Finance' %}selected{% endif %}>Finance</option>
+            </select>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Default Currency</label>
+            <select class="itb-select js-master-input" id="default_currency">
+              <option value="" {% if not td.get('default_currency') %}selected{% endif %}>-- Select --</option>
+              <option value="INR" {% if td.get('default_currency') == 'INR' %}selected{% endif %}>INR</option>
+              <option value="USD" {% if td.get('default_currency') == 'USD' %}selected{% endif %}>USD</option>
+              <option value="EUR" {% if td.get('default_currency') == 'EUR' %}selected{% endif %}>EUR</option>
+            </select>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Scope Type</label>
+            <select class="itb-select js-master-input" id="scope_type">
+              <option value="" {% if not td.get('scope_type') %}selected{% endif %}>-- Select --</option>
+              <option value="DEFAULT" {% if td.get('scope_type') == 'DEFAULT' %}selected{% endif %}>DEFAULT</option>
+              <option value="HOSPITAL" {% if td.get('scope_type') == 'HOSPITAL' %}selected{% endif %}>HOSPITAL</option>
+            </select>
+          </div>
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Narration</label>
+            <label class="itb-check-row" id="narrationCheckWrap">
+              <input
+                type="checkbox"
+                id="customer_narration"
+                class="js-master-input"
+                {% if td.get('customer_narration') in [true, 1, '1', 'Y', 'y', 'Yes', 'YES', 'true', 'True', 'on', 'ON'] %}checked{% endif %}
+              >
+              <span class="itb-check-copy">
+                <strong>NARRATION</strong>
+                <span>Enable user narration entry at invoice printing. Available only for Hospital scope templates.</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Hospital Name</label>
+            <input type="text" class="itb-input js-master-input" id="hospital_name" value="{{ td.get('hospital_name', '') }}">
+          </div>
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Logo Path / Upload Reference</label>
+            <input type="text" class="itb-input js-master-input" id="logo_path" value="{{ td.get('logo_path', '') }}">
+          </div>
+
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Invoice Row Combination</label>
+            <label class="itb-check-row">
+              <input type="checkbox" id="combine_selected_records_into_single_row" {% if td.get('combine_selected_records_into_single_row') %}checked{% endif %}>
+              <span class="itb-check-copy">
+                <strong>COMBINE RECORDS</strong>
+                <span>Combine Multiple Records</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Company Name</label>
+            <input type="text" class="itb-input js-master-input" id="company_name" value="{{ td.get('company_name', '') }}">
+          </div>
+
+          <div class="itb-field col-2">
+            <label class="itb-label">Company Address</label>
+            <input type="text" class="itb-input js-master-input" id="company_address" value="{{ td.get('company_address', '') }}">
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Company GSTIN</label>
+            <input type="text" class="itb-input js-master-input" id="company_gstin" value="{{ td.get('company_gstin', '') }}">
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Company Email</label>
+            <input type="text" class="itb-input js-master-input" id="company_email" value="{{ td.get('company_email', '') }}">
+          </div>
+
+          <div class="itb-field">
+            <label class="itb-label">Company Phone</label>
+            <input type="text" class="itb-input js-master-input" id="company_phone" value="{{ td.get('company_phone', '') }}">
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="itb-builder-layout">
+      {% if not is_print_mode %}
+      <div class="itb-card">
+        <div class="itb-card-head">
+          <div>
+            <h2>Field Library</h2>
+            <div class="meta">Use placeholder name for quick understanding</div>
+          </div>
+        </div>
+        <div class="itb-card-body">
+          <div class="itb-library-tools">
+            <div class="itb-library-search">
+              <input type="text" id="fieldLibrarySearch" placeholder="Search placeholder..." onkeyup="filterFieldLibraryTable(this.value)">
+            </div>
+            <div class="itb-library-pagination">
+              <button type="button" class="itb-btn itb-btn-light itb-btn-sm" id="fieldLibraryPrevBtn">Prev</button>
+              <span class="itb-library-meta" id="fieldLibraryPageMeta">Page 1</span>
+              <button type="button" class="itb-btn itb-btn-light itb-btn-sm" id="fieldLibraryNextBtn">Next</button>
+            </div>
+          </div>
+
+          <div class="itb-table-wrap">
+            <table class="itb-table" id="fieldLibraryTable">
+              <thead>
+                <tr>
+                  <th style="width:180px;">Section</th>
+                  <th style="width:240px;">Placeholder Name</th>
+                  <th>Placeholder</th>
+                  <th style="width:110px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="fieldLibraryBody">
+                {% for token in field_library.get('invoice_details', []) %}
+                <tr class="itb-library-row">
+                  <td>Invoice Details</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+
+                {% for token in field_library.get('hospital_details', []) %}
+                <tr class="itb-library-row">
+                  <td>Hospital / Bill To</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+
+                {% for token in field_library.get('patient_workflow', []) %}
+                <tr class="itb-library-row">
+                  <td>Patient / Workflow</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+
+                {% for token in field_library.get('item_fields', []) %}
+                <tr class="itb-library-row">
+                  <td>Item Table Fields</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+
+                {% for token in field_library.get('financials', []) %}
+                <tr class="itb-library-row">
+                  <td>Financials</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+
+                {% for token in field_library.get('system_footer', []) %}
+                <tr class="itb-library-row">
+                  <td>System / Footer</td>
+                  <td>{{ token|replace('{','')|replace('}','')|replace('.',' ')|replace('_',' ')|title }}</td>
+                  <td><code>{{ token }}</code></td>
+                  <td><button type="button" class="itb-btn itb-btn-light itb-btn-sm js-insert-token" data-token="{{ token }}">Insert</button></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="itb-card {% if is_print_mode %}itb-print-card{% endif %}">
+        <div class="itb-card-head itb-builder-only">
+          <div>
+            <h3>Layout Builder - Invoice Prototype</h3>
+            <div class="meta" id="builderMetaText">Click inside any field, then insert placeholder from field library</div>
+          </div>
+        </div>
+        <div class="itb-card-body">
+          {% if is_print_mode %}
+          <div class="itb-print-toolbar">
+            <button type="button" class="itb-btn itb-btn-primary" onclick="printInvoiceOnly()">Print / Save PDF</button>
+          </div>
+          {% endif %}
+          <div class="itb-prototype-shell">
+            <div class="itb-a4">
+
+              {% if not is_print_mode %}
+              <div class="itb-proto-header">
+                <div class="itb-proto-company-wrap">
+                  <div class="itb-logo-box">Logo</div>
+                  <div class="itb-proto-company">
+                    <h3 id="protoCompanyHeading">{{ td.get('company_name', '') or 'Company Name' }}</h3>
+                    <div class="itb-proto-meta" id="protoCompanyMeta"></div>
+                  </div>
+                </div>
+
+                <div class="itb-proto-title">
+                  <div class="doc">TAX INVOICE</div>
+                </div>
+              </div>
+
+              <div class="itb-proto-top">
+                <div class="itb-proto-panel">
+                  <h4>Bill To</h4>
+                  <div class="itb-billto-editor">
+                    <div class="itb-field-row">
+                      <label class="itb-inline-note">Bill To Name Placeholder</label>
+                      <input type="text" id="proto_bill_to_name" class="itb-input itb-billto-name-input proto-focusable js-prototype-control" value="{{ td.get('proto_bill_to_name', '') }}" placeholder="Insert bill to name placeholder">
+                    </div>
+                    <div class="itb-field-row">
+                      <label class="itb-inline-note">Bill To Body Placeholder</label>
+                      <textarea id="proto_bill_to_body" class="itb-textarea itb-billto-body-input itb-proto-editable js-prototype-control" placeholder="Insert bill to address / GST / city placeholders">{{ td.get('proto_bill_to_body', td.get('proto_bill_to', '')) }}</textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="itb-proto-panel">
+                  <h4>Invoice Information</h4>
+                  <div class="itb-info-grid">
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Invoice Date</div>
+                      <input type="text" id="proto_invoice_date" class="proto-focusable js-prototype-control" value="{{ td.get('proto_invoice_date', '') }}" placeholder="Placeholder">
+                    </div>
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Due Date</div>
+                      <input type="text" id="proto_due_date" class="proto-focusable js-prototype-control" value="{{ td.get('proto_due_date', '') }}" placeholder="Placeholder">
+                    </div>
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Currency</div>
+                      <input type="text" id="proto_currency" class="proto-focusable js-prototype-control" value="{{ td.get('proto_currency', '') }}" placeholder="Placeholder">
+                    </div>
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Invoice Number</div>
+                      <input type="text" id="proto_invoice_number" class="proto-focusable js-prototype-control" value="{{ td.get('proto_invoice_number', '') }}" placeholder="Placeholder">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="itb-proto-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width:80px;">Column</th>
+                      <th style="width:170px;">Label</th>
+                      <th>Placeholder / Formula</th>
+                    </tr>
+                  </thead>
+                  <tbody id="itemColumnsBody">
+                    {% if item_columns %}
+                      {% for row in item_columns %}
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="{{ row.get('display_order', loop.index) }}"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="{{ row.get('column_label', '') }}"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value="{{ row.get('field_key', '') }}"></td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="1"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="Sl"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+                      </tr>
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="2"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="Description"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+                      </tr>
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="3"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="Qty"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+                      </tr>
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="4"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="Rate"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+                      </tr>
+                      <tr>
+                        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="5"></td>
+                        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="Amount"></td>
+                        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="itb-inline-actions">
+                <div class="itb-grid-tools-left">
+                  <button type="button" class="itb-btn itb-btn-primary js-editable-only" onclick="addItemColumnRow()">Add Row</button>
+                  <button type="button" class="itb-btn itb-btn-danger js-editable-only" onclick="deleteLastItemRow()">Delete Last Row</button>
+                </div>
+                <div class="itb-grid-tools-right">
+                  <span class="itb-required-chip" id="prototypeChipText">Click in any field, then use Insert</span>
+                </div>
+              </div>
+
+              <div class="itb-proto-bottom">
+                <div class="itb-notes-box">
+                  <h4>Notes</h4>
+                  <textarea id="notes_text" class="itb-proto-editable js-prototype-control">{{ td.get('notes_text', '') }}</textarea>
+                </div>
+
+                <div class="itb-total-box">
+                  <div class="itb-total-row">
+                    <span>Total Invoice Amount</span>
+                    <input type="text" id="proto_total_invoice_amount" class="itb-total-input proto-focusable js-prototype-control" value="{{ td.get('proto_total_invoice_amount', '') }}" placeholder="Placeholder">
+                  </div>
+                  <div class="itb-total-row">
+                    <span>Total GST Amount</span>
+                    <input type="text" id="proto_total_tax_amount" class="itb-total-input proto-focusable js-prototype-control" value="{{ td.get('proto_total_tax_amount', '') }}" placeholder="Placeholder">
+                  </div>
+                  <div class="itb-total-row">
+                    <span>Total TDS Amount</span>
+                    <input type="text" id="proto_total_tds_amount" class="itb-total-input proto-focusable js-prototype-control" value="{{ td.get('proto_total_tds_amount', '') }}" placeholder="Placeholder">
+                  </div>
+                  <div class="itb-total-row grand">
+                    <span>Net Amount</span>
+                    <input type="text" id="proto_net_amount" class="itb-total-input proto-focusable js-prototype-control" value="{{ td.get('proto_net_amount', '') }}" placeholder="Placeholder">
+                  </div>
+                </div>
+              </div>
+
+              <div class="itb-proto-footer" id="protoFooterText">
+                This is a system-generated invoice.<span id="protoFooterCompany" style="display:none"></span>
+              </div>
+              {% else %}
+              <div class="itb-repeat-header">
+              <div class="itb-proto-header">
+                <div class="itb-proto-company-wrap">
+                  <div class="itb-logo-box">
+                    {% if company_logo_url %}
+                      <img src="{{ company_logo_url }}" alt="Company Logo">
+                    {% else %}
+                      Logo
+                    {% endif %}
+                  </div>
+                  <div class="itb-proto-company">
+                    <h3>{{ runtime_company.get('company_name') or td.get('company_name') or '' }}</h3>
+                    <div class="itb-proto-meta">
+                      {% set company_meta_lines = [] %}
+                      {% if runtime_company.get('address') %}{% set _ = company_meta_lines.append(runtime_company.get('address')) %}{% endif %}
+                      {% if runtime_company.get('gstin') %}{% set _ = company_meta_lines.append('GSTIN: ' ~ runtime_company.get('gstin')) %}{% endif %}
+                      {% if runtime_company.get('email') or runtime_company.get('phone') %}
+                        {% set contact_line = '' %}
+                        {% if runtime_company.get('email') %}{% set contact_line = contact_line ~ 'Email: ' ~ runtime_company.get('email') %}{% endif %}
+                        {% if runtime_company.get('email') and runtime_company.get('phone') %}{% set contact_line = contact_line ~ ' | ' %}{% endif %}
+                        {% if runtime_company.get('phone') %}{% set contact_line = contact_line ~ 'Phone: ' ~ runtime_company.get('phone') %}{% endif %}
+                        {% set _ = company_meta_lines.append(contact_line) %}
+                      {% endif %}
+                      {{ company_meta_lines|join(' | ') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="itb-proto-title">
+                  <div class="doc">TAX INVOICE</div>
+                  <div class="no">{{ runtime_placeholders.get('invoice_number') or runtime_invoice.get('invoice_number') or '' }}</div>
+                </div>
+              </div>
+
+              <div class="itb-proto-top">
+                <div class="itb-proto-panel">
+                  <h4>Bill To</h4>
+                  {# ---------------------------------------------------------
+                     PRINT MODE - BILL TO
+                     Use the SAVED Invoice Template fields as authority.
+                     --------------------------------------------------------- #}
+
+                  {% set bill_name_ns = namespace(
+                       value=(td.get('proto_bill_to_name', '') or '')
+                  ) %}
+
+                  {% set bill_body_ns = namespace(
+                       value=(
+                         td.get(
+                           'proto_bill_to_body',
+                           td.get('proto_bill_to', '')
+                         ) or ''
+                       )
+                  ) %}
+
+                  {# Resolve every {{placeholder}} from runtime data #}
+                  {% for placeholder_key, placeholder_value in runtime_placeholders.items() %}
+
+                    {% set token_compact =
+                         '{{' ~ placeholder_key ~ '}}' %}
+
+                    {% set token_spaced =
+                         '{{ ' ~ placeholder_key ~ ' }}' %}
+
+                    {% set bill_name_ns.value =
+                         bill_name_ns.value
+                         |replace(token_compact, placeholder_value|string)
+                         |replace(token_spaced, placeholder_value|string)
+                    %}
+
+                    {% set bill_body_ns.value =
+                         bill_body_ns.value
+                         |replace(token_compact, placeholder_value|string)
+                         |replace(token_spaced, placeholder_value|string)
+                    %}
+
+                  {% endfor %}
+
+                  <div class="itb-preview-billto-name" style="font-size:16px;">
+                    {{
+                      bill_name_ns.value
+                      or runtime_placeholders.get('partner_legal_name')
+                      or runtime_placeholders.get('bill_to_name')
+                      or runtime_bill_to.get('name')
+                      or ''
+                    }}
+                  </div>
+
+                  <div class="itb-preview-billto-body"
+                       style="margin-top:10px; white-space:pre-line;">{{ bill_body_ns.value }}</div>
+                </div>
+
+                <div class="itb-proto-panel">
+                  <h4>Invoice Information</h4>
+                  <div class="itb-info-grid">
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Invoice Date</div>
+                      <div class="itb-print-value">{{ runtime_invoice.get('invoice_date') or runtime_placeholders.get('invoice_date') or '' }}</div>
+                    </div>
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Due Date</div>
+                      <div class="itb-print-value">{{ runtime_invoice.get('due_date') or runtime_placeholders.get('due_date') or '' }}</div>
+                    </div>
+                    <div class="itb-info-box">
+                      <div class="itb-info-box-label">Currency</div>
+                      <div class="itb-print-value">{{ runtime_invoice.get('currency') or runtime_placeholders.get('currency') or '' }}</div>
+                    </div>
+                    <div class="itb-info-box itb-runtime-invoice-number-box">
+                      <div class="itb-info-box-label">Invoice Number</div>
+                      <div class="itb-print-value">{{ runtime_invoice.get('invoice_number') or runtime_placeholders.get('invoice_number') or '' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              </div>
+
+
+              {# CADUPIUS_PRINT_FOOTER_EARLY_V1 #}
+              <div class="itb-running-footer itb-print-only-footer">
+                <div class="itb-approved-wave itb-approved-wave-one"></div>
+                <div class="itb-approved-wave itb-approved-wave-two"></div>
+
+                <div class="itb-running-page-number"></div>
+              </div>
+
+
+              {# CADUPIUS_RUNNING_PAGE_LAYOUT_V1 #}
+
+              {#
+                 No fixed maximum number of records per page.
+
+                 All records except the final record flow naturally.
+                 The final record stays together with:
+                 Notes / Totals / Terms / Thank You.
+
+                 This prevents a closing-only final page.
+              #}
+
+              {#
+                 Small invoices should remain a single table, otherwise
+                 the second table header appears again on the same page.
+
+                 6 is a safe threshold for the current approved layout:
+                 all rows + Notes + Totals + Terms fit on one page.
+              #}
+              {% set single_page_item_threshold = 6 %}
+
+              {% set all_items_on_single_page =
+                   (runtime_items|length <= single_page_item_threshold) %}
+
+              {% if runtime_items %}
+                {% if all_items_on_single_page %}
+                  {% set lead_items = [] %}
+                  {% set final_items = runtime_items %}
+                {% else %}
+                  {% set lead_items = runtime_items[:-1] %}
+                  {% set final_items = runtime_items[-1:] %}
+                {% endif %}
+              {% else %}
+                {% set lead_items = [] %}
+                {% set final_items = [] %}
+              {% endif %}
+
+
+              {% if lead_items %}
+              <div class="itb-proto-table">
+                <table>
+                  <thead>
+                    <tr>
+                      {% set print_columns = item_columns if item_columns else [
+                        {'column_label':'Sl','field_key':'{{loop.index}}'},
+                        {'column_label':'Description','field_key':'{{item.description}}'},
+                        {'column_label':'Qty','field_key':'{{item.qty}}'},
+                        {'column_label':'Rate','field_key':'{{item.rate}}'},
+                        {'column_label':'Amount','field_key':'{{item.amount}}'}
+                      ] %}
+                      {% for col in print_columns if col.get('column_label') %}
+                        {% set key = (col.get('field_key') or '')|trim %}
+                        <th data-itb-col="{{ (col.get('column_label') or '')|trim|lower }}" class="{% if key in ['{{item.rate}}', '{{item.amount}}', '{{inv_amount}}', '{{sumof_invamnt}}'] %}itb-ta-right{% elif key == '{{item.qty}}' %}itb-ta-center{% endif %}">{{ col.get('column_label') }}</th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if lead_items %}
+                      {% for item in lead_items %}
+                      <tr>
+                        {% for col in print_columns if col.get('column_label') %}
+                          {% set key = (col.get('field_key') or '')|trim %}
+                          <td data-itb-col="{{ (col.get('column_label') or '')|trim|lower }}" class="{% if key in ['{{item.rate}}', '{{item.amount}}', '{{inv_amount}}', '{{sumof_invamnt}}'] %}itb-ta-right{% elif key == '{{item.qty}}' %}itb-ta-center{% endif %}">
+                            {% if (col.get('column_label') or '')|trim|upper == 'DESCRIPTION' and key and ('{{' not in key and '}}' not in key) %}
+                              {{ key }}
+                            {% elif key in ['{{loop.index}}', '{{sl_no}}', '{{item.sl_no}}', '{{loop_index}}'] %}
+                              {{ item.get('sl_no', item.get('loop_index', loop.index)) }}
+                            {% elif key in ['{{loop.index0}}', '{{loop_index0}}', '{{item.loop_index0}}'] %}
+                              {{ item.get('loop_index0', loop.index0) }}
+                            {% elif key in ['{{loop.revindex}}', '{{loop_revindex}}', '{{item.loop_revindex}}'] %}
+                              {{ item.get('loop_revindex', loop.revindex) }}
+                            {% elif key == '{{item.description}}' %}
+                              {{ item.get('description', '') }}
+                            {% elif key == '{{item.qty}}' %}
+                              {{ item.get('qty', 1) }}
+                            {% elif key in ['{{item.rate}}', '{{inv_amount}}'] %}
+                              {{ '{:,.2f}'.format(item.get('rate', item.get('inv_amount', 0))|float) }}
+                            {% elif key in ['{{item.amount}}', '{{sumof_invamnt}}'] %}
+                              {{ '{:,.2f}'.format(item.get('amount', item.get('inv_amount', 0))|float) }}
+                            {% elif key == '{{item.sac_code}}' %}
+                              {{ item.get('sac_code', '') }}
+                            {% elif key == '{{item.remarks}}' %}
+                              {{ item.get('remarks', '') }}
+                            {% elif key == '{{gst_percentage}}' %}
+                              {{ item.get('gst_percentage', '') }}
+                            {% elif key == '{{tds_percentage}}' %}
+                              {{ item.get('tds_percentage', '') }}
+                            {% elif runtime_placeholders.get(key|replace('{{','')|replace('}}','')|trim) is not none %}
+                              {{ runtime_placeholders.get(key|replace('{{','')|replace('}}','')|trim) }}
+                            {% else %}
+                              {% set resolved_text = key
+                                |replace('{{loop.index}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ loop.index }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{sl_no}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ sl_no }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{item.sl_no}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ item.sl_no }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{loop.index0}}', item.get('loop_index0', loop.index0)|string)
+                                |replace('{{ loop.index0 }}', item.get('loop_index0', loop.index0)|string)
+                                |replace('{{loop.revindex}}', item.get('loop_revindex', loop.revindex)|string)
+                                |replace('{{ loop.revindex }}', item.get('loop_revindex', loop.revindex)|string)
+                                |replace('{{patient_name}}', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('{{ patient_name }}', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('patient_name', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('{{patient_passport}}', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('{{ patient_passport }}', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('patient_passport', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('{{ld_internalno}}', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('{{ ld_internalno }}', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('ld_internalno', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('{{custom_narration}}', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{ custom_narration }}', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('custom_narration', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{cutom_narration}}', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{ cutom_narration }}', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                                |replace('cutom_narration', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                              %}
+                              {{ resolved_text }}
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="{{ print_columns|length }}">No item rows available.</td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+
+
+              {% endif %}
+
+
+              <div class="itb-final-page-cluster{% if lead_items %} itb-final-page-cluster-continuation{% endif %}">
+
+              <div class="itb-proto-table">
+                <table>
+                  <thead>
+                    <tr>
+                      {% set print_columns = item_columns if item_columns else [
+                        {'column_label':'Sl','field_key':'{{loop.index}}'},
+                        {'column_label':'Description','field_key':'{{item.description}}'},
+                        {'column_label':'Qty','field_key':'{{item.qty}}'},
+                        {'column_label':'Rate','field_key':'{{item.rate}}'},
+                        {'column_label':'Amount','field_key':'{{item.amount}}'}
+                      ] %}
+                      {% for col in print_columns if col.get('column_label') %}
+                        {% set key = (col.get('field_key') or '')|trim %}
+                        <th data-itb-col="{{ (col.get('column_label') or '')|trim|lower }}" class="{% if key in ['{{item.rate}}', '{{item.amount}}', '{{inv_amount}}', '{{sumof_invamnt}}'] %}itb-ta-right{% elif key == '{{item.qty}}' %}itb-ta-center{% endif %}">{{ col.get('column_label') }}</th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if final_items %}
+                      {% for item in final_items %}
+                      <tr>
+                        {% for col in print_columns if col.get('column_label') %}
+                          {% set key = (col.get('field_key') or '')|trim %}
+                          <td data-itb-col="{{ (col.get('column_label') or '')|trim|lower }}" class="{% if key in ['{{item.rate}}', '{{item.amount}}', '{{inv_amount}}', '{{sumof_invamnt}}'] %}itb-ta-right{% elif key == '{{item.qty}}' %}itb-ta-center{% endif %}">
+                            {% if (col.get('column_label') or '')|trim|upper == 'DESCRIPTION' and key and ('{{' not in key and '}}' not in key) %}
+                              {{ key }}
+                            {% elif key in ['{{loop.index}}', '{{sl_no}}', '{{item.sl_no}}', '{{loop_index}}'] %}
+                              {{ item.get('sl_no', item.get('loop_index', loop.index)) }}
+                            {% elif key in ['{{loop.index0}}', '{{loop_index0}}', '{{item.loop_index0}}'] %}
+                              {{ item.get('loop_index0', loop.index0) }}
+                            {% elif key in ['{{loop.revindex}}', '{{loop_revindex}}', '{{item.loop_revindex}}'] %}
+                              {{ item.get('loop_revindex', loop.revindex) }}
+                            {% elif key == '{{item.description}}' %}
+                              {{ item.get('description', '') }}
+                            {% elif key == '{{item.qty}}' %}
+                              {{ item.get('qty', 1) }}
+                            {% elif key in ['{{item.rate}}', '{{inv_amount}}'] %}
+                              {{ '{:,.2f}'.format(item.get('rate', item.get('inv_amount', 0))|float) }}
+                            {% elif key in ['{{item.amount}}', '{{sumof_invamnt}}'] %}
+                              {{ '{:,.2f}'.format(item.get('amount', item.get('inv_amount', 0))|float) }}
+                            {% elif key == '{{item.sac_code}}' %}
+                              {{ item.get('sac_code', '') }}
+                            {% elif key == '{{item.remarks}}' %}
+                              {{ item.get('remarks', '') }}
+                            {% elif key == '{{gst_percentage}}' %}
+                              {{ item.get('gst_percentage', '') }}
+                            {% elif key == '{{tds_percentage}}' %}
+                              {{ item.get('tds_percentage', '') }}
+                            {% elif runtime_placeholders.get(key|replace('{{','')|replace('}}','')|trim) is not none %}
+                              {{ runtime_placeholders.get(key|replace('{{','')|replace('}}','')|trim) }}
+                            {% else %}
+                              {% set resolved_text = key
+                                |replace('{{loop.index}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ loop.index }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{sl_no}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ sl_no }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{item.sl_no}}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{ item.sl_no }}', item.get('sl_no', item.get('loop_index', loop.index))|string)
+                                |replace('{{loop.index0}}', item.get('loop_index0', loop.index0)|string)
+                                |replace('{{ loop.index0 }}', item.get('loop_index0', loop.index0)|string)
+                                |replace('{{loop.revindex}}', item.get('loop_revindex', loop.revindex)|string)
+                                |replace('{{ loop.revindex }}', item.get('loop_revindex', loop.revindex)|string)
+                                |replace('{{patient_name}}', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('{{ patient_name }}', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('patient_name', item.get('patient_name', '') or runtime_placeholders.get('patient_name', ''))
+                                |replace('{{patient_passport}}', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('{{ patient_passport }}', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('patient_passport', item.get('patient_passport', '') or runtime_placeholders.get('patient_passport', ''))
+                                |replace('{{ld_internalno}}', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('{{ ld_internalno }}', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('ld_internalno', item.get('ld_internalno', '') or runtime_placeholders.get('ld_internalno', ''))
+                                |replace('{{custom_narration}}', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{ custom_narration }}', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('custom_narration', runtime_placeholders.get('custom_narration', '') or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{cutom_narration}}', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                                |replace('{{ cutom_narration }}', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                                |replace('cutom_narration', runtime_placeholders.get('cutom_narration', runtime_placeholders.get('custom_narration', '')) or runtime_invoice.get('custom_narration', ''))
+                              %}
+                              {{ resolved_text }}
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="{{ print_columns|length }}">No item rows available.</td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="itb-final-closing">
+              <div class="itb-proto-bottom">
+                <div class="itb-notes-box">
+                  <h4>Notes</h4>
+                  <div class="itb-notes-print">{{ runtime_placeholders.get('notes_text') or runtime_invoice.get('notes') or '' }}</div>
+                  {% if runtime_invoice.get('combine_selected_records_into_single_row') and runtime_invoice.get('selected_records')|int > 1 %}
+                  <div class="itb-proto-meta" style="margin-top:10px;">Combined Invoice Table Mode: {{ runtime_invoice.get('selected_records') }} patient records shown as 1 invoice table row.</div>
+                  {% endif %}
+                </div>
+
+                <div class="itb-total-box">
+                  {% set total_invoice_display = runtime_placeholders.get('inv_amount_display') or runtime_placeholders.get('sumof_invamnt_display') or runtime_invoice.get('netinv_amount') or '' %}
+                  {% set total_gst_display = runtime_placeholders.get('totalgst_amount_display') or runtime_invoice.get('netgst_amount') or '' %}
+                  {% set total_tds_display = runtime_placeholders.get('totaltds_amount_display') or runtime_invoice.get('nettds_amount') or '' %}
+                  {% set total_net_display = runtime_placeholders.get('totalinv_amount_display') or runtime_invoice.get('totalinv_amount') or '' %}
+
+                  {% set proto_total_invoice = (td.get('proto_total_invoice_amount', '') or '')|trim %}
+                  {% set proto_total_gst = (td.get('proto_total_tax_amount', '') or '')|trim %}
+                  {% set proto_total_tds = (td.get('proto_total_tds_amount', '') or '')|trim %}
+                  {% set proto_net_amount = (td.get('proto_net_amount', '') or '')|trim %}
+
+                  {% set rendered_total_invoice = proto_total_invoice
+                    |replace('{{inv_amount}}', total_invoice_display|string)
+                    |replace('{{ inv_amount }}', total_invoice_display|string)
+                    |replace('{{sumof_invamnt}}', total_invoice_display|string)
+                    |replace('{{ sumof_invamnt }}', total_invoice_display|string)
+                    |replace('{{inv_amount_display}}', total_invoice_display|string)
+                    |replace('{{ inv_amount_display }}', total_invoice_display|string)
+                    |replace('{{sumof_invamnt_display}}', total_invoice_display|string)
+                    |replace('{{ sumof_invamnt_display }}', total_invoice_display|string) %}
+
+                  {% set rendered_total_gst = proto_total_gst
+                    |replace('{{totalgst_amount}}', total_gst_display|string)
+                    |replace('{{ totalgst_amount }}', total_gst_display|string)
+                    |replace('{{totalgst_amount_display}}', total_gst_display|string)
+                    |replace('{{ totalgst_amount_display }}', total_gst_display|string) %}
+
+                  {% set rendered_total_tds = proto_total_tds
+                    |replace('{{totaltds_amount}}', total_tds_display|string)
+                    |replace('{{ totaltds_amount }}', total_tds_display|string)
+                    |replace('{{totaltds_amount_display}}', total_tds_display|string)
+                    |replace('{{ totaltds_amount_display }}', total_tds_display|string) %}
+
+                  {% set rendered_net_amount = proto_net_amount
+                    |replace('{{totalinv_amount}}', total_net_display|string)
+                    |replace('{{ totalinv_amount }}', total_net_display|string)
+                    |replace('{{totalinv_amount_display}}', total_net_display|string)
+                    |replace('{{ totalinv_amount_display }}', total_net_display|string) %}
+
+                  <div class="itb-total-row">
+                    <span>Total Invoice Amount</span>
+                    <span class="itb-print-value">{{ rendered_total_invoice if proto_total_invoice else total_invoice_display }}</span>
+                  </div>
+                  <div class="itb-total-row">
+                    <span>Total GST Amount</span>
+                    <span class="itb-print-value">{{ rendered_total_gst if proto_total_gst else total_gst_display }}</span>
+                  </div>
+                  <div class="itb-total-row">
+                    <span>Total TDS Amount</span>
+                    <span class="itb-print-value">{{ rendered_total_tds if proto_total_tds else total_tds_display }}</span>
+                  </div>
+                  <div class="itb-total-row grand">
+                    <span>Net Amount</span>
+                    <span class="itb-print-value">{{ rendered_net_amount if proto_net_amount else total_net_display }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="itb-approved-terms">
+                <div class="itb-approved-terms-title">TERMS &amp; CONDITIONS</div>
+                <ol>
+                  <li>Please make the payment within the due date mentioned above.</li>
+                  <li>Payment may be made via bank transfer to the account details shared separately.</li>
+                  <li>In case of any discrepancy, please contact us within 7 days of receipt of this invoice.</li>
+                  <li>This is a computer generated invoice and does not require a signature.</li>
+                </ol>
+              </div>
+
+              <div class="itb-approved-thankyou">
+                <div class="itb-approved-thankyou-line">
+                  <span></span>
+                  <strong>Thank you for your business!</strong>
+                  <span></span>
+                </div>
+                <div class="itb-approved-company-footer">
+                  Cadupius Healthassist Pvt. Ltd.
+                </div>
+              </div>
+
+              <div class="itb-approved-page-footer">
+                <div class="itb-approved-website">
+                  www.cadupiushealthassist.com
+                </div>
+                <div class="itb-approved-tagline">
+                  A truly Global Medical Value Facilitator
+                </div>
+              </div>
+
+              </div>
+
+
+
+              </div>
+
+
+
+              {% endif %}
+            </div>
+          </div>
+
+          {% if not is_print_mode %}
+          <input type="hidden" id="template_description" value="{{ td.get('template_description', '') }}">
+          {% endif %}
+        </div>
+      </div>
+
+      {% if not is_print_mode %}
+      <div class="itb-card">
+        <div class="itb-card-head">
+          <div>
+            <h2>Saved Templates</h2>
+            <div class="meta">Moved below layout builder prototype section</div>
+          </div>
+        </div>
+        <div class="itb-card-body">
+          <div class="itb-grid-tools">
+            <div class="itb-grid-tools-left">
+              <input
+                type="text"
+                id="savedTemplatesSearch"
+                class="itb-input"
+                placeholder="Search template code, name, hospital, module, status..."
+                style="min-width:320px; max-width:420px;"
+                onkeyup="filterSavedTemplates(this.value)"
+              >
+            </div>
+            <div class="itb-grid-tools-right">
+              <span class="itb-muted">Total Records: <strong id="savedTemplateCount">{{ template_rows|length }}</strong></span>
+            </div>
+          </div>
+
+          <div class="itb-record-grid-wrap">
+            <table class="itb-record-grid" id="savedTemplatesGrid">
+              <thead>
+                <tr>
+                  <th style="width:120px;">Action</th>
+                  <th style="width:160px;">Template Code</th>
+                  <th style="width:220px;">Template Name</th>
+                  <th style="width:140px;">Category</th>
+                  <th style="width:140px;">Module</th>
+                  <th style="width:120px;">Scope</th>
+                  <th style="width:220px;">Hospital</th>
+                  <th style="width:110px;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="savedTemplatesBody">
+                {% if template_rows %}
+                  {% for row in template_rows %}
+                  <tr class="itb-saved-row">
+                    <td>
+                      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button
+                          type="button"
+                          class="itb-btn itb-btn-light itb-btn-sm js-edit-template"
+                          data-template-code="{{ row.get('template_code', '') }}"
+                        >Edit</button>
+                        <button
+                          type="button"
+                          class="itb-btn itb-btn-danger itb-btn-sm js-delete-template"
+                          data-template-code="{{ row.get('template_code', '') }}"
+                        >Delete</button>
+                      </div>
+                    </td>
+                    <td>
+                      <a href="javascript:void(0)" class="itb-link js-open-template" data-template-code="{{ row.get('template_code', '') }}">
+                        {{ row.get('template_code', '') }}
+                      </a>
+                    </td>
+                    <td>{{ row.get('template_name', '') }}</td>
+                    <td>{{ row.get('template_category', '') }}</td>
+                    <td>{{ row.get('applicable_module', '') }}</td>
+                    <td>{{ row.get('scope_type', '') }}</td>
+                    <td>{{ row.get('hospital_name', '') }}</td>
+                    <td>
+                      {% set row_status = (row.get('template_status', '') or '')|upper %}
+                      {% if row_status == 'ACTIVE' %}
+                        <span class="itb-badge itb-badge-active">ACTIVE</span>
+                      {% elif row_status == 'INACTIVE' %}
+                        <span class="itb-badge itb-badge-inactive">INACTIVE</span>
+                      {% elif row_status == 'DRAFT' %}
+                        <span class="itb-badge itb-badge-draft">DRAFT</span>
+                      {% else %}
+                        <span class="itb-badge itb-badge-draft">{{ row_status or '-' }}</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr id="savedTemplatesEmptyRow">
+                    <td colspan="8">
+                      <div class="itb-empty-state">No saved template records available.</div>
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="itb-card js-editable-only" id="saveValidationCard">
+        <div class="itb-card-head">
+          <div>
+            <h2>Save Validation</h2>
+            <div class="meta">Save is blocked until all required placeholders are populated</div>
+          </div>
+        </div>
+        <div class="itb-card-body">
+          <div class="itb-validation-list" id="saveValidationList"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% if not is_print_mode %}
+<div class="itb-drawer-backdrop" id="previewDrawerBackdrop" onclick="closePreviewDrawer()"></div>
+
+<div class="itb-preview-drawer" id="previewDrawer">
+  <div class="itb-preview-drawer-head">
+    <div>
+      <h3>Template Review</h3>
+      <div class="itb-muted">Side flap preview</div>
+    </div>
+    <button type="button" class="itb-btn itb-btn-light" onclick="closePreviewDrawer()">Close</button>
+  </div>
+  <div class="itb-preview-drawer-body">
+    <div class="itb-a4 itb-preview-static">
+      <div class="itb-proto-header">
+        <div class="itb-proto-company-wrap">
+          <div class="itb-logo-box" id="previewLogoBox">Logo</div>
+          <div class="itb-proto-company">
+            <h3 id="previewCompanyName"></h3>
+            <div class="itb-proto-meta" id="previewCompanyMeta"></div>
+          </div>
+        </div>
+
+        <div class="itb-proto-title">
+          <div class="doc">TAX INVOICE</div>
+          <div class="no" id="previewDocNumber"></div>
+        </div>
+      </div>
+
+      <div class="itb-proto-top">
+        <div class="itb-proto-panel">
+          <h4>Bill To</h4>
+          <div class="itb-preview-billto-name" id="previewBillToName"></div>
+          <div class="itb-preview-billto-body" id="previewBillToBody"></div>
+        </div>
+
+        <div class="itb-proto-panel">
+          <h4>Invoice Information</h4>
+          <div class="itb-preview-info-grid">
+            <div class="itb-preview-info-box">
+              <div class="itb-preview-info-label">Invoice Date</div>
+              <div class="itb-preview-info-value" id="previewInvoiceDate"></div>
+            </div>
+            <div class="itb-preview-info-box">
+              <div class="itb-preview-info-label">Due Date</div>
+              <div class="itb-preview-info-value" id="previewDueDate"></div>
+            </div>
+            <div class="itb-preview-info-box">
+              <div class="itb-preview-info-label">Currency</div>
+              <div class="itb-preview-info-value" id="previewCurrency"></div>
+            </div>
+            <div class="itb-preview-info-box">
+              <div class="itb-preview-info-label">Invoice Number</div>
+              <div class="itb-preview-info-value" id="previewInvoiceNumber"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="itb-proto-table">
+        <table>
+          <thead>
+            <tr id="previewTableHeader"></tr>
+          </thead>
+          <tbody id="previewTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="itb-proto-bottom">
+        <div class="itb-notes-box">
+          <h4>Notes</h4>
+          <div class="itb-proto-meta" id="previewNotes"></div>
+        </div>
+
+        <div class="itb-total-box">
+          <div class="itb-total-row">
+            <span>Total Invoice Amount</span>
+            <span id="previewTotalInvoiceAmount"></span>
+          </div>
+          <div class="itb-total-row">
+            <span>Total GST Amount</span>
+            <span id="previewTotalTaxAmount"></span>
+          </div>
+          <div class="itb-total-row">
+            <span>Total TDS Amount</span>
+            <span id="previewTotalTdsAmount"></span>
+          </div>
+          <div class="itb-total-row grand">
+            <span>Net Amount</span>
+            <span id="previewNetAmount"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="itb-proto-footer" id="previewFooterCompany"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div
+  id="itb-route-config"
+  data-builder-url="{% if not is_print_mode %}{{ url_for('invoice_template_builder') }}{% endif %}"
+  data-save-url="{% if not is_print_mode %}{{ url_for('invoice_template_builder_save') }}{% endif %}"
+  data-preview-url="{% if not is_print_mode %}{{ url_for('invoice_template_builder_preview') }}{% endif %}"
+  data-delete-url="{% if not is_print_mode %}{{ url_for('invoice_template_builder_save') }}{% endif %}"
+  data-page-mode="{{ page_mode }}"
+  style="display:none;"
+></div>
+<script id="itb-template-data-json" type="application/json">{{ td|tojson|safe }}</script>
+<script id="itb-runtime-data-json" type="application/json">{{ runtime|tojson|safe }}</script>
+
+<script>
+const routeConfigEl = document.getElementById("itb-route-config");
+const invoiceTemplateBuilderUrl = routeConfigEl?.dataset?.builderUrl || "";
+const invoiceTemplateBuilderSaveUrl = routeConfigEl?.dataset?.saveUrl || "";
+const invoiceTemplateBuilderPreviewUrl = routeConfigEl?.dataset?.previewUrl || "";
+const invoiceTemplateBuilderDeleteUrl = routeConfigEl?.dataset?.deleteUrl || invoiceTemplateBuilderSaveUrl || "";
+
+const pageRoot = document.getElementById("invoiceTemplatePageRoot");
+const explicitPageMode = (routeConfigEl?.dataset?.pageMode || "").toLowerCase();
+const urlParams = new URLSearchParams(window.location.search);
+const screenMode = explicitPageMode || ((urlParams.get("mode") || "").toLowerCase() === "view" ? "view" : "edit");
+const isPrintMode = screenMode === "print";
+const isViewMode = screenMode === "view";
+const hasTemplateCodeInUrl = !!String(urlParams.get("template_code") || "").trim();
+const isNewTemplateMode = !isPrintMode && !isViewMode && !hasTemplateCodeInUrl;
+const rawTemplateJson = document.getElementById("itb-template-data-json")?.textContent || "{}";
+const rawRuntimeJson = document.getElementById("itb-runtime-data-json")?.textContent || "{}";
+
+let templateData = {};
+let runtimeData = {};
+try { templateData = JSON.parse(rawTemplateJson) || {}; } catch (e) { templateData = {}; }
+try { runtimeData = JSON.parse(rawRuntimeJson) || {}; } catch (e) { runtimeData = {}; }
+
+let activeInsertTarget = null;
+let fieldLibraryCurrentPage = 1;
+const FIELD_LIBRARY_PAGE_SIZE = 8;
+
+const TOKEN_LOOP_INDEX = "{{ '{{' }}loop.index{{ '}}' }}";
+const TOKEN_ITEM_DESCRIPTION = "{{ '{{' }}item.description{{ '}}' }}";
+const TOKEN_ITEM_QTY = "{{ '{{' }}item.qty{{ '}}' }}";
+const TOKEN_ITEM_RATE = "{{ '{{' }}item.rate{{ '}}' }}";
+const TOKEN_ITEM_AMOUNT = "{{ '{{' }}item.amount{{ '}}' }}";
+const TOKEN_ITEM_SAC_CODE = "{{ '{{' }}item.sac_code{{ '}}' }}";
+const TOKEN_ITEM_REMARKS = "{{ '{{' }}item.remarks{{ '}}' }}";
+
+function getEl(id){ return document.getElementById(id); }
+
+function deepRead(obj, path){
+  if (!obj || !path) return undefined;
+  return String(path).split('.').reduce(function(acc, part){
+    if (acc && typeof acc === "object" && part in acc) return acc[part];
+    return undefined;
+  }, obj);
+}
+
+function getTemplateValue(){
+  const paths = Array.from(arguments);
+  for (const path of paths) {
+    if (!path) continue;
+    const value = deepRead(templateData, path);
+    if (value !== undefined && value !== null && String(value) !== "") {
+      return String(value);
+    }
+  }
+  return "";
+}
+
+function setControlValueIfBlank(id){
+  const el = getEl(id);
+  if (!el) return;
+  const current = typeof el.value !== "undefined" ? String(el.value ?? "") : String(el.textContent ?? "");
+  if (current.trim()) return;
+  const value = getTemplateValue.apply(null, Array.prototype.slice.call(arguments, 1));
+  if (!value) return;
+  if (typeof el.value !== "undefined") el.value = value;
+  else el.textContent = value;
+}
+
+function hydratePrototypeFromTemplateData(){
+  if (isPrintMode) return;
+  setControlValueIfBlank("proto_bill_to_name", "proto_bill_to_name", "bill_to_name", "hospital_name", "bill_to.title");
+  setControlValueIfBlank("proto_bill_to_body", "proto_bill_to_body", "proto_bill_to", "bill_to_body", "bill_to", "bill_to_details", "hospital_address", "bill_to.address");
+  setControlValueIfBlank("proto_invoice_date", "proto_invoice_date", "invoice_date", "status_date", "invoice_info.invoice_date");
+  setControlValueIfBlank("proto_due_date", "proto_due_date", "due_date", "invoice_info.due_date");
+  setControlValueIfBlank("proto_currency", "proto_currency", "currency", "default_currency", "invoice_info.currency");
+  setControlValueIfBlank("proto_invoice_number", "proto_invoice_number", "invoice_number", "invoice_no", "header_invoice_no", "invoice_info.invoice_number");
+  setControlValueIfBlank("proto_total_invoice_amount", "proto_total_invoice_amount", "total_invoice_amount", "totalinv_amount", "sumof_invamnt", "inv_amount", "financials.total_invoice_amount");
+  setControlValueIfBlank("proto_total_tax_amount", "proto_total_tax_amount", "total_tax_amount", "totalgst_amount", "gst_amount", "financials.total_gst_amount");
+  setControlValueIfBlank("proto_total_tds_amount", "proto_total_tds_amount", "total_tds_amount", "totaltds_amount", "tds_amount", "financials.total_tds_amount");
+  setControlValueIfBlank("proto_net_amount", "proto_net_amount", "proto_net_amount", "net_amount", "totalinv_amount", "financials.net_amount");
+  setControlValueIfBlank("notes_text", "notes_text", "notes", "footer_notes", "invoice_notes");
+}
+
+function getInputValue(id){
+  const el = getEl(id);
+  if (!el) return "";
+  if ("value" in el) return String(el.value ?? "").trim();
+  return String(el.textContent ?? "").trim();
+}
+
+function setText(id, value){
+  const el = getEl(id);
+  if (el) el.textContent = value || "";
+}
+
+function setHtml(id, value){
+  const el = getEl(id);
+  if (el) el.innerHTML = value || "";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function nl2brHtml(value) {
+  return escapeHtml(value).replace(/\n/g, "<br>");
+}
+
+function buildCompanyMetaHtml(address, gstin, email, phone){
+  const parts = [];
+  if (address) parts.push(escapeHtml(address));
+  if (gstin) parts.push("GSTIN: " + escapeHtml(gstin));
+  let contactLine = "";
+  if (email) contactLine += "Email: " + escapeHtml(email);
+  if (email && phone) contactLine += " | ";
+  if (phone) contactLine += "Phone: " + escapeHtml(phone);
+  if (contactLine) parts.push(contactLine);
+  return parts.join("<br>");
+}
+
+function setActiveInsertTarget(el){
+  if (isViewMode || isPrintMode) return;
+  activeInsertTarget = el || null;
+}
+
+function insertTextAtCursor(el, text){
+  if (!el || isViewMode || isPrintMode) return;
+  const tag = (el.tagName || "").toLowerCase();
+  if (tag !== "input" && tag !== "textarea") return;
+
+  el.focus();
+  const start = typeof el.selectionStart === "number" ? el.selectionStart : (el.value || "").length;
+  const end = typeof el.selectionEnd === "number" ? el.selectionEnd : (el.value || "").length;
+  const currentValue = el.value || "";
+  el.value = currentValue.slice(0, start) + text + currentValue.slice(end);
+
+  const newPos = start + text.length;
+  if (typeof el.setSelectionRange === "function") {
+    el.setSelectionRange(newPos, newPos);
+  }
+
+  el.dispatchEvent(new Event("input", { bubbles:true }));
+  el.dispatchEvent(new Event("change", { bubbles:true }));
+}
+
+function insertPlaceholder(token){
+  if (isViewMode || isPrintMode) return;
+  if (!activeInsertTarget) {
+    activeInsertTarget = getEl("proto_bill_to_body") || getEl("notes_text");
+  }
+  if (!activeInsertTarget) {
+    alert("Click inside a builder field first, then use Insert.");
+    return;
+  }
+  insertTextAtCursor(activeInsertTarget, token);
+}
+
+function buildTemplateUrl(templateCode, mode){
+  if (!templateCode) return invoiceTemplateBuilderUrl;
+  const suffix = mode === "view" ? "&mode=view" : "&mode=edit";
+  return invoiceTemplateBuilderUrl + "?template_code=" + encodeURIComponent(templateCode) + suffix;
+}
+
+function openTemplateForEdit(templateCode){
+  if (!templateCode || isPrintMode) return;
+  window.location = buildTemplateUrl(templateCode, "edit");
+}
+
+function openTemplateForView(templateCode){
+  if (!templateCode || isPrintMode) return;
+  window.location = buildTemplateUrl(templateCode, "view");
+}
+
+function filterSavedTemplates(value){
+  const q = String(value || "").toLowerCase().trim();
+  const rows = Array.from(document.querySelectorAll("#savedTemplatesBody .itb-saved-row"));
+  let visibleCount = 0;
+
+  rows.forEach(function(row){
+    const txt = row.textContent.toLowerCase();
+    const show = !q || txt.includes(q);
+    row.style.display = show ? "" : "none";
+    if (show) visibleCount += 1;
+  });
+
+  setText("savedTemplateCount", String(visibleCount));
+}
+
+function collectVisibleFieldLibraryRows(){
+  return Array.from(document.querySelectorAll("#fieldLibraryBody .itb-library-row")).filter(function(row){
+    return row.dataset.matched !== "false";
+  });
+}
+
+function renderFieldLibraryPagination(){
+  if (isPrintMode) return;
+  const rows = Array.from(document.querySelectorAll("#fieldLibraryBody .itb-library-row"));
+  const matchedRows = collectVisibleFieldLibraryRows();
+  const total = matchedRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / FIELD_LIBRARY_PAGE_SIZE));
+
+  if (fieldLibraryCurrentPage > totalPages) fieldLibraryCurrentPage = totalPages;
+  if (fieldLibraryCurrentPage < 1) fieldLibraryCurrentPage = 1;
+
+  rows.forEach(function(row){ row.style.display = "none"; });
+
+  const start = (fieldLibraryCurrentPage - 1) * FIELD_LIBRARY_PAGE_SIZE;
+  const end = start + FIELD_LIBRARY_PAGE_SIZE;
+
+  matchedRows.slice(start, end).forEach(function(row){
+    row.style.display = "";
+  });
+
+  setText("fieldLibraryPageMeta", "Page " + fieldLibraryCurrentPage + " of " + totalPages + " | " + total + " item(s)");
+
+  const prevBtn = getEl("fieldLibraryPrevBtn");
+  const nextBtn = getEl("fieldLibraryNextBtn");
+  if (prevBtn) prevBtn.disabled = fieldLibraryCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = fieldLibraryCurrentPage >= totalPages;
+}
+
+function filterFieldLibraryTable(value){
+  if (isPrintMode) return;
+  const q = String(value || "").toLowerCase().trim();
+  const rows = Array.from(document.querySelectorAll("#fieldLibraryBody .itb-library-row"));
+  rows.forEach(function(row){
+    const txt = row.textContent.toLowerCase();
+    row.dataset.matched = (!q || txt.includes(q)) ? "true" : "false";
+  });
+  fieldLibraryCurrentPage = 1;
+  renderFieldLibraryPagination();
+}
+
+function addItemColumnRow(){
+  if (isViewMode || isPrintMode) return;
+  const tbody = getEl("itemColumnsBody");
+  if (!tbody) return;
+
+  const rowCount = tbody.querySelectorAll("tr").length + 1;
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" class="itb-input col-display-order js-prototype-control" value="${rowCount}"></td>
+    <td><input type="text" class="itb-input col-column-label js-prototype-control" value=""></td>
+    <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value=""></td>
+  `;
+  tbody.appendChild(tr);
+  bindPrototypeInputs(tr);
+  applyScreenMode();
+  refreshPrototypeSummary();
+}
+
+function deleteLastItemRow(){
+  if (isViewMode || isPrintMode) return;
+  const tbody = getEl("itemColumnsBody");
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll("tr");
+  if (!rows.length) return;
+  rows[rows.length - 1].remove();
+  refreshPrototypeSummary();
+}
+
+function buildDefaultItemColumns(){
+  return [
+    { display_order:"1", column_label:"Sl", field_key:"", column_width:"", alignment:"Left", data_type:"TEXT", is_visible:"Yes", wrap_text:"No", sortable:"No", default_value:"" },
+    { display_order:"2", column_label:"Description", field_key:"", column_width:"", alignment:"Left", data_type:"TEXT", is_visible:"Yes", wrap_text:"No", sortable:"No", default_value:"" },
+    { display_order:"3", column_label:"Qty", field_key:"", column_width:"", alignment:"Left", data_type:"TEXT", is_visible:"Yes", wrap_text:"No", sortable:"No", default_value:"" },
+    { display_order:"4", column_label:"Rate", field_key:"", column_width:"", alignment:"Left", data_type:"TEXT", is_visible:"Yes", wrap_text:"No", sortable:"No", default_value:"" },
+    { display_order:"5", column_label:"Amount", field_key:"", column_width:"", alignment:"Left", data_type:"TEXT", is_visible:"Yes", wrap_text:"No", sortable:"No", default_value:"" }
+  ];
+}
+
+function renderItemColumns(rows){
+  const tbody = getEl("itemColumnsBody");
+  if (!tbody || isPrintMode) return;
+
+  const sourceRows = Array.isArray(rows) && rows.length ? rows : buildDefaultItemColumns();
+  tbody.innerHTML = sourceRows.map(function(row, idx){
+    return `
+      <tr>
+        <td><input type="text" class="itb-input col-display-order js-prototype-control" value="${escapeHtml(row.display_order || String(idx + 1))}"></td>
+        <td><input type="text" class="itb-input col-column-label js-prototype-control" value="${escapeHtml(row.column_label || "")}"></td>
+        <td><input type="text" class="itb-input col-field-key proto-focusable js-prototype-control" value="${escapeHtml(row.field_key || "")}"></td>
+      </tr>
+    `;
+  }).join("");
+
+  bindPrototypeInputs(tbody);
+  applyScreenMode();
+}
+
+
+function applyNarrationScopeState(){
+  const scopeValue = String(getEl("scope_type")?.value || "").toUpperCase();
+  const narrationInput = getEl("customer_narration");
+  const narrationWrap = getEl("narrationCheckWrap");
+
+  if (!narrationInput) return;
+
+  const enabledForHospital = scopeValue === "HOSPITAL";
+  narrationInput.disabled = !enabledForHospital;
+
+  if (!enabledForHospital){
+    narrationInput.checked = false;
+  }
+
+  if (narrationWrap){
+    narrationWrap.classList.toggle("is-disabled", !enabledForHospital);
+  }
+}
+
+function resetFormControlValue(el){
+  if (!el) return;
+  const tagName = (el.tagName || "").toLowerCase();
+
+  if (el.id === "template_code") return;
+
+  if (tagName === "select") {
+    const blankOption = Array.from(el.options || []).find(function(opt){ return String(opt.value || "") === ""; });
+    if (blankOption) el.value = "";
+    else el.selectedIndex = 0;
+    return;
+  }
+
+  if (tagName === "input" || tagName === "textarea") {
+    const inputType = (el.type || "text").toLowerCase();
+    if (inputType === "checkbox" || inputType === "radio") {
+      el.checked = false;
+    } else {
+      el.value = "";
+    }
+  }
+}
+
+function collectItemColumns(){
+  return Array.from(document.querySelectorAll("#itemColumnsBody tr")).map(function(tr){
+    return {
+      display_order: tr.querySelector(".col-display-order")?.value || "",
+      column_label: tr.querySelector(".col-column-label")?.value || "",
+      field_key: tr.querySelector(".col-field-key")?.value || "",
+      column_width: "",
+      alignment: "Left",
+      data_type: "TEXT",
+      is_visible: "Yes",
+      wrap_text: "No",
+      sortable: "No",
+      default_value: ""
+    };
+  });
+}
+
+function buildPrototypeDescription(){
+  const parts = [
+    "Invoice Template",
+    getInputValue("template_name"),
+    getEl("template_category")?.value || "",
+    getEl("applicable_module")?.value || "",
+    getEl("scope_type")?.value || "",
+    getInputValue("hospital_name")
+  ].filter(Boolean);
+
+  return parts.join(" | ").slice(0, 500);
+}
+
+function buildPayload(){
+  return {
+    template_code: getInputValue("template_code"),
+    template_name: getInputValue("template_name"),
+    template_category: getEl("template_category")?.value || "",
+    paper_size: getEl("paper_size")?.value || "",
+    template_status: getEl("template_status")?.value || "",
+    applicable_module: getEl("applicable_module")?.value || "",
+    default_currency: getEl("default_currency")?.value || "",
+    scope_type: getEl("scope_type")?.value || "",
+    customer_narration: (String(getEl("scope_type")?.value || "").toUpperCase() === "HOSPITAL" && !!getEl("customer_narration")?.checked),
+    hospital_name: getInputValue("hospital_name"),
+    logo_path: getInputValue("logo_path"),
+    company_name: getInputValue("company_name"),
+    company_address: getInputValue("company_address"),
+    company_gstin: getInputValue("company_gstin"),
+    company_email: getInputValue("company_email"),
+    company_phone: getInputValue("company_phone"),
+    template_description: buildPrototypeDescription(),
+    proto_bill_to_name: getInputValue("proto_bill_to_name"),
+    proto_bill_to_body: getInputValue("proto_bill_to_body"),
+    proto_invoice_date: getInputValue("proto_invoice_date"),
+    proto_due_date: getInputValue("proto_due_date"),
+    proto_currency: getInputValue("proto_currency"),
+    proto_invoice_number: getInputValue("proto_invoice_number"),
+    proto_total_invoice_amount: getInputValue("proto_total_invoice_amount"),
+    proto_total_tax_amount: getInputValue("proto_total_tax_amount"),
+    proto_total_tds_amount: getInputValue("proto_total_tds_amount"),
+    proto_net_amount: getInputValue("proto_net_amount"),
+    notes_text: getInputValue("notes_text"),
+    show_company_logo: true,
+    show_company_meta: true,
+    show_document_title: true,
+    show_invoice_number: true,
+    show_notes_section: true,
+    show_tax_breakup: true,
+    enable_print_footer: true,
+    allow_multiple_item_rows: true,
+    combine_selected_records_into_single_row: !!getEl("combine_selected_records_into_single_row")?.checked,
+    repeat_header_on_new_page: true,
+    show_serial_number: true,
+    auto_wrap_description: true,
+    item_columns: collectItemColumns()
+  };
+}
+
+function getRequiredPlaceholderChecks(){
+  const itemColumns = collectItemColumns().filter(function(row){
+    return String(row.column_label || "").trim() !== "";
+  });
+
+  return [
+    { label:"Template Name", value:getInputValue("template_name"), required:true },
+    { label:"Bill To Name", value:getInputValue("proto_bill_to_name"), required:true },
+    { label:"Bill To Body", value:getInputValue("proto_bill_to_body"), required:true },
+    { label:"Invoice Date", value:getInputValue("proto_invoice_date"), required:true },
+    { label:"Due Date", value:getInputValue("proto_due_date"), required:true },
+    { label:"Currency", value:getInputValue("proto_currency"), required:true },
+    { label:"Invoice Number", value:getInputValue("proto_invoice_number"), required:true },
+    { label:"Total Invoice Amount", value:getInputValue("proto_total_invoice_amount"), required:true },
+    { label:"Total GST Amount", value:getInputValue("proto_total_tax_amount"), required:true },
+    { label:"Total TDS Amount", value:getInputValue("proto_total_tds_amount"), required:true },
+    { label:"Net Amount", value:getInputValue("proto_net_amount"), required:true },
+    { label:"At least one item table row", value:itemColumns.length ? "YES" : "", required:true }
+  ];
+}
+
+function validateTemplateForSave(showMessage){
+  if (isViewMode || isPrintMode) return { ok:true, missing:[] };
+
+  const checks = getRequiredPlaceholderChecks();
+  const missing = checks.filter(function(item){
+    return item.required && !String(item.value || "").trim();
+  });
+
+  const listEl = getEl("saveValidationList");
+  if (listEl) {
+    listEl.innerHTML = checks.map(function(item){
+      const isOk = String(item.value || "").trim() !== "";
+      return `<div class="itb-validation-item ${isOk ? "is-ok" : "is-missing"}">${escapeHtml(item.label)} - ${isOk ? "Ready" : "Missing"}</div>`;
+    }).join("");
+  }
+
+  if (showMessage && missing.length) {
+    alert("Please input all required placeholders before saving the template.\nMissing: " + missing.map(function(m){ return m.label; }).join(", "));
+  }
+
+  return { ok: missing.length === 0, missing: missing };
+}
+
+async function saveTemplate(){
+  if (isViewMode || isPrintMode) return;
+
+  const validation = validateTemplateForSave(true);
+  if (!validation.ok) return;
+
+  const payload = buildPayload();
+  try {
+    const resp = await fetch(invoiceTemplateBuilderSaveUrl, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.success) {
+      alert(data.message || "Saved successfully.");
+      const savedCode = data.template_code || payload.template_code;
+      if (savedCode) {
+        window.location = buildTemplateUrl(savedCode, "edit");
+      } else {
+        window.location = invoiceTemplateBuilderUrl;
+      }
+    } else {
+      alert(data.message || "Unable to save template.");
+    }
+  } catch (error) {
+    alert("Unable to save template.");
+  }
+}
+
+function resolvePreviewFieldValue(fieldKey, item, idx){
+  const key = String(fieldKey || "").trim();
+  if (key === TOKEN_LOOP_INDEX) return String(idx + 1);
+  if (key === TOKEN_ITEM_DESCRIPTION) return item.description || "";
+  if (key === TOKEN_ITEM_QTY) return "1";
+  if (key === TOKEN_ITEM_RATE) return String(item.rate ?? "");
+  if (key === TOKEN_ITEM_AMOUNT) return String(item.amount ?? "");
+  if (key === TOKEN_ITEM_SAC_CODE) return String(item.sac_code ?? "");
+  if (key === TOKEN_ITEM_REMARKS) return String(item.remarks ?? "");
+  return key || "";
+}
+
+function refreshPreviewTable(columns, items){
+  const header = getEl("previewTableHeader");
+  const body = getEl("previewTableBody");
+  if (!header || !body || isPrintMode) return;
+
+  const cols = (columns || collectItemColumns()).filter(function(c){
+    return String(c.column_label || "").trim() !== "";
+  });
+
+  if (!cols.length) {
+    header.innerHTML = "";
+    body.innerHTML = "";
+    return;
+  }
+
+  header.innerHTML = cols.map(function(c){
+    return "<th>" + escapeHtml(c.column_label || "") + "</th>";
+  }).join("");
+
+  const previewItems = Array.isArray(items) ? items : [];
+  if (!previewItems.length) {
+    body.innerHTML = `<tr>${cols.map(function(c){
+      return "<td>" + escapeHtml(c.field_key || "") + "</td>";
+    }).join("")}</tr>`;
+    return;
+  }
+
+  body.innerHTML = previewItems.map(function(item, idx){
+    return `<tr>${cols.map(function(c){
+      return "<td>" + escapeHtml(resolvePreviewFieldValue(c.field_key, item || {}, idx)) + "</td>";
+    }).join("")}</tr>`;
+  }).join("");
+}
+
+function readFieldRawValue(id){
+  const el = getEl(id);
+  if (!el) return "";
+  if (typeof el.value !== "undefined") return String(el.value ?? "");
+  return String(el.textContent ?? "");
+}
+
+function renderLocalPreview(){
+  if (isPrintMode) return;
+
+  const companyName = readFieldRawValue("company_name");
+  const companyAddress = readFieldRawValue("company_address");
+  const companyGstin = readFieldRawValue("company_gstin");
+  const companyEmail = readFieldRawValue("company_email");
+  const companyPhone = readFieldRawValue("company_phone");
+  let logoPath = String(readFieldRawValue("logo_path") || "").trim();
+  const billToName = readFieldRawValue("proto_bill_to_name");
+  const billToBody = readFieldRawValue("proto_bill_to_body");
+  const invoiceDate = readFieldRawValue("proto_invoice_date");
+  const dueDate = readFieldRawValue("proto_due_date");
+  const currency = readFieldRawValue("proto_currency");
+  const invoiceNumber = readFieldRawValue("proto_invoice_number");
+  const notes = readFieldRawValue("notes_text");
+  const totalInvoiceAmount = readFieldRawValue("proto_total_invoice_amount");
+  const totalTaxAmount = readFieldRawValue("proto_total_tax_amount");
+  const totalTdsAmount = readFieldRawValue("proto_total_tds_amount");
+  const netAmount = readFieldRawValue("proto_net_amount");
+
+  const previewLogoBox = getEl("previewLogoBox");
+  if (previewLogoBox) {
+    previewLogoBox.innerHTML = "";
+
+    if (logoPath) {
+      if (!/^https?:\/\//i.test(logoPath)) {
+        if (logoPath.startsWith("static/")) {
+          logoPath = "/" + logoPath;
+        } else if (!logoPath.startsWith("/")) {
+          logoPath = "/static/" + logoPath;
+        }
+      }
+
+      const logoImg = document.createElement("img");
+      logoImg.src = logoPath;
+      logoImg.alt = "Company Logo";
+      logoImg.onerror = function() {
+        previewLogoBox.textContent = "Logo";
+      };
+      previewLogoBox.appendChild(logoImg);
+    } else {
+      previewLogoBox.textContent = "Logo";
+    }
+  }
+
+  setText("previewCompanyName", companyName);
+  setHtml("previewCompanyMeta", buildCompanyMetaHtml(companyAddress, companyGstin, companyEmail, companyPhone));
+  setText("previewDocNumber", invoiceNumber);
+  setText("previewBillToName", billToName);
+  setHtml("previewBillToBody", nl2brHtml(billToBody));
+  setText("previewInvoiceDate", invoiceDate);
+  setText("previewDueDate", dueDate);
+  setText("previewCurrency", currency);
+  setText("previewInvoiceNumber", invoiceNumber);
+  setHtml("previewNotes", nl2brHtml(notes));
+  setText("previewTotalInvoiceAmount", totalInvoiceAmount);
+  setText("previewTotalTaxAmount", totalTaxAmount);
+  setText("previewTotalTdsAmount", totalTdsAmount);
+  setText("previewNetAmount", netAmount);
+  setText("previewFooterCompany", "This is a system-generated invoice.");
+  refreshPreviewTable();
+}
+
+function openPreviewDrawer(){
+  if (isPrintMode) return;
+  getEl("previewDrawer")?.classList.add("is-open");
+  getEl("previewDrawerBackdrop")?.classList.add("is-open");
+  document.body.style.overflow = "hidden";
+}
+
+function closePreviewDrawer(){
+  getEl("previewDrawer")?.classList.remove("is-open");
+  getEl("previewDrawerBackdrop")?.classList.remove("is-open");
+  document.body.style.overflow = "";
+}
+
+async function previewTemplate(){
+  if (isPrintMode) return;
+  renderLocalPreview();
+  openPreviewDrawer();
+}
+
+function refreshPrototypeSummary(){
+  if (isPrintMode) return;
+  const companyName = readFieldRawValue("company_name");
+  setText("protoCompanyHeading", companyName || "Company Name");
+  setHtml("protoCompanyMeta", buildCompanyMetaHtml(
+    readFieldRawValue("company_address"),
+    readFieldRawValue("company_gstin"),
+    readFieldRawValue("company_email"),
+    readFieldRawValue("company_phone")
+  ));
+  setText("protoFooterCompany", companyName || "");
+  renderLocalPreview();
+  validateTemplateForSave(false);
+}
+
+function clearTemplateForm(){
+  if (isViewMode || isPrintMode) return;
+  if (!confirm("Clear current screen values from the screen?")) return;
+
+  /*
+    Clear must also reset TEMPLATE CODE.
+    TEMPLATE CODE is readonly and is intentionally not part of .js-master-input,
+    so earlier Clear only cleaned editable fields and left INV_STD_DEFAULT/current code visible.
+  */
+  const templateCodeEl = getEl("template_code");
+  if (templateCodeEl) {
+    templateCodeEl.value = "";
+    templateCodeEl.removeAttribute("readonly");
+  }
+
+  document.querySelectorAll(".js-master-input, .js-prototype-control").forEach(function(el){
+    resetFormControlValue(el);
+  });
+
+  const fieldLibrarySearch = getEl("fieldLibrarySearch");
+  if (fieldLibrarySearch) fieldLibrarySearch.value = "";
+
+  const savedTemplatesSearch = getEl("savedTemplatesSearch");
+  if (savedTemplatesSearch) {
+    savedTemplatesSearch.value = "";
+    filterSavedTemplates("");
+  }
+
+  Array.from(document.querySelectorAll("#fieldLibraryBody .itb-library-row")).forEach(function(row){
+    row.dataset.matched = "true";
+  });
+  fieldLibraryCurrentPage = 1;
+  renderFieldLibraryPagination();
+
+  renderItemColumns(buildDefaultItemColumns());
+
+  const initialTarget = getEl("proto_bill_to_body") || getEl("notes_text");
+  if (initialTarget) setActiveInsertTarget(initialTarget);
+
+  refreshPrototypeSummary();
+}
+
+async function deleteTemplateByCode(templateCode){
+  if (isViewMode || isPrintMode || !templateCode) return;
+  if (!confirm('Delete template ' + templateCode + '?')) return;
+
+  try {
+    const resp = await fetch(invoiceTemplateBuilderDeleteUrl, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ action:"delete", template_code:templateCode })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+      alert(data.message || "Template deleted successfully.");
+      const currentTemplateCode = getInputValue("template_code");
+      if (currentTemplateCode && currentTemplateCode === templateCode) {
+        window.location = invoiceTemplateBuilderUrl;
+      } else {
+        window.location.reload();
+      }
+    } else {
+      alert(data.message || "Unable to delete template.");
+    }
+  } catch (error) {
+    alert("Unable to delete template.");
+  }
+}
+
+function deleteCurrentTemplate(){
+  const templateCode = getInputValue("template_code");
+  if (!templateCode) {
+    alert("No template code available to delete.");
+    return;
+  }
+  deleteTemplateByCode(templateCode);
+}
+
+function bindPrototypeInputs(scope){
+  if (isPrintMode) return;
+  (scope || document).querySelectorAll(".itb-proto-editable, .proto-focusable, .js-prototype-control").forEach(function(el){
+    el.addEventListener("focus", function(){ setActiveInsertTarget(this); });
+    el.addEventListener("click", function(){ setActiveInsertTarget(this); });
+    el.addEventListener("input", refreshPrototypeSummary);
+    el.addEventListener("change", refreshPrototypeSummary);
+  });
+}
+
+function applyReadonlyToElement(el){
+  const tagName = (el.tagName || "").toLowerCase();
+  if (tagName === "select") {
+    el.disabled = true;
+  } else {
+    el.readOnly = true;
+  }
+}
+
+function applyScreenMode(){
+  if (!pageRoot) return;
+
+  const banner = getEl("screenModeBanner");
+  const badge = getEl("screenModeBadge");
+  const text = getEl("screenModeText");
+
+  pageRoot.classList.remove("itb-view-only", "itb-print-mode");
+
+  if (isPrintMode) {
+    pageRoot.classList.add("itb-print-mode");
+    return;
+  }
+
+  if (isViewMode) {
+    pageRoot.classList.add("itb-view-only");
+    if (banner) banner.style.display = "flex";
+    if (badge) {
+      badge.className = "itb-badge itb-badge-view";
+      badge.textContent = "VIEW MODE";
+    }
+    if (text) text.textContent = "Template is opened in view mode.";
+    document.querySelectorAll(".js-master-input, .js-prototype-control").forEach(applyReadonlyToElement);
+  } else {
+    if (banner) banner.style.display = "flex";
+    if (badge) {
+      badge.className = "itb-badge itb-badge-edit";
+      badge.textContent = isNewTemplateMode ? "NEW MODE" : "EDIT MODE";
+    }
+    if (text) text.textContent = isNewTemplateMode ? "Template Builder is opened with clean values for a new template." : "Template is opened in edit mode.";
+  }
+}
+
+function bindTemplateRowActions(){
+  if (isPrintMode) return;
+
+  document.querySelectorAll(".js-edit-template").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      openTemplateForEdit(this.dataset.templateCode || "");
+    });
+  });
+
+  document.querySelectorAll(".js-open-template").forEach(function(link){
+    link.addEventListener("click", function(){
+      openTemplateForView(this.dataset.templateCode || "");
+    });
+  });
+
+  document.querySelectorAll(".js-delete-template").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      deleteTemplateByCode(this.dataset.templateCode || "");
+    });
+  });
+
+  document.querySelectorAll(".js-insert-token").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      insertPlaceholder(this.dataset.token || "");
+    });
+  });
+
+  const prevBtn = getEl("fieldLibraryPrevBtn");
+  const nextBtn = getEl("fieldLibraryNextBtn");
+  if (prevBtn) {
+    prevBtn.addEventListener("click", function(){
+      fieldLibraryCurrentPage -= 1;
+      renderFieldLibraryPagination();
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function(){
+      fieldLibraryCurrentPage += 1;
+      renderFieldLibraryPagination();
+    });
+  }
+}
+
+function initialisePrintMode(){
+  if (!isPrintMode) return;
+  document.body.style.overflow = "";
+}
+function hideApplicationChromeForPrintMode(){
+  if (!isPrintMode) return;
+  [
+    '.app-sidebar','.sidebar','.topbar','.navbar','.header','.footer',
+    '.app-header','.main-sidebar','.layout-sidebar'
+  ].forEach(function(sel){
+    document.querySelectorAll(sel).forEach(function(el){
+      el.style.display = 'none';
+    });
+  });
+}
+
+
+document.addEventListener("DOMContentLoaded", function(){
+  applyScreenMode();
+  hideApplicationChromeForPrintMode();
+
+  if (!isPrintMode) {
+    if (isNewTemplateMode) {
+      templateData = {};
+    } else {
+      hydratePrototypeFromTemplateData();
+    }
+
+    const currentItemColumns = (!isNewTemplateMode && Array.isArray(templateData.item_columns)) ? templateData.item_columns : [];
+    if (currentItemColumns.length) {
+      renderItemColumns(currentItemColumns);
+    } else {
+      renderItemColumns(buildDefaultItemColumns());
+    }
+
+    bindPrototypeInputs(document);
+    bindTemplateRowActions();
+
+    const scopeTypeEl = getEl("scope_type");
+    if (scopeTypeEl){
+      scopeTypeEl.addEventListener("change", applyNarrationScopeState);
+    }
+    applyNarrationScopeState();
+
+    Array.from(document.querySelectorAll("#fieldLibraryBody .itb-library-row")).forEach(function(row){
+      row.dataset.matched = "true";
+    });
+    renderFieldLibraryPagination();
+
+    const initialTarget = getEl("proto_bill_to_body") || getEl("notes_text");
+    if (initialTarget) setActiveInsertTarget(initialTarget);
+
+    refreshPrototypeSummary();
+  } else {
+    initialisePrintMode();
+  }
+});
+</script>
+<script src="{{ url_for('static', filename='js/pages/invoice_template_builder.js') }}"></script>
+{% endblock %}

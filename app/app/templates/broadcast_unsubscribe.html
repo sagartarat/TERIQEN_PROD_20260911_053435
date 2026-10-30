@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Marketing Email Preferences | {{ brand_product_name|default('TERIQEN') }}</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #f2f6f8;
+      color: #253846;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .card {
+      width: min(560px, 100%);
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid #dce6eb;
+      border-radius: 16px;
+      box-shadow: 0 12px 34px rgba(24, 55, 72, .10);
+    }
+    .top {
+      padding: 24px 28px 18px;
+      text-align: center;
+      background: linear-gradient(135deg, #edf7fb, #ffffff);
+      border-bottom: 1px solid #e4edf1;
+    }
+    .brand-logo-box {
+      width: min(100%, 360px);
+      margin: 0 auto 14px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 6px 18px rgba(24, 55, 72, .08);
+    }
+    .brand-logo {
+      display: block;
+      width: 100%;
+      max-height: 82px;
+      height: auto;
+      object-fit: contain;
+    }
+    .brand {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+      color: #0b5f82;
+      font-weight: 700;
+    }
+    .subbrand { margin: 6px 0 0; font-size: 13px; color: #687782; }
+    .content { padding: 28px; text-align: center; }
+    h1 { margin: 0 0 12px; font-size: 23px; color: #203845; }
+    p { margin: 9px 0; font-size: 14px; line-height: 1.6; color: #5d6f7a; }
+    .email {
+      display: inline-block;
+      margin: 10px 0 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #f4f7f9;
+      color: #334b58;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .btn {
+      margin-top: 18px;
+      border: 0;
+      border-radius: 9px;
+      background: #0b6e99;
+      color: #fff;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn:hover { background: #095d82; }
+    .status {
+      margin: 0 auto 14px;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #eaf7ef;
+      color: #247847;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .warn { background: #fff5e7; color: #9a6718; }
+    .foot {
+      padding: 16px 24px 20px;
+      text-align: center;
+      border-top: 1px solid #eef2f4;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #82909a;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" aria-live="polite">
+    <div class="top">
+      <div class="brand-logo-box">
+        <img src="{{ url_for('static', filename=brand_logo_filename|default('images/cadupius_healthassist_logo.png')) }}"
+             alt="{{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}"
+             class="brand-logo">
+      </div>
+      <p class="brand">{{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}</p>
+      <p class="subbrand">{{ brand_product_name|default('TERIQEN') }} Marketing Email Preferences</p>
+    </div>
+    <div class="content">
+      {% if invalid %}
+        <div class="status warn">!</div>
+        <h1>Unsubscribe link is invalid</h1>
+        <p>This link cannot be used. Please use the Unsubscribe link from the most recent marketing email.</p>
+      {% elif service_error %}
+        <div class="status warn">!</div>
+        <h1>Unable to update preferences</h1>
+        <p>We could not process the request right now. Please try again shortly.</p>
+      {% elif completed %}
+        <div class="status">✓</div>
+        <h1>You are unsubscribed</h1>
+        {% if masked_email %}<div class="email">{{ masked_email }}</div>{% endif %}
+        {% if already_unsubscribed %}
+          <p>This email address was already unsubscribed from TERIQEN marketing emails.</p>
+        {% else %}
+          <p>Your preference has been saved. Future TERIQEN marketing emails will be suppressed for this email address.</p>
+        {% endif %}
+        <p>Service or transactional communications may still be sent when required for an existing interaction.</p>
+      {% else %}
+        <h1>Unsubscribe from marketing emails?</h1>
+        <p>You are about to stop TERIQEN marketing emails to:</p>
+        {% if masked_email %}<div class="email">{{ masked_email }}</div>{% endif %}
+        <form method="post" action="{{ request.path }}">
+          <input type="hidden" name="token" value="{{ token }}">
+          <button class="btn" type="submit">Unsubscribe</button>
+        </form>
+        <p>This action applies to future marketing emails sent through TERIQEN.</p>
+      {% endif %}
+    </div>
+    <div class="foot">
+      © {{ current_year|default(2026) }} {{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}
+      · Powered by <strong>{{ brand_product_name|default('TERIQEN') }}</strong><br>
+      Marketing communication preference centre
+    </div>
+  </main>
+</body>
+</html>

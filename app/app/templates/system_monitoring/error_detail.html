@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Error Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Error Detail</div>
+      <div class="sm-breadcrumb">System Monitoring / Error Monitor / {{ error.id }}</div>
+      <div class="sm-page-subtitle">Exception context, source, retry status and resolution information.</div>
+    </div>
+
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.error_monitor') }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+
+      {% if error.can_retry|default(false) %}
+      <form method="post" action="{{ url_for('system_monitoring.retry_error', error_id=error.id) }}">
+        <button class="top-btn" type="submit"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+      </form>
+      {% endif %}
+
+      {% if error.can_resolve|default(false) %}
+      <form method="post" action="{{ url_for('system_monitoring.resolve_error', error_id=error.id) }}">
+        <button class="top-btn primary" type="submit"><i class="fa-solid fa-check"></i> Mark Resolved</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sm-health-banner {{ (error.severity or 'ERROR')|lower }}">
+    <div class="sm-health-main">
+      <div class="sm-health-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div>
+        <div class="sm-health-name">{{ error.severity or 'ERROR' }} · {{ error.resolution_status or 'OPEN' }}</div>
+        <div class="sm-health-message">{{ error.error_message or 'No error message recorded.' }}</div>
+      </div>
+    </div>
+    <div class="sm-health-time">{{ error.occurred_on or '-' }}</div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div><div class="sm-section-title">Exception Context</div><div class="sm-section-subtitle">Source and business reference</div></div>
+    </div>
+
+    <div class="sm-detail-grid">
+      <div class="sm-detail-item"><div class="sm-detail-label">Error ID</div><div class="sm-detail-value">{{ error.id }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Error Code</div><div class="sm-detail-value">{{ error.error_code or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Module</div><div class="sm-detail-value">{{ error.module_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Process</div><div class="sm-detail-value">{{ error.process_name or error.scheduler_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Reference Type</div><div class="sm-detail-value">{{ error.reference_type or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Reference ID</div><div class="sm-detail-value">{{ error.reference_id or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Execution ID</div><div class="sm-detail-value">{{ error.execution_id or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Retry Count</div><div class="sm-detail-value">{{ error.retry_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Occurred On</div><div class="sm-detail-value">{{ error.occurred_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Last Retry</div><div class="sm-detail-value">{{ error.last_retry_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Resolved By</div><div class="sm-detail-value">{{ error.resolved_by or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Resolved On</div><div class="sm-detail-value">{{ error.resolved_on or '-' }}</div></div>
+    </div>
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head"><div><div class="sm-section-title">Error Message</div></div></div>
+    <div class="sm-message-box">{{ error.error_message or '-' }}</div>
+  </section>
+
+  {% if error.stack_trace %}
+  <section class="sm-section">
+    <div class="sm-section-head"><div><div class="sm-section-title">Stack Trace</div><div class="sm-section-subtitle">Technical exception information</div></div></div>
+    <div class="sm-code-box">{{ error.stack_trace }}</div>
+  </section>
+  {% endif %}
+
+  {% if error.resolution_notes %}
+  <section class="sm-section">
+    <div class="sm-section-head"><div><div class="sm-section-title">Resolution Notes</div></div></div>
+    <div class="sm-message-box">{{ error.resolution_notes }}</div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

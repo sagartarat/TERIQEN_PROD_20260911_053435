@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Payment Workbench{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/agent_payment.css') }}">
+
+<div class="ap-page">
+
+  <div class="ap-topbar">
+    <div class="ap-title-wrap">
+      <h1>Agent Payment Workbench</h1>
+      <div class="ap-subtitle">
+        Process agency pay amount, outstanding payment, and UTR references against invoice numbers.
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ap-btn ap-btn-light" onclick="resetAgentPaymentScreen()">Reset</button>
+      <button type="button" class="ap-btn ap-btn-primary" onclick="loadAgentInvoices()">Search</button>
+    </div>
+  </div>
+
+  <div class="ap-summary-grid">
+    <div class="ap-stat"><div class="ap-stat-label">Total Invoices</div><div class="ap-stat-value" id="kpiTotalInvoices">0</div><div class="ap-stat-note">Loaded invoice count</div></div>
+    <div class="ap-stat"><div class="ap-stat-label">Total Payable</div><div class="ap-stat-value" id="kpiTotalPayable">0.00</div><div class="ap-stat-note">Agency pay outstanding amount</div></div>
+    <div class="ap-stat"><div class="ap-stat-label">Selected Amount</div><div class="ap-stat-value" id="kpiSelectedAmount">0.00</div><div class="ap-stat-note">Clicked invoice agency pay amount</div></div>
+    <div class="ap-stat"><div class="ap-stat-label">Paid Amount</div><div class="ap-stat-value" id="kpiPaidAmount">0.00</div><div class="ap-stat-note">Saved paid amount</div></div>
+    <div class="ap-stat"><div class="ap-stat-label">Pending Amount</div><div class="ap-stat-value" id="kpiPendingAmount">0.00</div><div class="ap-stat-note">Pending agency payment</div></div>
+  </div>
+
+  <div class="ap-card">
+    <div class="ap-card-head"><div><h2 class="ap-card-title">Payment Filters</h2><div class="ap-card-subtitle">Filter agent invoice records before opening an invoice in Payment Summary.</div></div></div>
+    <div class="ap-card-body">
+      <div class="ap-filter-grid">
+        <div class="ap-field"><label for="filterAgent">Agent</label><select id="filterAgent" class="ap-select"><option value="">All Agents</option></select></div>
+        <div class="ap-field"><label for="filterInvoiceNo">Invoice No</label><select id="filterInvoiceNo" class="ap-select"><option value="">All Invoices</option></select></div>
+        <div class="ap-field"><label for="filterFromDate">From Date</label><input type="date" id="filterFromDate" class="ap-input"></div>
+        <div class="ap-field"><label for="filterToDate">To Date</label><input type="date" id="filterToDate" class="ap-input"></div>
+        <div class="ap-field"><label for="filterStatus">Payment Status</label><select id="filterStatus" class="ap-select"><option value="">All</option><option value="PENDING">Pending</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option><option value="HOLD">Hold</option></select></div>
+        <div class="ap-field"><label for="filterLike">All Like Search</label><input type="text" id="filterLike" class="ap-input" placeholder="Like Search..."></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ap-main-grid">
+    <div class="ap-card">
+      <div class="ap-card-head"><div><h2 class="ap-card-title">Agent Invoice Snapshot</h2><div class="ap-card-subtitle">Click Invoice No to load details into Payment Summary.</div></div></div>
+      <div class="ap-card-body">
+        <div class="ap-toolbar"><div class="ap-toolbar-left" style="flex:1;"><div class="ap-search"><span class="ap-search-icon">🔍</span><input type="text" id="tableSearchInput" class="ap-input" placeholder="Search invoice, agent, patient, or status"></div></div></div>
+        <div class="ap-table-wrap">
+          <table class="ap-table" style="min-width:1320px;">
+            <thead><tr><th>Invoice No</th><th>Invoice Date</th><th>Agent</th><th>Patient / Case(s)</th><th>Currency</th><th>Invoice Amount</th><th>Agency Pay Amount</th><th>Outstanding Payment</th><th>UTR Reference</th><th>Status</th></tr></thead>
+            <tbody id="agentInvoiceBody"><tr><td colspan="10" class="ap-empty">No records loaded.</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:14px;" class="ap-muted">Showing <span id="visibleRecordCount">0</span> invoice record(s)</div>
+      </div>
+    </div>
+
+    <div class="ap-card">
+      <div class="ap-card-head"><div><h2 class="ap-card-title">Payment Summary</h2><div class="ap-card-subtitle" id="selectedCountText">No invoice selected</div></div></div>
+      <div class="ap-card-body">
+        <div class="ap-side-section">
+          <div class="ap-summary-row"><span>Invoice No</span><strong id="summaryInvoiceNo">-</strong></div>
+          <div class="ap-summary-row"><span>Agent</span><strong id="summaryAgent">-</strong></div>
+          <div class="ap-summary-row"><span>Patient / Case</span><strong id="summaryPatientCase">-</strong></div>
+          <div class="ap-summary-row"><span>Currency</span><strong id="summaryCurrency">-</strong></div>
+          <div class="ap-summary-row"><span>Invoice Amount</span><strong id="summaryInvoiceAmount">0.00</strong></div>
+          <div class="ap-summary-row"><span>Agency Pay Amount</span><strong id="summaryAgencyPayAmount">0.00</strong></div>
+          <div class="ap-summary-row"><span>Already Paid</span><strong id="summaryAlreadyPaid">0.00</strong></div>
+          <div class="ap-summary-row"><span>Outstanding Payment</span><strong id="summaryOutstanding">0.00</strong></div>
+        </div>
+        <div class="ap-section-title">Payment Details</div>
+        <div class="ap-payment-grid">
+          <div class="ap-field"><label for="paymentDate">Payment Date</label><input type="date" id="paymentDate" class="ap-input"></div>
+          <div class="ap-field"><label for="paymentMode">Payment Mode</label><select id="paymentMode" class="ap-select"><option value="">Select</option><option value="BANK TRANSFER">Bank Transfer</option><option value="CHEQUE">Cheque</option><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="OTHER">Other</option></select></div>
+          <div class="ap-field"><label for="paymentAmount">Paid Amount</label><input type="number" step="0.01" id="paymentAmount" class="ap-input" placeholder="0.00" oninput="recalculatePaymentSummary()"></div>
+          <div class="ap-field"><label for="tdsAmount">TDS / Deduction</label><input type="number" step="0.01" id="tdsAmount" class="ap-input" placeholder="0.00"></div>
+          <div class="ap-field ap-full"><label for="bankReference">Bank Reference / UTR No</label><input type="text" id="bankReference" class="ap-input" placeholder="Bank Reference / UTR No"></div>
+          <div class="ap-field ap-full"><label for="paymentRemarks">Remarks</label><textarea id="paymentRemarks" class="ap-textarea" placeholder="Payment remarks..."></textarea></div>
+        </div>
+        <div class="ap-actions"><button type="button" class="ap-btn ap-btn-light" onclick="previewAgentPayment()">Preview</button><button type="button" class="ap-btn ap-btn-success" onclick="saveAgentPayment()">Save Payment</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/report_helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/agent_payment.js') }}"></script>
+
+{% endblock %}

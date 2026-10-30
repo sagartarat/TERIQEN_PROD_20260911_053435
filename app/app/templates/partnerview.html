@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Partner View / Modify{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/partnerview.css') }}">
+
+<div class="pv-page">
+
+  <div class="pv-hero">
+    <div class="pv-page-header">
+      <div class="pv-title-block">
+        <h1>Partner View / Modify</h1>
+        <p>Search, review, modify, or delete partner records through a premium enterprise workspace aligned with the File Upload screen design language.</p>
+      </div>
+
+      <div class="pv-header-actions">
+        <a class="pv-btn pv-btn-light" href="/partner-creation">
+          <i class="fa-solid fa-user-plus"></i> New Partner
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      <div class="pv-alert {% if category == 'success' %}pv-alert-success{% else %}pv-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="pv-panel">
+    <div class="pv-panel-header">
+      <div>
+        <h2>Partner Search</h2>
+        <small>Apply filters to quickly find partner records.</small>
+      </div>
+    </div>
+
+    <div class="pv-panel-body">
+      <div class="pv-panel-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <span>Search by partner type, short name, country, or contact number. Use View / Modify / Delete actions from the grid.</span>
+      </div>
+
+      <div class="pv-filter-grid">
+        <div>
+          <label class="pv-label" for="searchText">All Like Search</label>
+          <input class="pv-input" id="searchText" type="text" placeholder="Search Short Name / Country / Contact...">
+        </div>
+
+        <div>
+          <label class="pv-label" for="statusFilter">Status</label>
+          <select class="pv-select" id="statusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="pv-label" for="gstFilter">GST Required</label>
+          <select class="pv-select" id="gstFilter">
+            <option value="">GST Required (All)</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="pv-label">&nbsp;</label>
+          <button class="pv-btn pv-btn-ghost" type="button" id="btnReset">
+            <i class="fa-solid fa-rotate"></i> Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pv-panel">
+    <div class="pv-panel-header">
+      <div>
+        <h2>Partners List</h2>
+        <small>Search by Short Name / Country and view or modify a partner.</small>
+      </div>
+    </div>
+
+    <div class="pv-panel-body">
+      <div class="pv-table-wrap">
+        <div class="pv-table-scroll" id="tableScroll">
+          <table id="partnerTable">
+            <thead>
+              <tr>
+                <th>Partner Type</th>
+                <th>Short Name</th>
+                <th>Country</th>
+                <th>Contact No</th>
+                <th>Contract End Date</th>
+                <th>GST</th>
+                <th>Status</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% if partners and partners|length > 0 %}
+                {% for p in partners %}
+                  {% set gst = (p.gst_required or "") %}
+                  {% set st  = (p.partner_status or "") %}
+                  <tr class="data-row" data-status="{{ (st or '')|e }}" data-gst="{{ (gst or '')|e }}">
+                    <td class="col-type">{{ p.partner_type or "" }}</td>
+                    <td class="col-short">{{ p.short_name or "" }}</td>
+                    <td class="col-country">{{ p.partner_country or "" }}</td>
+                    <td class="col-contact">{{ p.prim_contno or "" }}</td>
+                    <td>{{ p.contend_date or "" }}</td>
+
+                    <td class="col-gst">
+                      {% if gst|lower == "yes" %}
+                        <span class="status-pill pill-yes"><span class="status-dot dot-yes"></span> Yes</span>
+                      {% elif gst|lower == "no" %}
+                        <span class="status-pill pill-no"><span class="status-dot dot-no"></span> No</span>
+                      {% else %}
+                        <span class="status-pill pill-na"><span class="status-dot dot-na"></span> {{ gst }}</span>
+                      {% endif %}
+                    </td>
+
+                    <td class="col-status">
+                      {% if st|lower == "active" %}
+                        <span class="status-pill pill-yes"><span class="status-dot dot-yes"></span> Active</span>
+                      {% elif st|lower == "inactive" %}
+                        <span class="status-pill pill-na"><span class="status-dot dot-na"></span> Inactive</span>
+                      {% else %}
+                        <span class="status-pill pill-na"><span class="status-dot dot-na"></span> {{ st }}</span>
+                      {% endif %}
+                    </td>
+
+                    <td>
+                      <div class="actions">
+                        <button class="icon-btn view" type="button" title="View" data-key="{{ (p.short_name or '')|e }}" onclick="viewPartner(this)">
+                          <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                        <button class="icon-btn edit" type="button" title="Modify" data-key="{{ (p.short_name or '')|e }}" onclick="editPartner(this)">
+                          <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <button class="icon-btn delete" type="button" title="Delete" data-key="{{ (p.short_name or '')|e }}" onclick="deletePartner(this)">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr class="no-data-row">
+                  <td colspan="8" class="no-data">
+                    No partners found.
+                    <div class="muted">Create a partner from Partner Registration screen first.</div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <div class="pager-left">
+            <span class="pager-info" id="pagerInfo">Showing 0–0 of 0</span>
+            <label class="muted" style="font-weight:800;">Rows:</label>
+            <select class="page-size" id="pageSize">
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+
+          <div class="pager-right" id="pagerButtons">
+            <button class="page-btn" type="button" id="btnPrev"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="page-btn" type="button" id="btnNext"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

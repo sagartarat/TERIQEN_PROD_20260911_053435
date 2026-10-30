@@ -1,0 +1,85 @@
+﻿# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and private configuration
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+
+# Logs and runtime files
+logs/
+*.log
+instance/
+*.pid
+
+# Database files and backups
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+*.bak
+*.backup
+
+# Release archives
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Historical backups and staging folders
+backup_*/
+change_backup_*/
+*_backup_*/
+*backup*/
+*_staging/
+
+# Editor and local settings
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local server configuration pending review
+/server-config/
+
+# Historical release directories
+/app/TERIQEN_INVOICE_RELEASE_*/
+/app/TERIQEN_PROD_RELEASE_*/
+/app/TERIQEN_RELEASE_*/
+
+# Historical source-code snapshots
+*.bak_*
+*.backup_*
+*.pre_*
+*.before_*
+*.bak
+*.backup
+
+# Temporary Git review file
+/git_upload_review.txt
+*.tar.gz.sha256
+/app/reset_local_admin.py
+
+# Additional precautions for initial GitHub upload
+/app/.env.production.example
+/app/app/static/downloads/Cadupius_Patient_Details_Format.txt

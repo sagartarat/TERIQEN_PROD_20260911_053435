@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Scheduler Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">{{ scheduler.scheduler_name or 'Scheduler Detail' }}</div>
+      <div class="sm-breadcrumb">
+        System Monitoring / Scheduler Monitor / {{ scheduler.scheduler_code or scheduler.id }}
+      </div>
+      <div class="sm-page-subtitle">
+        Scheduler configuration, heartbeat, latest execution and execution history.
+      </div>
+    </div>
+
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.scheduler_monitor') }}">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
+
+      {% if scheduler.can_run_now|default(false) %}
+      <form method="post" action="{{ url_for('system_monitoring.run_scheduler', scheduler_id=scheduler.id) }}">
+        <button class="top-btn primary" type="submit">
+          <i class="fa-solid fa-play"></i> Run Now
+        </button>
+      </form>
+      {% endif %}
+
+      {% if scheduler.can_toggle|default(false) %}
+      <form method="post" action="{{ url_for('system_monitoring.toggle_scheduler', scheduler_id=scheduler.id) }}">
+        <input type="hidden" name="enabled_flag"
+               value="{% if scheduler.enabled_flag in ['Y', '1', 1, true, True] %}N{% else %}Y{% endif %}">
+        <button class="top-btn" type="submit">
+          <i class="fa-solid fa-power-off"></i>
+          {% if scheduler.enabled_flag in ['Y', '1', 1, true, True] %}Disable{% else %}Enable{% endif %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sm-health-banner {{ (scheduler.health_status or 'UNKNOWN')|lower }}">
+    <div class="sm-health-main">
+      <div class="sm-health-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+      <div>
+        <div class="sm-health-name">{{ scheduler.health_status or 'UNKNOWN' }}</div>
+        <div class="sm-health-message">{{ scheduler.health_message or 'No scheduler health message available.' }}</div>
+      </div>
+    </div>
+    <div class="sm-health-time">Last heartbeat: {{ scheduler.last_heartbeat_on or '-' }}</div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Scheduler Configuration</div>
+        <div class="sm-section-subtitle">Registered configuration for this scheduler</div>
+      </div>
+    </div>
+
+    <div class="sm-detail-grid">
+      <div class="sm-detail-item"><div class="sm-detail-label">Scheduler Code</div><div class="sm-detail-value">{{ scheduler.scheduler_code or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Module</div><div class="sm-detail-value">{{ scheduler.module_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Job Function</div><div class="sm-detail-value">{{ scheduler.job_function or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Scheduler Type</div><div class="sm-detail-value">{{ scheduler.scheduler_type or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Frequency</div><div class="sm-detail-value">{{ scheduler.frequency_label or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Enabled</div><div class="sm-detail-value">{{ scheduler.enabled_flag or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Max Runtime</div><div class="sm-detail-value">{% if scheduler.max_runtime_seconds is not none %}{{ scheduler.max_runtime_seconds }} sec{% else %}-{% endif %}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Retry Count</div><div class="sm-detail-value">{{ scheduler.retry_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Next Run</div><div class="sm-detail-value">{{ scheduler.next_run_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Server</div><div class="sm-detail-value">{{ scheduler.server_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Process ID</div><div class="sm-detail-value">{{ scheduler.process_id or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Updated On</div><div class="sm-detail-value">{{ scheduler.updated_on or '-' }}</div></div>
+    </div>
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Latest Execution</div>
+        <div class="sm-section-subtitle">Most recent recorded run</div>
+      </div>
+
+      {% if latest_execution %}
+      <a class="sm-link"
+         href="{{ url_for('system_monitoring.execution_detail', execution_id=latest_execution.id) }}">
+        Open Full Execution
+      </a>
+      {% endif %}
+    </div>
+
+    {% if latest_execution %}
+    <div class="sm-detail-grid">
+      <div class="sm-detail-item"><div class="sm-detail-label">Execution ID</div><div class="sm-detail-value">{{ latest_execution.execution_id or latest_execution.id }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Status</div><div class="sm-detail-value"><span class="sm-status {{ (latest_execution.execution_status or 'UNKNOWN')|lower }}">{{ latest_execution.execution_status or 'UNKNOWN' }}</span></div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Started On</div><div class="sm-detail-value">{{ latest_execution.started_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Completed On</div><div class="sm-detail-value">{{ latest_execution.completed_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Duration</div><div class="sm-detail-value">{% if latest_execution.duration_ms is not none %}{{ latest_execution.duration_ms }} ms{% else %}-{% endif %}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Records Found</div><div class="sm-detail-value">{{ latest_execution.records_found|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Processed</div><div class="sm-detail-value">{{ latest_execution.records_processed|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Successful</div><div class="sm-detail-value">{{ latest_execution.success_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Failed</div><div class="sm-detail-value">{{ latest_execution.failure_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Skipped</div><div class="sm-detail-value">{{ latest_execution.skipped_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Server</div><div class="sm-detail-value">{{ latest_execution.server_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Process ID</div><div class="sm-detail-value">{{ latest_execution.process_id or '-' }}</div></div>
+    </div>
+
+    {% if latest_execution.error_message %}
+    <div class="sm-message-box">{{ latest_execution.error_message }}</div>
+    {% endif %}
+    {% else %}
+    <div class="sm-empty">
+      <i class="fa-solid fa-clock"></i>
+      <strong>No execution recorded</strong>
+      This scheduler does not yet have a recorded execution.
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Execution History</div>
+        <div class="sm-section-subtitle">Recent runs for this scheduler</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if execution_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Execution ID</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Duration</th>
+            <th>Found</th>
+            <th>Processed</th>
+            <th>Success</th>
+            <th>Failed</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in execution_rows %}
+          <tr>
+            <td><a class="sm-link" href="{{ url_for('system_monitoring.execution_detail', execution_id=row.id) }}">{{ row.execution_id or row.id }}</a></td>
+            <td>{{ row.started_on or '-' }}</td>
+            <td>{{ row.completed_on or '-' }}</td>
+            <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+            <td>{{ row.records_found|default(0, true) }}</td>
+            <td>{{ row.records_processed|default(0, true) }}</td>
+            <td>{{ row.success_count|default(0, true) }}</td>
+            <td>{{ row.failure_count|default(0, true) }}</td>
+            <td><span class="sm-status {{ (row.execution_status or 'UNKNOWN')|lower }}">{{ row.execution_status or 'UNKNOWN' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-list"></i>
+        <strong>No execution history</strong>
+        No historical runs are available for this scheduler.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

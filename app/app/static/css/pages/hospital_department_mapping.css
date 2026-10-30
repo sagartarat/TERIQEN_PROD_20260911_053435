@@ -1,0 +1,501 @@
+.erp-page {
+        padding: 18px;
+        background: #eef3f8;
+        min-height: calc(100vh - 70px);
+    }
+
+    .erp-header {
+        background: linear-gradient(135deg, #082b4c, #146aa0);
+        color: #fff;
+        border-radius: 18px;
+        padding: 20px 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 10px 28px rgba(8, 43, 76, 0.25);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .erp-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .erp-header p {
+        margin: 6px 0 0;
+        font-size: 13px;
+        opacity: 0.92;
+    }
+
+    .erp-badge {
+        padding: 9px 16px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.16);
+        border: 1px solid rgba(255,255,255,0.28);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .kpi-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 15px;
+        border: 1px solid #dce6f1;
+        box-shadow: 0 5px 16px rgba(16, 24, 40, 0.07);
+    }
+
+    .kpi-label {
+        font-size: 11px;
+        color: #667085;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .kpi-value {
+        margin-top: 5px;
+        font-size: 24px;
+        font-weight: 900;
+        color: #123c69;
+    }
+
+    .erp-grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .erp-card {
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid #dce6f1;
+        box-shadow: 0 6px 18px rgba(16, 24, 40, 0.07);
+        overflow: hidden;
+    }
+
+    .erp-card-header {
+        background: #123c69;
+        color: #fff;
+        padding: 14px 16px;
+        font-size: 14px;
+        font-weight: 900;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .erp-card-body {
+        padding: 16px;
+    }
+
+    .field {
+        margin-bottom: 15px;
+    }
+
+    .field label {
+        display: block;
+        font-size: 12px;
+        color: #344054;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .field select,
+    .field textarea,
+    .field input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cfd8e3;
+        border-radius: 13px;
+        padding: 11px 13px;
+        font-size: 14px;
+        outline: none;
+        background: #fff;
+    }
+
+    .field select:focus,
+    .field textarea:focus,
+    .field input:focus {
+        border-color: #17689f;
+        box-shadow: 0 0 0 3px rgba(23, 104, 159, 0.14);
+    }
+
+    textarea {
+        min-height: 86px;
+        resize: vertical;
+    }
+
+    .required {
+        color: #d92d20;
+    }
+
+    .hospital-view-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .hospital-view-row select {
+        flex: 1;
+    }
+
+    .summary-box {
+        background: #f8fafc;
+        border: 1px solid #e4e7ec;
+        border-radius: 15px;
+        padding: 13px;
+        margin-top: 12px;
+    }
+
+    .summary-line {
+        font-size: 13px;
+        color: #344054;
+        margin-bottom: 8px;
+    }
+
+    .summary-line b {
+        color: #123c69;
+    }
+
+    .help-text {
+        margin-top: 7px;
+        font-size: 12px;
+        color: #667085;
+        line-height: 1.4;
+    }
+
+    .transfer-layout {
+        display: grid;
+        grid-template-columns: 1fr 82px 1fr;
+        gap: 14px;
+        align-items: stretch;
+    }
+
+    .transfer-box {
+        border: 1px solid #d8e1ec;
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+        min-height: 460px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .transfer-title {
+        background: #f3f7fb;
+        border-bottom: 1px solid #d8e1ec;
+        padding: 13px 14px;
+        font-size: 13px;
+        color: #123c69;
+        font-weight: 900;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-transform: uppercase;
+    }
+
+    .transfer-search {
+        padding: 10px;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .transfer-search input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cfd8e3;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .transfer-list {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 400px;
+        padding: 8px;
+    }
+
+    .dept-item {
+        border: 1px solid #e5edf5;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        background: #fff;
+        font-size: 13px;
+        color: #344054;
+        font-weight: 800;
+        user-select: none;
+    }
+
+    .dept-item:hover {
+        background: #f8fbff;
+        border-color: #b9c9dc;
+    }
+
+    .dept-item.selected {
+        background: #eaf3fb;
+        border-color: #17689f;
+        color: #123c69;
+    }
+
+    .transfer-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .move-btn {
+        border: 1px solid #c8d3e1;
+        background: #123c69;
+        color: #fff;
+        padding: 12px 10px;
+        border-radius: 13px;
+        font-size: 16px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(18, 60, 105, 0.18);
+    }
+
+    .move-btn.secondary {
+        background: #eef2f7;
+        color: #123c69;
+    }
+
+    .empty-box,
+    .empty-list {
+        padding: 16px;
+        text-align: center;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .empty-box {
+        background: #fff1f0;
+        color: #b42318;
+        border: 1px solid #fecdca;
+    }
+
+    .empty-list {
+        color: #667085;
+    }
+
+    .action-bar {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid #eef2f7;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        border-radius: 12px;
+        padding: 11px 20px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: #123c69;
+        color: #fff;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: #eef2f7;
+        color: #123c69;
+        border: 1px solid #c8d3e1;
+    }
+
+    .view-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .view-title {
+        font-size: 13px;
+        color: #344054;
+        font-weight: 900;
+    }
+
+    .view-search {
+        width: 280px;
+        max-width: 100%;
+        border: 1px solid #cfd8e3;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .view-table-wrap {
+        overflow-x: auto;
+        border: 1px solid #d8e1ec;
+        border-radius: 14px;
+    }
+
+    .view-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        background: #fff;
+    }
+
+    .view-table th {
+        background: #f3f7fb;
+        color: #123c69;
+        padding: 12px;
+        border-bottom: 1px solid #d8e1ec;
+        text-align: left;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 11px;
+    }
+
+    .view-table td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #eef2f7;
+        color: #344054;
+    }
+
+    .view-table tr:hover td {
+        background: #f8fbff;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #027a48;
+        border: 1px solid #abefc6;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .status-pill.inactive {
+        background: #fff1f0;
+        color: #b42318;
+        border: 1px solid #fecdca;
+    }
+
+    .flash-popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .flash-popup-box {
+        width: 430px;
+        max-width: calc(100% - 32px);
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28);
+        border: 1px solid #e4e7ec;
+    }
+
+    .flash-popup-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 999px;
+        margin: 0 auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: 900;
+    }
+
+    .flash-popup-icon.success {
+        background: #ecfdf3;
+        color: #027a48;
+        border: 1px solid #abefc6;
+    }
+
+    .flash-popup-icon.danger {
+        background: #fff1f0;
+        color: #b42318;
+        border: 1px solid #fecdca;
+    }
+
+    .flash-popup-icon.warning {
+        background: #fffaeb;
+        color: #b54708;
+        border: 1px solid #fedf89;
+    }
+
+    .flash-popup-title {
+        font-size: 18px;
+        font-weight: 900;
+        color: #123c69;
+        margin-bottom: 8px;
+    }
+
+    .flash-popup-message {
+        font-size: 14px;
+        color: #344054;
+        line-height: 1.45;
+        margin-bottom: 20px;
+    }
+
+    .flash-popup-btn {
+        background: #123c69;
+        color: #fff;
+        border: none;
+        border-radius: 11px;
+        padding: 10px 28px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    @media(max-width: 1100px) {
+        .erp-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .transfer-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .transfer-actions {
+            flex-direction: row;
+        }
+
+        .hospital-view-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }

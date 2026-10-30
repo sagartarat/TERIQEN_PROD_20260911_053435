@@ -1,0 +1,627 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Creation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/patientcreation.css') }}">
+
+{# -------- Mode helpers -------- #}
+{% set mode = (mode or 'create') %}
+{% set is_view = (mode == 'view') %}
+{% set is_modify = (mode == 'modify') %}
+{% set p = patient or {} %}
+
+<div class="pc-page">
+
+  <div class="pc-hero">
+    <div class="pc-page-header">
+      <div class="pc-title-block">
+        <h1>
+          {% if is_view %}Patient View{% elif is_modify %}Patient Modify{% else %}Patient Creation{% endif %}
+        </h1>
+        <p>
+          Capture passport, demographic and document details through the same premium ERP workspace used in File Upload and Partner screens.
+        </p>
+      </div>
+
+      <div class="pc-header-actions">
+        <a class="pc-btn pc-btn-light" href="{{ url_for('patient_view') }}">
+          <i class="fa-solid fa-list"></i> Patient View
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      <div class="pc-alert {% if category == 'success' %}pc-alert-success{% else %}pc-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if is_view %}
+    <div class="pc-mode-card">
+      <div class="pc-mode-left">
+        <div class="pc-mode-icon"><i class="fa-solid fa-eye"></i></div>
+        <div>
+          <div class="pc-mode-title">VIEW MODE</div>
+          <div class="pc-mode-sub">All fields are disabled and available for read-only review.</div>
+        </div>
+      </div>
+      <div class="pc-mode-actions">
+        <a class="pc-btn pc-btn-dark" href="{{ url_for('patient_view') }}">
+          <i class="fa-solid fa-arrow-left"></i> Back to View
+        </a>
+        <a class="pc-btn pc-btn-primary"
+           href="{{ url_for('patient_creation') }}?mode=modify&key={{ p.passport_no or (key or '') }}">
+          <i class="fa-solid fa-pen"></i> Switch to Modify
+        </a>
+      </div>
+    </div>
+  {% elif is_modify %}
+    <div class="pc-mode-card">
+      <div class="pc-mode-left">
+        <div class="pc-mode-icon"><i class="fa-solid fa-pen"></i></div>
+        <div>
+          <div class="pc-mode-title">MODIFY MODE</div>
+          <div class="pc-mode-sub">Update patient details and save changes.</div>
+        </div>
+      </div>
+      <div class="pc-mode-actions">
+        <a class="pc-btn pc-btn-dark"
+           href="{{ url_for('patient_creation') }}?mode=view&key={{ p.passport_no or (key or '') }}">
+          <i class="fa-solid fa-arrow-left"></i> Back to View
+        </a>
+        <a class="pc-btn pc-btn-primary" href="{{ url_for('patient_view') }}">
+          <i class="fa-solid fa-list"></i> Back to List
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="pc-panel">
+    <div class="pc-panel-header">
+      <div>
+        <h2>Patient Information</h2>
+        <small>Enter passport and demographic information. Mandatory fields are marked with a red star.</small>
+      </div>
+    </div>
+
+    <div class="pc-panel-body">
+      <div class="pc-panel-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <span>Patient passport number is treated as the key field. In modify mode, it remains read-only.</span>
+      </div>
+
+      <form id="patientForm"
+            method="POST"
+            enctype="multipart/form-data"
+            novalidate
+            action="{{ url_for('patient_creation', mode=mode, key=key) }}">
+
+        {% if csrf_token is defined %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+
+        <input type="hidden" name="mode" value="{{ mode }}">
+        <input type="hidden" name="key" value="{{ key or (p.passport_no or '') }}">
+        <input type="hidden" name="original_passport_no" value="{{ p.passport_no or (key or '') }}">
+
+        <input type="hidden" id="patientCreationBaseUrl" value="{{ url_for('patient_creation') }}">
+        <input type="hidden" id="patientViewUrl" value="{{ url_for('patient_view') }}">
+
+        <div class="pc-section">
+          <div class="pc-section-title">
+            <span>Core Passport Details</span>
+            <div class="pc-section-sub">Primary patient identification</div>
+          </div>
+
+          <div class="pc-detail-grid">
+            <div class="pc-detail-item">
+              <label class="pc-label">Passport Number <span class="pc-req">*</span></label>
+              <input class="pc-input" type="text" name="passport_no" autocomplete="off" required data-label="Passport Number"
+                     value="{{ p.passport_no or '' }}">
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Passport Expiry Date <span class="pc-req">*</span></label>
+              <input class="pc-input" type="date" name="passport_expiry" id="passportExpiry"
+                     min="{{ passport_min_date or '' }}" required data-label="Passport Expiry Date"
+                     value="{{ p.passport_expirydt or '' }}">
+              <div class="pc-help-text">Passport Expiry Date must be later than today.</div>
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Passport Issuing Country <span class="pc-req">*</span></label>
+              <select class="pc-select" name="issuing_country" id="issuingCountry" required data-label="Passport Issuing Country">
+                <option value="">Please select Issuing Country</option>
+                {% for c in countries %}
+                  <option value="{{ c.country_name }}"
+                    {% if (p.psprtissue_country or '') == c.country_name %}selected{% endif %}>
+                    {{ c.country_name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-section">
+          <div class="pc-section-title">
+            <span>Personal Details</span>
+            <div class="pc-section-sub">Patient name, country, contact and DOB</div>
+          </div>
+
+          <div class="pc-detail-grid">
+            <div class="pc-detail-item">
+              <label class="pc-label">Patient Given Name <span class="pc-req">*</span></label>
+              <input class="pc-input" type="text" name="given_name" autocomplete="off" required data-label="Patient Given Name"
+                     value="{{ p.patient_givennm or '' }}">
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Patient Sur Name</label>
+              <input class="pc-input" type="text" name="sur_name" autocomplete="off" data-label="Patient Sur Name"
+                     value="{{ p.patient_surnm or '' }}">
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Gender <span class="pc-req">*</span></label>
+              <select class="pc-select" name="gender" required data-label="Gender">
+                <option value="">Select</option>
+                <option value="Male" {% if (p.patient_gender or '') == 'Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if (p.patient_gender or '') == 'Female' %}selected{% endif %}>Female</option>
+                <option value="Others" {% if (p.patient_gender or '') == 'Others' %}selected{% endif %}>Others</option>
+              </select>
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Patient Country <span class="pc-req">*</span></label>
+              <select class="pc-select" name="country" id="patientCountry" required data-label="Patient Country">
+                <option value="">Please select Country</option>
+                {% for c in countries %}
+                  <option value="{{ c.country_name }}"
+                    {% if (p.patient_country or '') == c.country_name %}selected{% endif %}>
+                    {{ c.country_name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Patient Contact Number <span class="pc-req">*</span></label>
+              <input class="pc-input" type="text" name="contact_no" autocomplete="off" required data-label="Patient Contact Number"
+                     value="{{ p.patient_contno or '' }}">
+            </div>
+
+            <div class="pc-detail-item">
+              <label class="pc-label">Patient D.O.B. <span class="pc-req">*</span></label>
+              <input class="pc-input" type="date" name="dob" id="patientDob"
+                     max="{{ dob_max_date or '' }}" required data-label="Patient D.O.B."
+                     value="{{ p.patient_dob or '' }}">
+            </div>
+
+            <div class="pc-detail-item pc-span-3">
+              <label class="pc-label">Patient Address <span class="pc-req">*</span></label>
+              <textarea class="pc-textarea" name="address" required data-label="Patient Address">{{ p.patient_address or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-section">
+          <div class="pc-section-title">
+            <span>Patient Documents</span>
+            <div class="pc-section-sub">Upload supporting documents up to 2 MB total</div>
+          </div>
+
+          <div class="pc-detail-grid">
+            <div class="pc-detail-item pc-span-3">
+              <label class="pc-label">Upload Document</label>
+              <div class="pc-upload-box">
+                <div class="pc-upload-box-top">
+                  <div class="pc-upload-box-title">Upload Patient Documents</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <span class="pc-badge pc-badge-info">Multiple Files</span>
+                    <span class="pc-badge pc-badge-success">PDF / Image / Doc</span>
+                    <span class="pc-badge pc-badge-warning">2 MB Limit</span>
+                  </div>
+                </div>
+
+                <input
+                  class="pc-input"
+                  style="height:auto;padding:10px 12px"
+                  type="file"
+                  id="uploadDocs"
+                  name="patient_documents"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                >
+
+                <div class="pc-size-badge">
+                  <span class="pc-size-pill" id="totalSizePill">Total: 0 KB / 2 MB</span>
+                </div>
+
+                <div class="pc-help-text">
+                  Total upload size must be within <b>2 MB</b>. Remove files if it exceeds the limit.
+                </div>
+
+                {% if is_modify %}
+                  <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+                    <input type="checkbox" id="replace_docs" name="replace_docs" value="1">
+                    <label for="replace_docs" style="margin:0;color:var(--text);font-weight:700;">
+                      Replace existing documents with newly uploaded files
+                    </label>
+                  </div>
+                  <div class="pc-help-text">
+                    If unchecked, newly uploaded files will be appended.
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="pc-detail-item pc-span-3">
+              <label class="pc-label">List of Documents Uploaded</label>
+
+              <div class="pc-doc-list-box">
+                <div id="docListEmpty" class="pc-doc-empty">No documents selected</div>
+                <ul id="docList" class="pc-doc-ul"></ul>
+              </div>
+
+              <textarea class="pc-textarea" id="uploadedDocsText" name="uploaded_docs" readonly style="margin-top:12px;min-height:90px;"></textarea>
+
+              {% if (docs and docs|length > 0) %}
+                <div class="pc-existing-docs">
+                  <div class="head">Existing Documents From DB</div>
+                  <div class="body">
+                    <ul style="list-style:disc;padding-left:18px;margin:0;">
+                      {% for d in docs %}
+                        <li style="margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                          <div style="flex:1;">
+                            <b>{{ d.file_name }}</b>
+                            <span class="pc-muted">({{ d.file_type }}, {{ d.file_size }} bytes)</span>
+                          </div>
+
+                          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <a class="pc-doc-remove" href="{{ d.doc_url }}" target="_blank" rel="noopener">
+                              <i class="fa-solid fa-up-right-from-square"></i> Open
+                            </a>
+                            <a class="pc-doc-remove" href="{{ d.doc_url }}?download=1">
+                              <i class="fa-solid fa-download"></i> Download
+                            </a>
+                          </div>
+                        </li>
+                      {% endfor %}
+                    </ul>
+
+                    <div class="pc-muted" style="margin-top:8px;">
+                      Tip: PDFs/images open in browser; other types may download.
+                    </div>
+                  </div>
+                </div>
+              {% elif (is_view or is_modify) %}
+                <div class="pc-muted" style="margin-top:10px;">No existing documents found for this patient.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-actions" id="cardFoot">
+          <button class="pc-btn pc-btn-ghost" type="reset" id="btnClear">
+            <i class="fa-solid fa-rotate"></i> Clear
+          </button>
+
+          {% if is_modify %}
+            <button class="pc-btn pc-btn-primary" type="submit" id="btnSubmit">
+              <i class="fa-solid fa-floppy-disk"></i> Update
+            </button>
+          {% elif not is_view %}
+            <button class="pc-btn pc-btn-primary" type="submit" id="btnSubmit">
+              <i class="fa-solid fa-floppy-disk"></i> Submit
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const MODE = ("{{ mode or 'create' }}").toLowerCase();
+  const KEY  = ("{{ key or '' }}");
+
+  const form = document.getElementById("patientForm");
+  if(!form) return;
+
+  if(MODE === "view"){
+    form.querySelectorAll("input, select, textarea, button").forEach(el=>{
+      el.disabled = true;
+    });
+    const foot = document.getElementById("cardFoot");
+    if(foot) foot.style.display = "none";
+    return;
+  }
+
+  if(MODE === "modify"){
+    const passport = form.querySelector('input[name="passport_no"]');
+    if(passport && KEY){
+      passport.readOnly = true;
+    }
+  }
+
+  function isEmpty(el){
+    if(!el) return true;
+    if(el.disabled) return false;
+    return ((el.value || "").trim() === "");
+  }
+
+  function clearMarks(){
+    form.querySelectorAll(".is-invalid").forEach(x=>x.classList.remove("is-invalid"));
+  }
+
+  function focusField(el){
+    if(!el) return;
+    el.focus({preventScroll:true});
+    el.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+
+  function formatDateForMessage(dateValue){
+    if(!dateValue) return "";
+    const parts = dateValue.split("-");
+    if(parts.length !== 3) return dateValue;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  function todayAsInputDate(){
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  form.addEventListener("submit", function(e){
+    clearMarks();
+
+    const requiredEls = Array.from(form.querySelectorAll("[required]")).filter(el=>!el.disabled);
+    const firstMissing = requiredEls.find(el=>isEmpty(el));
+
+    if(firstMissing){
+      e.preventDefault();
+      firstMissing.classList.add("is-invalid");
+      alert((firstMissing.getAttribute("data-label") || "This field") + " should not be empty.");
+      focusField(firstMissing);
+      return false;
+    }
+
+    const patientDob = form.querySelector('input[name="dob"]');
+    const dobValue = (patientDob?.value || "").trim();
+    const todayValue = todayAsInputDate();
+
+    if(dobValue && dobValue >= todayValue){
+      e.preventDefault();
+      patientDob.classList.add("is-invalid");
+
+      if(dobValue === todayValue){
+        alert(
+          `Patient D.O.B. cannot be today (${formatDateForMessage(dobValue)}). ` +
+          "Patient D.O.B. must be earlier than today."
+        );
+      }else{
+        alert(
+          `Patient D.O.B. cannot be a future date (${formatDateForMessage(dobValue)}). ` +
+          "Please enter a date earlier than today."
+        );
+      }
+
+      focusField(patientDob);
+      return false;
+    }
+
+    const passportExpiry = form.querySelector('input[name="passport_expiry"]');
+    const expiryValue = (passportExpiry?.value || "").trim();
+
+    if(expiryValue && expiryValue <= todayValue){
+      e.preventDefault();
+      passportExpiry.classList.add("is-invalid");
+
+      if(expiryValue === todayValue){
+        alert(
+          `Passport expires today (${formatDateForMessage(expiryValue)}). ` +
+          "Passport Expiry Date must be later than today."
+        );
+      }else{
+        alert(
+          `Passport expired on ${formatDateForMessage(expiryValue)}. ` +
+          "Please enter a passport expiry date later than today."
+        );
+      }
+
+      focusField(passportExpiry);
+      return false;
+    }
+
+    if(MODE === "modify"){
+      if(!KEY){
+        e.preventDefault();
+        alert("Missing primary key (Passport Number). Please open this record from Patient View.");
+        return false;
+      }
+
+      const current = (form.querySelector('input[name="passport_no"]')?.value || "").trim();
+      if(current && current !== KEY){
+        e.preventDefault();
+        alert("Passport Number cannot be changed because it is the primary key.");
+        return false;
+      }
+
+      const ok = confirm("Are you sure you want to UPDATE this patient?");
+      if(!ok){
+        e.preventDefault();
+        return false;
+      }
+    }
+  });
+
+  form.addEventListener("input", (e)=>{
+    const el = e.target;
+    if(el && el.classList && el.classList.contains("is-invalid")){
+      if(!isEmpty(el)) el.classList.remove("is-invalid");
+    }
+  });
+
+  form.addEventListener("change", (e)=>{
+    const el = e.target;
+    if(el && el.classList && el.classList.contains("is-invalid")){
+      if(!isEmpty(el)) el.classList.remove("is-invalid");
+    }
+  });
+
+  const MAX_TOTAL_BYTES = 2 * 1024 * 1024;
+
+  const input = document.getElementById("uploadDocs");
+  const list = document.getElementById("docList");
+  const empty = document.getElementById("docListEmpty");
+  const txt = document.getElementById("uploadedDocsText");
+  const clearBtn = document.getElementById("btnClear");
+  const totalPill = document.getElementById("totalSizePill");
+  const submitBtn = document.getElementById("btnSubmit");
+
+  if(!input || !list || !empty) return;
+
+  let selectedFiles = [];
+
+  function formatBytes(bytes){
+    const units = ["B","KB","MB","GB"];
+    let i = 0;
+    let b = bytes;
+    while(b >= 1024 && i < units.length - 1){ b /= 1024; i++; }
+    return `${b.toFixed(b < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+  }
+
+  function totalBytes(){
+    return selectedFiles.reduce((sum,f)=> sum + (f.size || 0), 0);
+  }
+
+  function updateTotalUI(){
+    const total = totalBytes();
+
+    if(totalPill){
+      totalPill.textContent = `Total: ${formatBytes(total)} / 2 MB`;
+      totalPill.classList.toggle("over", total > MAX_TOTAL_BYTES);
+    }
+
+    if(submitBtn){
+      submitBtn.disabled = (total > MAX_TOTAL_BYTES);
+      submitBtn.title = (total > MAX_TOTAL_BYTES) ? "Total upload size exceeds 2 MB" : "";
+      submitBtn.style.opacity = submitBtn.disabled ? "0.6" : "1";
+      submitBtn.style.cursor = submitBtn.disabled ? "not-allowed" : "pointer";
+    }
+  }
+
+  function setTextarea(){
+    if(!txt) return;
+    txt.value = selectedFiles.map(f => `${f.name} (${formatBytes(f.size)})`).join("\n");
+  }
+
+  function syncInputFiles(){
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+  }
+
+  function render(){
+    list.innerHTML = "";
+
+    if(selectedFiles.length === 0){
+      list.style.display = "none";
+      empty.style.display = "block";
+      setTextarea();
+      updateTotalUI();
+      return;
+    }
+
+    empty.style.display = "none";
+    list.style.display = "block";
+
+    selectedFiles.forEach((file, idx) => {
+      const li = document.createElement("li");
+      li.className = "pc-doc-li";
+
+      const meta = document.createElement("div");
+      meta.className = "pc-doc-meta";
+      meta.textContent = `${file.name} (${formatBytes(file.size)})`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pc-doc-remove";
+      btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Remove';
+
+      btn.addEventListener("click", () => {
+        selectedFiles.splice(idx, 1);
+        syncInputFiles();
+        render();
+      });
+
+      li.appendChild(meta);
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+
+    setTextarea();
+    updateTotalUI();
+  }
+
+  function addFiles(incomingFiles){
+    const before = selectedFiles.slice();
+
+    incomingFiles.forEach(f => {
+      const exists = selectedFiles.some(sf =>
+        sf.name === f.name && sf.size === f.size && sf.lastModified === f.lastModified
+      );
+      if(!exists) selectedFiles.push(f);
+    });
+
+    if(totalBytes() > MAX_TOTAL_BYTES){
+      selectedFiles = before;
+      syncInputFiles();
+      render();
+      alert("Total upload size cannot exceed 2 MB. Please remove some files or choose smaller files.");
+      return;
+    }
+
+    syncInputFiles();
+    render();
+  }
+
+  input.addEventListener("change", () => {
+    const incoming = Array.from(input.files || []);
+    addFiles(incoming);
+  });
+
+  if(clearBtn){
+    clearBtn.addEventListener("click", () => {
+      selectedFiles = [];
+      input.value = "";
+      render();
+    });
+  }
+
+  form.addEventListener("submit", (e) => {
+    if(totalBytes() > MAX_TOTAL_BYTES){
+      e.preventDefault();
+      alert("Total upload size cannot exceed 2 MB.");
+    }
+  });
+
+  render();
+});
+</script>
+
+{% endblock %}

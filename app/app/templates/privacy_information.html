@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <meta name="referrer" content="no-referrer">
+    <title>Privacy Information | {{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}</title>
+
+    <style>
+        :root {
+            --teal-dark: #123b31;
+            --teal: #1f7458;
+            --teal-soft: #eaf4ef;
+            --gold: #d6a541;
+            --page: #eef4f1;
+            --card: #ffffff;
+            --text: #18342b;
+            --muted: #687b73;
+            --border: #ccd9d3;
+            --danger-bg: #fff2f1;
+            --danger: #9c342f;
+            --success-bg: #eef8f2;
+            --success: #226747;
+            --neutral-bg: #f4f6f5;
+            --neutral: #44564f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--page);
+            color: var(--text);
+        }
+
+        body {
+            padding: 18px 12px 34px;
+        }
+
+        .shell {
+            width: min(100%, 620px);
+            margin: 0 auto;
+        }
+
+        .brand {
+            background: var(--teal-dark);
+            color: #ffffff;
+            padding: 18px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo-box {
+            width: 168px;
+            flex: 0 0 168px;
+            padding: 7px 9px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            box-shadow: 0 6px 16px rgba(0,0,0,.14);
+        }
+
+        .brand-logo {
+            display: block;
+            width: 100%;
+            max-height: 54px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .brand-subtitle {
+            margin-top: 2px;
+            color: #d5e4de;
+            font-size: 13px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 0;
+            border-radius: 0 0 20px 20px;
+            padding: 18px;
+            box-shadow: 0 15px 40px rgba(22, 55, 45, 0.09);
+        }
+
+        .intro {
+            background: var(--teal-soft);
+            border: 1px solid #cfe0d8;
+            border-radius: 12px;
+            padding: 12px 13px;
+            color: #3e5d51;
+            font-size: 14px;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .version {
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #edf2ef;
+            color: var(--text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .privacy-scroll {
+            height: 340px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: #fbfdfc;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            color: #28483d;
+        }
+
+        .helper {
+            min-height: 18px;
+            margin: 9px 2px 10px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .acknowledgement {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 13px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+        }
+
+        .acknowledgement input {
+            width: 19px;
+            height: 19px;
+            margin: 2px 0 0;
+            flex: 0 0 auto;
+            accent-color: var(--teal);
+        }
+
+        .acknowledgement label {
+            font-size: 14px;
+            line-height: 1.45;
+            cursor: pointer;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 13px;
+        }
+
+        .confirm,
+        .decline {
+            width: 100%;
+            border-radius: 12px;
+            padding: 13px 15px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .confirm {
+            border: 0;
+            background: var(--gold);
+            color: #173429;
+        }
+
+        .decline {
+            border: 1px solid #c8d3ce;
+            background: #ffffff;
+            color: #4c5e57;
+        }
+
+        .confirm:disabled,
+        .decline:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        .status {
+            display: none;
+            margin-top: 12px;
+            border-radius: 12px;
+            padding: 12px 13px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid #cee7d8;
+        }
+
+        .status.error {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid #efd2cf;
+        }
+
+        .final-card {
+            padding: 18px;
+            border-radius: 14px;
+            background: var(--success-bg);
+            border: 1px solid #cee7d8;
+            color: var(--success);
+            line-height: 1.5;
+        }
+
+        .final-card strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .final-card.neutral {
+            background: var(--neutral-bg);
+            border-color: #d9dfdc;
+            color: var(--neutral);
+        }
+
+        .auto-close-note {
+            margin-top: 10px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .invalid-card {
+            padding: 18px;
+            border-radius: 14px;
+            background: var(--danger-bg);
+            border: 1px solid #efd2cf;
+            color: var(--danger);
+            line-height: 1.5;
+        }
+
+        .privacy-note {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .brand-product {
+            margin-top: 5px;
+            color: #d9ece4;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .privacy-footer {
+            padding: 13px 12px 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .privacy-footer strong {
+            color: var(--teal-dark);
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 0;
+            }
+
+            .shell {
+                width: 100%;
+            }
+
+            .brand,
+            .card {
+                border-radius: 0;
+            }
+
+            .brand {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .brand-logo-box {
+                width: 190px;
+                flex-basis: auto;
+            }
+
+            .privacy-scroll {
+                height: 43vh;
+                min-height: 260px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+{% set is_bn = (language|default('ENGLISH', true) == 'BENGALI') %}
+<div class="shell">
+    <div class="brand">
+        <div class="brand-logo-box">
+            <img src="{{ url_for('static', filename=brand_logo_filename|default('images/cadupius_healthassist_logo.png')) }}"
+                 alt="{{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}"
+                 class="brand-logo">
+        </div>
+        <div>
+            <div class="brand-title">{{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}</div>
+            <div class="brand-subtitle">
+                {% if is_bn %}মেডিকেল ট্যুরিজম এজেন্সি — গোপনীয়তা সংক্রান্ত তথ্য{% else %}Medical Tourism Agency Privacy Information{% endif %}
+            </div>
+            <div class="brand-product">Powered by {{ brand_product_name|default('TERIQEN') }}</div>
+        </div>
+    </div>
+
+    <main class="card" id="privacyCard" data-token="{{ token|default('', true)|e }}">
+        {% if invalid_or_expired %}
+            <div class="invalid-card">
+                <strong>{% if is_bn %}এই গোপনীয়তা সংক্রান্ত তথ্যের লিংকটি আর কার্যকর নেই।{% else %}This Privacy Information link is no longer available.{% endif %}</strong>
+                <div>
+                    {% if is_bn %}
+                        লিংকটির মেয়াদ শেষ হয়ে থাকতে পারে অথবা নতুন একটি রিভিউ অনুরোধ দিয়ে এটি প্রতিস্থাপিত হয়েছে। অনুগ্রহ করে WhatsApp-এ ফিরে গিয়ে আবার শুরু করুন।
+                    {% else %}
+                        The link may have expired or may have been replaced by a newer review request. Please return to WhatsApp and start again.
+                    {% endif %}
+                </div>
+            </div>
+
+        {% elif already_confirmed %}
+            <div class="final-card">
+                <strong>{% if is_bn %}✅ গোপনীয়তার স্বীকৃতি ইতিমধ্যেই রেকর্ড করা হয়েছে।{% else %}✅ Privacy confirmation already recorded.{% endif %}</strong>
+                <div>
+                    {% if is_bn %}আপনি WhatsApp-এ ফিরে গিয়ে রোগীর বিবরণ ও মেডিকেল রিপোর্ট পাঠাতে পারেন।{% else %}You may return to WhatsApp and send the patient's details and medical reports.{% endif %}
+                </div>
+            </div>
+
+        {% else %}
+            <div class="intro">
+                {% if is_bn %}নিশ্চিত করার আগে অনুগ্রহ করে নিচের সম্পূর্ণ গোপনীয়তা সংক্রান্ত তথ্যটি পড়ে দেখুন।{% else %}Please review the complete Privacy Information below before confirming.{% endif %}
+            </div>
+
+            <div class="meta">
+                <span>{% if is_bn %}গোপনীয়তা নোটিস{% else %}Privacy Notice{% endif %}</span>
+                <span class="version">
+                    {% if is_bn %}ভার্সন{% else %}Version{% endif %} {{ review_session.notice_version or "-" }}
+                </span>
+            </div>
+
+            <div
+                id="privacyScroll"
+                class="privacy-scroll"
+                tabindex="0"
+                aria-label="Privacy Information"
+            >{{ privacy_text }}</div>
+
+            <div id="helperText" class="helper">
+                {% if is_bn %}অনুগ্রহ করে সম্পূর্ণ গোপনীয়তা সংক্রান্ত তথ্যটি নিচ পর্যন্ত স্ক্রল করুন।{% else %}Please scroll through the complete Privacy Information.{% endif %}
+            </div>
+
+            <div class="acknowledgement">
+                <input id="authorityCheck" type="checkbox" disabled>
+                <label for="authorityCheck">
+                    {% if is_bn %}
+                        আমি নিশ্চিত করছি যে, চিকিৎসা মূল্যায়ন এবং সংশ্লিষ্ট মেডিকেল ট্যুরিজম সেবার উদ্দেশ্যে রোগীর ব্যক্তিগত ও চিকিৎসাবিষয়ক তথ্য ক্যাডুপিয়াস হেলথঅ্যাসিস্ট-এর (Cadupius Healthassist) সাথে শেয়ার করার প্রয়োজনীয় অনুমতি আমার আছে। যেখানে এই তথ্য কোনো শিশু বা অপ্রাপ্তবয়স্কের সাথে সম্পর্কিত, সেখানে আমি নিশ্চিত করছি যে পিতা-মাতা বা আইনি অভিভাবকের প্রয়োজনীয় অনুমতি বা সম্মতি নেওয়া হয়েছে।
+                    {% else %}
+                        I confirm that I am authorised to share the patient's personal and medical information with Cadupius Healthassist for the purpose of treatment evaluation and related medical tourism services. Where the information relates to a child or minor, I confirm that the necessary authority or consent of the parent or lawful guardian has been obtained.
+                    {% endif %}
+                </label>
+            </div>
+
+            <div class="actions">
+                <button id="confirmButton" class="confirm" type="button" disabled>
+                    {% if is_bn %}নিশ্চিত করুন এবং এগিয়ে যান{% else %}Confirm &amp; Continue{% endif %}
+                </button>
+                <button id="declineButton" class="decline" type="button">
+                    {% if is_bn %}সম্মত নই{% else %}Do Not Agree{% endif %}
+                </button>
+            </div>
+
+            <div id="statusBox" class="status" role="status" aria-live="polite"></div>
+
+            <div class="privacy-note">
+                {% if is_bn %}
+                    অডিটের উদ্দেশ্যে আপনার স্বীকৃতির সাথে প্রযোজ্য Privacy Information-এর ভার্সন এবং রিভিউয়ের সময় সংরক্ষণ করা হবে।
+                {% else %}
+                    Your confirmation is recorded together with the applicable Privacy Information version and review timestamps for audit purposes.
+                {% endif %}
+            </div>
+        {% endif %}
+    </main>
+    <div class="privacy-footer">
+        © {{ current_year|default(2026) }} {{ brand_company_name|default('Cadupius Healthassist Pvt. Ltd.') }}
+        · Powered by <strong>{{ brand_product_name|default('TERIQEN') }}</strong>
+    </div>
+</div>
+
+{% if not invalid_or_expired and not already_confirmed %}
+<script>
+(function () {
+    "use strict";
+
+    var isBn = {{ 'true' if is_bn else 'false' }};
+    function t(en, bn) { return isBn ? bn : en; }
+
+    var privacyCard = document.getElementById("privacyCard");
+    var token = privacyCard ? (privacyCard.getAttribute("data-token") || "") : "";
+    var scrollBox = document.getElementById("privacyScroll");
+    var checkBox = document.getElementById("authorityCheck");
+    var confirmButton = document.getElementById("confirmButton");
+    var declineButton = document.getElementById("declineButton");
+    var helperText = document.getElementById("helperText");
+    var statusBox = document.getElementById("statusBox");
+
+    var serverRecordedScroll = false;
+    var scrollRequestInFlight = false;
+    var activityRequestInFlight = false;
+    var lastActivitySentAt = 0;
+    var reviewExpired = false;
+    var activityThrottleMs = 30000;
+
+    function showStatus(message, kind) {
+        statusBox.textContent = message || "";
+        statusBox.className = "status show " + (kind || "");
+    }
+
+    function clearStatus() {
+        statusBox.textContent = "";
+        statusBox.className = "status";
+    }
+
+    function expireReviewUi(message) {
+        reviewExpired = true;
+        checkBox.disabled = true;
+        confirmButton.disabled = true;
+        declineButton.disabled = true;
+        showStatus(
+            message || t(
+                "This Privacy Information session has expired. Please return to WhatsApp and start again.",
+                "এই গোপনীয়তা সংক্রান্ত তথ্যের সেশনটির মেয়াদ শেষ হয়েছে। অনুগ্রহ করে WhatsApp-এ ফিরে গিয়ে আবার শুরু করুন।"
+            ),
+            "error"
+        );
+    }
+
+    function renderFinalMessage(title, message, neutral) {
+        var card = document.querySelector(".card");
+        card.innerHTML = "";
+        var finalCard = document.createElement("div");
+        finalCard.className = "final-card" + (neutral ? " neutral" : "");
+        var strong = document.createElement("strong");
+        strong.textContent = title;
+        var body = document.createElement("div");
+        body.textContent = message;
+        var closeNote = document.createElement("div");
+        closeNote.className = "auto-close-note";
+        closeNote.textContent = t("This page will close automatically.", "এই পেজটি স্বয়ংক্রিয়ভাবে বন্ধ হবে।");
+        finalCard.appendChild(strong);
+        finalCard.appendChild(body);
+        finalCard.appendChild(closeNote);
+        card.appendChild(finalCard);
+        return closeNote;
+    }
+
+    function closePageAfterTwoSeconds(closeNote) {
+        window.setTimeout(function () {
+            window.close();
+            window.setTimeout(function () {
+                if (closeNote && document.body.contains(closeNote)) {
+                    closeNote.textContent = t(
+                        "Action completed. You may close this page and return to WhatsApp.",
+                        "কাজটি সম্পন্ন হয়েছে। আপনি এই পেজটি বন্ধ করে WhatsApp-এ ফিরে যেতে পারেন।"
+                    );
+                }
+            }, 500);
+        }, 2000);
+    }
+
+    function recordActivity() {
+        if (reviewExpired || activityRequestInFlight || !token) return;
+        var now = Date.now();
+        if (now - lastActivitySentAt < activityThrottleMs) return;
+        lastActivitySentAt = now;
+        activityRequestInFlight = true;
+        fetch("/whatsapp/privacy/" + encodeURIComponent(token) + "/activity", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            cache: "no-store",
+            body: JSON.stringify({active: true})
+        })
+        .then(function (response) {
+            return response.json().then(function (data) { return {ok: response.ok, status: response.status, data: data}; });
+        })
+        .then(function (result) {
+            if (!result.ok && result.status === 410) {
+                expireReviewUi(t(
+                    "This Privacy Information link is invalid, expired, or is no longer active.",
+                    "এই গোপনীয়তা সংক্রান্ত তথ্যের লিংকটি অবৈধ, মেয়াদোত্তীর্ণ অথবা আর সক্রিয় নেই।"
+                ));
+            }
+        })
+        .catch(function () {})
+        .finally(function () { activityRequestInFlight = false; });
+    }
+
+    function reachedBottom() {
+        var tolerance = 4;
+        return scrollBox.scrollTop > 0 &&
+            scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - tolerance;
+    }
+
+    function recordFullScroll() {
+        if (reviewExpired || serverRecordedScroll || scrollRequestInFlight || !reachedBottom()) return;
+        scrollRequestInFlight = true;
+        fetch("/whatsapp/privacy/" + encodeURIComponent(token) + "/scrolled", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            cache: "no-store",
+            body: JSON.stringify({reviewed: true})
+        })
+        .then(function (response) {
+            return response.json().then(function (data) { return {ok: response.ok, data: data}; });
+        })
+        .then(function (result) {
+            if (!result.ok || !result.data.ok) {
+                throw new Error(t("Unable to record the privacy review.", "গোপনীয়তা রিভিউটি রেকর্ড করা যায়নি।"));
+            }
+            serverRecordedScroll = true;
+            checkBox.disabled = false;
+            helperText.textContent = "";
+            clearStatus();
+        })
+        .catch(function (error) {
+            showStatus(error.message || t(
+                "Unable to record the privacy review. Please try again.",
+                "গোপনীয়তা রিভিউটি রেকর্ড করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+            ), "error");
+        })
+        .finally(function () { scrollRequestInFlight = false; });
+    }
+
+    scrollBox.addEventListener("scroll", function () { recordActivity(); recordFullScroll(); }, {passive: true});
+    document.addEventListener("click", recordActivity, {passive: true});
+    document.addEventListener("touchstart", recordActivity, {passive: true});
+    document.addEventListener("keydown", recordActivity);
+
+    checkBox.addEventListener("change", function () {
+        confirmButton.disabled = !(serverRecordedScroll && checkBox.checked);
+    });
+
+    declineButton.addEventListener("click", function () {
+        if (reviewExpired || !token) return;
+        confirmButton.disabled = true;
+        declineButton.disabled = true;
+        checkBox.disabled = true;
+        clearStatus();
+
+        fetch("/whatsapp/privacy/" + encodeURIComponent(token) + "/cancel", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            cache: "no-store",
+            body: JSON.stringify({action: "DO_NOT_AGREE"})
+        })
+        .then(function (response) {
+            return response.json().then(function (data) { return {ok: response.ok, data: data}; });
+        })
+        .then(function (result) {
+            if (!result.ok || !result.data.ok) {
+                throw new Error(t(
+                    "Unable to close this Privacy Information session.",
+                    "এই গোপনীয়তা সংক্রান্ত তথ্যের সেশনটি বন্ধ করা যায়নি।"
+                ));
+            }
+            var closeNote = renderFinalMessage(
+                t("ℹ️ Privacy confirmation was not provided.", "ℹ️ গোপনীয়তার স্বীকৃতি প্রদান করা হয়নি।"),
+                t(
+                    "Patient information cannot be submitted through this session. Thank you for considering Cadupius Healthassist.",
+                    "এই সেশনের মাধ্যমে রোগীর তথ্য জমা দেওয়া যাবে না। ক্যাডুপিয়াস হেলথঅ্যাসিস্ট বিবেচনা করার জন্য ধন্যবাদ।"
+                ),
+                true
+            );
+            closePageAfterTwoSeconds(closeNote);
+        })
+        .catch(function (error) {
+            checkBox.disabled = !serverRecordedScroll;
+            confirmButton.disabled = !(serverRecordedScroll && checkBox.checked);
+            declineButton.disabled = false;
+            showStatus(error.message || t(
+                "Unable to close this Privacy Information session. Please try again.",
+                "এই গোপনীয়তা সংক্রান্ত তথ্যের সেশনটি বন্ধ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+            ), "error");
+        });
+    });
+
+    confirmButton.addEventListener("click", function () {
+        if (reviewExpired || !serverRecordedScroll || !checkBox.checked) return;
+        confirmButton.disabled = true;
+        declineButton.disabled = true;
+        checkBox.disabled = true;
+        clearStatus();
+
+        fetch("/whatsapp/privacy/" + encodeURIComponent(token) + "/confirm", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            cache: "no-store",
+            body: JSON.stringify({acknowledged: true})
+        })
+        .then(function (response) {
+            return response.json().then(function (data) { return {ok: response.ok, data: data}; });
+        })
+        .then(function (result) {
+            if (!result.ok || !result.data.ok) {
+                throw new Error(t("Unable to record the confirmation.", "স্বীকৃতিটি রেকর্ড করা যায়নি।"));
+            }
+            var closeNote = renderFinalMessage(
+                t("✅ Privacy confirmation recorded.", "✅ গোপনীয়তার স্বীকৃতি রেকর্ড করা হয়েছে।"),
+                t(
+                    "You may now return to WhatsApp. The patient-details instruction and download button have been sent there.",
+                    "আপনি এখন WhatsApp-এ ফিরে যেতে পারেন। রোগীর বিবরণ পাঠানোর নির্দেশনা এবং ডাউনলোড বোতাম সেখানে পাঠানো হয়েছে।"
+                ),
+                false
+            );
+            closePageAfterTwoSeconds(closeNote);
+        })
+        .catch(function (error) {
+            checkBox.disabled = false;
+            confirmButton.disabled = !checkBox.checked;
+            declineButton.disabled = false;
+            showStatus(error.message || t(
+                "Unable to record the confirmation. Please try again.",
+                "স্বীকৃতিটি রেকর্ড করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+            ), "error");
+        });
+    });
+})();
+</script>
+{% endif %}
+</body>
+
+</html>

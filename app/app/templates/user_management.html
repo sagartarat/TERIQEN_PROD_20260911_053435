@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/pages/user_management.css') }}"
+>
+
+<div class="um-page">
+  <div class="um-header">
+    <div>
+      <h1>
+        <i class="fa-solid fa-users-gear"></i>
+        User Management
+      </h1>
+
+      <div class="sub">
+        Add, view, modify and delete system users from one ERP control screen
+      </div>
+    </div>
+
+    <div class="um-actions">
+      <button type="button" class="um-btn um-btn-light" onclick="newUser()">
+        <i class="fa-solid fa-plus"></i>
+        New User
+      </button>
+
+      <button type="button" class="um-btn um-btn-success" onclick="submitUserForm()">
+        <i class="fa-solid fa-floppy-disk"></i>
+        Save
+      </button>
+
+      <button type="button" class="um-btn um-btn-danger" onclick="clearForm()">
+        <i class="fa-solid fa-eraser"></i>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  {% if success_message %}
+    <div class="um-message um-success">
+      {{ success_message }}
+    </div>
+  {% endif %}
+
+  {% if error_message %}
+    <div class="um-message um-error">
+      {{ error_message }}
+    </div>
+  {% endif %}
+
+  <div class="um-selection-card">
+    <div class="um-selection-grid">
+      <div class="um-field">
+        <label for="selected_user_code">User Selection</label>
+
+        <select
+          id="selected_user_code"
+          name="selected_user_code"
+          onchange="loadSelectedUser()"
+        >
+          <option value="">Select Active User</option>
+
+          {% set lov_users = active_users if active_users is defined else users %}
+
+          {% for row in lov_users %}
+            {% if row.user_status is not defined or row.user_status == "Active" %}
+              <option
+                value="{{ row.user_code }}"
+                {% if selected_user and selected_user.user_code == row.user_code %}
+                  selected
+                {% endif %}
+              >
+                {{ row.user_name }} ({{ row.user_code }})
+              </option>
+            {% endif %}
+          {% endfor %}
+        </select>
+
+        <div class="um-help">
+          Only active users from user_master are available for selection.
+        </div>
+      </div>
+
+      <div>
+        <button type="button" class="um-btn um-btn-primary" onclick="loadSelectedUser()">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          Load User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="um-layout">
+    <div class="um-card">
+      <div class="um-card-head">
+        <h2>
+          <i class="fa-solid fa-table-list"></i>
+          Saved Users
+        </h2>
+
+        <input
+          class="um-search"
+          id="userSearch"
+          type="text"
+          placeholder="Like Search..."
+          onkeyup="filterUsers()"
+        >
+      </div>
+
+      <div class="um-table-wrap">
+        <table class="um-table" id="usersTable">
+          <thead>
+            <tr>
+              <th>User Code</th>
+              <th>User Name</th>
+              <th>Email</th>
+              <th>DOB</th>
+              <th>Gender</th>
+              <th>Contact No</th>
+              <th>Status</th>
+              <th>User Type</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for row in users %}
+              <tr>
+                <td>
+                  <a
+                    class="um-link"
+                    href="{{ url_for('user_management', user_code=row.user_code) }}"
+                  >
+                    {{ row.user_code }}
+                  </a>
+                </td>
+
+                <td>{{ row.user_name or "" }}</td>
+                <td>{{ row.user_email or "" }}</td>
+                <td>{{ row.user_dob or "" }}</td>
+                <td>{{ row.user_gender or "" }}</td>
+                <td>{{ row.user_contno or "" }}</td>
+
+                <td>
+                  {% if row.user_status == "Active" %}
+                    <span class="um-badge um-badge-active">Active</span>
+                  {% else %}
+                    <span class="um-badge um-badge-inactive">
+                      {{ row.user_status or "Inactive" }}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td>{{ row.user_type or "" }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8">No users found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="um-card">
+      <div class="um-card-head">
+        <h2>
+          <i class="fa-solid fa-user-pen"></i>
+          User Detail
+        </h2>
+      </div>
+
+      <form
+        id="userForm"
+        class="um-form"
+        method="POST"
+        action="{{ url_for('user_management') }}"
+      >
+        <input
+          type="hidden"
+          id="mode"
+          name="mode"
+          value="{{ 'edit' if selected_user else 'add' }}"
+        >
+
+        <div class="um-form-grid">
+          <div class="um-field">
+            <label for="user_code">User Code *</label>
+            <input
+              type="text"
+              id="user_code"
+              name="user_code"
+              value="{{ selected_user.user_code if selected_user else '' }}"
+              {% if selected_user %}readonly{% endif %}
+              required
+            >
+          </div>
+
+          <div class="um-field">
+            <label for="user_name">User Name *</label>
+            <input
+              type="text"
+              id="user_name"
+              name="user_name"
+              value="{{ selected_user.user_name if selected_user else '' }}"
+              required
+            >
+          </div>
+
+          <div class="um-field">
+            <label for="user_email">Email</label>
+            <input
+              type="email"
+              id="user_email"
+              name="user_email"
+              value="{{ selected_user.user_email if selected_user else '' }}"
+              placeholder="name@example.com"
+            >
+          </div>
+
+          <div class="um-field">
+            <label for="user_dob">Date of Birth</label>
+            <input
+              type="date"
+              id="user_dob"
+              name="user_dob"
+              value="{{ selected_user.user_dob if selected_user and selected_user.user_dob else '' }}"
+            >
+          </div>
+
+          <div class="um-field">
+            <label for="user_gender">Gender *</label>
+            <select id="user_gender" name="user_gender" required>
+              <option value="">Select</option>
+
+              {% for g in gender_list %}
+                <option
+                  value="{{ g }}"
+                  {% if selected_user and selected_user.user_gender == g %}
+                    selected
+                  {% endif %}
+                >
+                  {{ g }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="um-field">
+            <label for="user_contno">Contact No</label>
+            <input
+              type="text"
+              id="user_contno"
+              name="user_contno"
+              value="{{ selected_user.user_contno if selected_user else '' }}"
+              placeholder="+91XXXXXXXXXX"
+            >
+          </div>
+
+          <div class="um-field">
+            <label for="user_status">Status *</label>
+            <select id="user_status" name="user_status" required>
+              {% for st in status_list %}
+                <option
+                  value="{{ st }}"
+                  {% if selected_user and selected_user.user_status == st %}
+                    selected
+                  {% elif not selected_user and st == "Active" %}
+                    selected
+                  {% endif %}
+                >
+                  {{ st }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="um-field">
+            <label for="user_type">User Type *</label>
+            <select id="user_type" name="user_type" required>
+              {% for tp in type_list %}
+                <option
+                  value="{{ tp }}"
+                  {% if selected_user and selected_user.user_type == tp %}
+                    selected
+                  {% elif not selected_user and tp == "User" %}
+                    selected
+                  {% endif %}
+                >
+                  {{ tp }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="um-field full">
+            <label for="user_password">Password</label>
+            <input
+              type="password"
+              id="user_password"
+              name="user_password"
+              placeholder="{% if selected_user %}Leave blank to keep existing password{% else %}Enter password{% endif %}"
+            >
+          </div>
+
+          <div class="um-field full">
+            <div class="um-help">
+              For existing users, password will be changed only if a new
+              password is entered.
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="um-form-actions">
+        <button type="button" class="um-btn um-btn-light" onclick="newUser()">
+          <i class="fa-solid fa-plus"></i>
+          New
+        </button>
+
+        <button type="button" class="um-btn um-btn-danger" onclick="clearForm()">
+          <i class="fa-solid fa-eraser"></i>
+          Clear
+        </button>
+
+        {% if selected_user %}
+          <button
+            type="button"
+            class="um-btn um-btn-delete"
+            onclick="deleteUser()"
+          >
+            <i class="fa-solid fa-trash-can"></i>
+            Delete User
+          </button>
+        {% endif %}
+
+        <button type="button" class="um-btn um-btn-primary" onclick="submitUserForm()">
+          <i class="fa-solid fa-floppy-disk"></i>
+          Save User
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function submitUserForm() {
+    const form = document.getElementById("userForm");
+    document.getElementById("mode").value =
+      document.getElementById("user_code").readOnly ? "edit" : "add";
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    form.submit();
+  }
+
+  function deleteUser() {
+    const form = document.getElementById("userForm");
+    const userCode = document.getElementById("user_code").value.trim();
+    const userName = document.getElementById("user_name").value.trim();
+
+    if (!userCode) {
+      alert("Please select a user to delete.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Delete user "' + userName + '" (' + userCode + ')?\n\n' +
+      "This action cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    document.getElementById("mode").value = "delete";
+    form.submit();
+  }
+
+  function clearForm() {
+    const userCode = document.getElementById("user_code");
+
+    if (
+      document.getElementById("mode").value === "add" &&
+      userCode &&
+      !userCode.readOnly
+    ) {
+      userCode.value = "";
+    }
+
+    document.getElementById("user_name").value = "";
+    document.getElementById("user_email").value = "";
+    document.getElementById("user_dob").value = "";
+    document.getElementById("user_gender").value = "";
+    document.getElementById("user_contno").value = "";
+    document.getElementById("user_status").value = "Active";
+    document.getElementById("user_type").value = "User";
+    document.getElementById("user_password").value = "";
+  }
+
+  function newUser() {
+    window.location.href = "{{ url_for('user_management') }}";
+  }
+
+  function loadSelectedUser() {
+    const selectedUserCode =
+      document.getElementById("selected_user_code").value;
+
+    if (!selectedUserCode) {
+      return;
+    }
+
+    window.location.href =
+      "{{ url_for('user_management') }}?user_code=" +
+      encodeURIComponent(selectedUserCode);
+  }
+
+  function filterUsers() {
+    const input = document.getElementById("userSearch");
+    const filter = input.value.toLowerCase().trim();
+    const table = document.getElementById("usersTable");
+    const rows = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < rows.length; i++) {
+      const rowText = rows[i].innerText.toLowerCase();
+      rows[i].style.display =
+        rowText.indexOf(filter) > -1 ? "" : "none";
+    }
+  }
+</script>
+{% endblock %}

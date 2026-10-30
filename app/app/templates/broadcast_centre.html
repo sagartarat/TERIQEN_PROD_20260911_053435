@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Broadcast Centre{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('broadcast_management.broadcast_asset', filename='broadcast_management.css') }}?v=1.2.13a">
+{% endblock %}
+{% block content %}
+<div class="bc-page" data-api-root="{{ url_for('broadcast_management.broadcast_centre') }}">
+  <div class="bc-header">
+    <div>
+      <h1>Broadcast Centre</h1>
+      <p>One-way bulk communication with website and direct call/WhatsApp call-to-action.</p>
+    </div>
+    <div class="bc-actions">
+      <a class="bc-btn" href="{{ url_for('broadcast_management.broadcast_history') }}"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+      <button class="bc-btn bc-primary" id="bcNew"><i class="fa-solid fa-plus"></i> New Broadcast</button>
+    </div>
+  </div>
+
+  <div class="bc-grid">
+    <main>
+      <section class="bc-card">
+        <div class="bc-card-head"><h3><span>1</span> Broadcast Details</h3></div>
+        <div class="bc-card-body">
+          <div class="bc-row">
+            <label>Broadcast Name *<input id="bcName" type="text" maxlength="200"></label>
+            <label>Broadcast Type
+              <select id="bcType"><option value="MARKETING">Marketing / Awareness</option><option value="SERVICE">Service Update</option><option value="OPERATIONAL">Operational Notice</option><option value="REMINDER">Reminder</option></select>
+            </label>
+          </div>
+          <div class="bc-row bc-email-only">
+  <label>Email Format
+    <select id="bcEmailMode">
+      <option value="RICH">HTML Marketing Email</option>
+      <option value="PLAIN">Plain / Normal Email</option>
+    </select>
+  </label>
+</div>
+          <div class="bc-label">Delivery Channel *</div>
+          <div class="bc-channels">
+            <button class="bc-channel active" data-channel="WHATSAPP"><i class="fa-brands fa-whatsapp"></i><b>WhatsApp</b><small>Meta Business API</small></button>
+            <button class="bc-channel" data-channel="EMAIL"><i class="fa-solid fa-envelope"></i><b>Email</b><small>HTML / rich content</small></button>
+            <button class="bc-channel" data-channel="SMS"><i class="fa-solid fa-comment-sms"></i><b>SMS</b><small>Text / provider API</small></button>
+            <button class="bc-channel" data-channel="TELEGRAM"><i class="fa-brands fa-telegram"></i><b>Telegram</b><small>Bot delivery</small></button>
+          </div>
+          <div class="bc-note"><b>One-way model:</b> Broadcast replies are not managed in this module. Recipients are directed to your website or direct phone/WhatsApp number.</div>
+        </div>
+      </section>
+
+      <section class="bc-card">
+        <div class="bc-card-head"><h3><span>2</span> Receiver List</h3></div>
+        <div class="bc-card-body">
+          <div class="bc-actions">
+            <button class="bc-btn" id="bcPaste"><i class="fa-solid fa-user-plus"></i> Add / Paste Receivers</button>
+            <label class="bc-btn"><i class="fa-solid fa-file-csv"></i> Upload CSV <input id="bcCsv" type="file" accept=".csv" hidden></label>
+            <button class="bc-btn" id="bcClear"><i class="fa-solid fa-trash"></i> Clear</button>
+          </div>
+          <p class="bc-help">Add receivers in the form, paste multiple rows from Excel, or upload CSV. Supported CSV fields: <b>Name, Mobile, Email, Country, Language, Reference No., Tag, Telegram Chat ID</b>. Email requires Email; WhatsApp/SMS require Mobile; Telegram requires Telegram Chat ID or Mobile.</p>
+          <div class="bc-stats">
+            <div><b id="bcTotal">0</b><span>Total</span></div><div><b id="bcValid">0</b><span>Valid</span></div>
+            <div><b id="bcDup">0</b><span>Duplicate</span></div><div><b id="bcInvalid">0</b><span>Invalid / Missing</span></div>
+          </div>
+          <div class="bc-table-wrap">
+            <table class="bc-receiver-table"><thead><tr><th>Name</th><th>Mobile</th><th>Email</th><th>Country</th><th>Language</th><th>Reference No.</th><th>Tag</th><th>Telegram Chat ID</th><th>Status / Validation</th></tr></thead><tbody id="bcRecipients"><tr><td colspan="9" class="bc-empty">No receiver list loaded.</td></tr></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <section class="bc-card">
+        <div class="bc-card-head"><h3><span>3</span> Message Composer</h3><a class="bc-btn" href="{{ url_for('broadcast_management.broadcast_templates') }}"><i class="fa-solid fa-layer-group"></i> Manage Templates</a></div>
+        <div class="bc-card-body">
+          <div id="bcWhatsappTemplateWrap">
+            <div class="bc-row bc-template-select-row">
+              <label>Approved WhatsApp Template *
+                <select id="bcTemplate"><option value="">Loading approved templates...</option></select>
+              </label>
+              <div class="bc-template-refresh"><button class="bc-btn" id="bcTemplateRefresh" type="button"><i class="fa-solid fa-rotate"></i> Refresh Templates</button></div>
+            </div>
+            <div id="bcTemplateInfo" class="bc-template-info hidden"></div>
+            <div id="bcTemplateWarning" class="bc-note">WhatsApp broadcasts must use a Meta-approved template. Select a template before sending.</div>
+          </div>
+
+          <div id="bcFreeformComposer" class="hidden">
+            <label id="bcSubjectWrap" class="bc-full hidden">Email Subject *<input id="bcSubject" type="text" maxlength="300"></label>
+
+            <div class="bc-toolbar bc-rich-toolbar" id="bcRichToolbar" aria-label="Message formatting toolbar">
+              <select id="bcBlockFormat" class="bc-email-only" title="Paragraph / heading">
+                <option value="P">Paragraph</option><option value="H1">Heading 1</option><option value="H2">Heading 2</option><option value="H3">Heading 3</option>
+              </select>
+              <select id="bcFontName" class="bc-email-only" title="Font family">
+                <option value="Arial">Arial</option><option value="Calibri">Calibri</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Tahoma">Tahoma</option>
+              </select>
+              <select id="bcFontSize" class="bc-email-only" title="Font size">
+                <option value="10">10 px</option><option value="12">12 px</option><option value="14" selected>14 px</option><option value="16">16 px</option><option value="18">18 px</option><option value="20">20 px</option><option value="24">24 px</option><option value="28">28 px</option><option value="32">32 px</option>
+              </select>
+              <span class="bc-toolbar-separator bc-email-only"></span>
+              <button type="button" class="bc-email-only" data-cmd="bold" title="Bold"><b>B</b></button>
+              <button type="button" class="bc-email-only" data-cmd="italic" title="Italic"><i>I</i></button>
+              <button type="button" class="bc-email-only" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button type="button" class="bc-email-only" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+              <label class="bc-color-control bc-email-only" title="Font color"><span>A</span><input id="bcForeColor" type="color" value="#1f2937"></label>
+              <label class="bc-color-control bc-email-only" title="Highlight color"><span><i class="fa-solid fa-highlighter"></i></span><input id="bcBackColor" type="color" value="#fff59d"></label>
+              <span class="bc-toolbar-separator bc-email-only"></span>
+              <button type="button" class="bc-email-only" data-cmd="justifyLeft" title="Align left"><i class="fa-solid fa-align-left"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="justifyCenter" title="Align center"><i class="fa-solid fa-align-center"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="justifyRight" title="Align right"><i class="fa-solid fa-align-right"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="justifyFull" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="insertUnorderedList" title="Bulleted list"><i class="fa-solid fa-list-ul"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="insertOrderedList" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="outdent" title="Outdent"><i class="fa-solid fa-outdent"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="indent" title="Indent"><i class="fa-solid fa-indent"></i></button>
+              <span class="bc-toolbar-separator bc-email-only"></span>
+              <button type="button" class="bc-email-only" id="bcAddLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="unlink" title="Remove link"><i class="fa-solid fa-link-slash"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-eraser"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="undo" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+              <button type="button" class="bc-email-only" data-cmd="redo" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+              <button type="button" id="bcEmoji" title="Emoji">😊</button>
+            </div>
+            <div id="bcEditor" class="bc-editor bc-rich-editor" contenteditable="true" role="textbox" aria-multiline="true"></div>
+            <div id="bcEmojiBox" class="bc-emojis hidden"><button type="button" data-emoji="😊">😊</button><button type="button" data-emoji="🙏">🙏</button><button type="button" data-emoji="✅">✅</button><button type="button" data-emoji="📞">📞</button><button type="button" data-emoji="🏥">🏥</button><button type="button" data-emoji="🌐">🌐</button><button type="button" data-emoji="📢">📢</button><button type="button" data-emoji="❤️">❤️</button><button type="button" data-emoji="📅">📅</button><button type="button" data-emoji="✈️">✈️</button><button type="button" data-emoji="🛂">🛂</button><button type="button" data-emoji="🤝">🤝</button><button type="button" data-emoji="💙">💙</button><button type="button" data-emoji="🌿">🌿</button><button type="button" data-emoji="👋">👋</button><button type="button" data-emoji="⭐">⭐</button></div>
+            <div id="bcFormattingNote" class="bc-help">Email supports rich text formatting. SMS and Telegram are sent as plain text in this release.</div>
+            <div class="bc-tokens">Personalisation:
+              <button type="button" data-token="{% raw %}{{recipient_name}}{% endraw %}">{% raw %}{{recipient_name}}{% endraw %}</button>
+              <button type="button" data-token="{% raw %}{{first_name}}{% endraw %}">{% raw %}{{first_name}}{% endraw %}</button>
+              <button type="button" data-token="{% raw %}{{country}}{% endraw %}">{% raw %}{{country}}{% endraw %}</button>
+              <button type="button" data-token="{% raw %}{{reference_no}}{% endraw %}">{% raw %}{{reference_no}}{% endraw %}</button>
+              <button type="button" data-token="{% raw %}{{website_url}}{% endraw %}">{% raw %}{{website_url}}{% endraw %}</button>
+              <button type="button" data-token="{% raw %}{{contact_number}}{% endraw %}">{% raw %}{{contact_number}}{% endraw %}</button>
+            </div>
+          </div>
+
+          <div class="bc-media" id="bcMediaSection">
+            <div class="bc-media-title"><b><i class="fa-solid fa-photo-film"></i> Media Content</b><small id="bcMediaRequirement">Optional</small></div>
+            <div class="bc-actions">
+              <label class="bc-btn bc-media-btn" data-media="image"><i class="fa-regular fa-image"></i> Picture<input id="bcImage" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
+              <label class="bc-btn bc-media-btn" data-media="video"><i class="fa-solid fa-video"></i> Video<input id="bcVideo" type="file" accept="video/mp4,video/webm" hidden></label>
+              <label class="bc-btn bc-media-btn" data-media="gif"><i class="fa-solid fa-wand-magic-sparkles"></i> GIF / Animation<input id="bcGif" type="file" accept="image/gif" hidden></label>
+              <button class="bc-btn" id="bcMediaUrl"><i class="fa-solid fa-link"></i> Media URL</button>
+            </div>
+            <div id="bcMediaRules" class="bc-help"></div>
+            <div id="bcMediaSelected" class="bc-selected-media hidden"></div>
+          </div>
+
+          <div class="bc-cta" id="bcCtaSection">
+            <div class="bc-row">
+              <label>Website Link<input id="bcWebsite" type="url" value="https://cadupiushealthassist.com"></label>
+              <label>Direct Call / WhatsApp Number<input id="bcPhone" type="text" placeholder="+91 XXXXX XXXXX"></label>
+            </div>
+            <div class="bc-row">
+              <label>CTA Text<input id="bcCtaText" type="text" value="For more information or assistance:"></label>
+              <label>CTA Options<select id="bcCtaMode"><option value="both">Website + Call/WhatsApp</option><option value="web">Website only</option><option value="phone">Call/WhatsApp only</option></select></label>
+            </div>
+          </div>
+          <div id="bcWhatsappCtaNote" class="bc-note">For WhatsApp, header/body/footer/buttons are controlled by the approved Meta template. TERIQEN will not append a separate CTA to the WhatsApp template.</div>
+        </div>
+      </section>
+
+      <section class="bc-card">
+        <div class="bc-card-head"><h3><span>4</span> Delivery Controls</h3></div>
+        <div class="bc-card-body">
+          <div class="bc-row">
+            <label>Send Mode<select id="bcSendMode"><option value="NOW">Send Now</option><option value="SCHEDULE">Schedule</option><option value="DRAFT">Save Draft Only</option></select></label>
+            <label id="bcScheduleWrap" class="hidden">Schedule Date & Time<input id="bcSchedule" type="datetime-local"></label>
+          </div>
+          <div class="bc-check-row"><span>Exclude opted-out recipients</span><b>Enabled</b></div>
+          <div class="bc-check-row"><span>Remove duplicates</span><b>Enabled</b></div>
+          <div class="bc-check-row"><span>Retry temporary failures</span><b>Maximum 3 attempts</b></div>
+        </div>
+      </section>
+
+      <section class="bc-card">
+        <div class="bc-card-head"><h3><span>5</span> Execution & Results</h3><button class="bc-btn" id="bcRetry">Retry Failed</button></div>
+        <div class="bc-card-body">
+          <div class="bc-progress"><div id="bcProgressBar"></div></div>
+          <p id="bcProgressText" class="bc-help">Not started</p>
+          <div class="bc-stats">
+            <div><b id="bcQueued">0</b><span>Queued</span></div><div><b id="bcSuccess">0</b><span>Success</span></div>
+            <div><b id="bcFailed">0</b><span>Failed</span></div><div><b id="bcSkipped">0</b><span>Skipped</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="bc-footer">
+        <button class="bc-btn" id="bcSaveDraft"><i class="fa-solid fa-floppy-disk"></i> Save Draft</button>
+        <button class="bc-btn" id="bcValidate"><i class="fa-solid fa-circle-check"></i> Validate</button>
+        <button class="bc-btn" id="bcTest"><i class="fa-solid fa-vial"></i> Send Test</button>
+        <button class="bc-btn bc-primary" id="bcBroadcast"><i class="fa-solid fa-paper-plane"></i> Review & Broadcast</button>
+      </div>
+    </main>
+
+    <aside id="bcSidePanel">
+      <section class="bc-card sticky" id="bcLivePreviewCard">
+        <div class="bc-card-head"><h3>Live Preview</h3><span id="bcPreviewChannel" class="bc-pill">WhatsApp</span></div>
+        <div class="bc-card-body">
+          <div id="bcPreviewMedia" class="bc-preview-media hidden"></div>
+          <div id="bcPreview" class="bc-preview"></div>
+        </div>
+      </section>
+      <section class="bc-card">
+        <div class="bc-card-head"><h3>Pre-Send Checkpoints</h3></div>
+        <div class="bc-card-body">
+          <div class="bc-check-row"><span>Broadcast Name</span><b id="chkName">Pending</b></div>
+          <div class="bc-check-row"><span>Message Content</span><b id="chkMessage">Pending</b></div>
+          <div class="bc-check-row" id="chkTemplateRow"><span>Approved WhatsApp Template</span><b id="chkTemplate">Pending</b></div>
+          <div class="bc-check-row"><span>Receiver List</span><b id="chkReceivers">Pending</b></div>
+          <div class="bc-check-row"><span>Website / Phone CTA</span><b id="chkCta">Ready</b></div>
+          <div class="bc-check-row"><span>Media Compatibility</span><b id="chkMedia">Optional</b></div>
+          <div class="bc-check-row"><span>Test Message</span><b id="chkTest">Pending</b></div>
+        </div>
+      </section>
+      <section class="bc-card">
+        <div class="bc-card-head"><h3>Estimated Cost</h3></div>
+        <div class="bc-card-body">
+          <div class="bc-cost"><b id="bcCost">₹0.00</b><span>Illustrative estimate only</span></div>
+          <p id="bcCostNote" class="bc-help"></p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div id="bcPasteModal" class="bc-modal hidden">
+  <div class="bc-recipient-modal">
+    <div class="bc-modal-head">
+      <div>
+        <h3>Add Receivers</h3>
+        <p id="bcReceiverRequirement" class="bc-help">Enter one or many receivers. Required destination fields depend on the selected channel.</p>
+      </div>
+      <button class="bc-icon-btn" type="button" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="bc-entry-actions">
+      <button class="bc-btn" type="button" id="bcAddRow"><i class="fa-solid fa-plus"></i> Add Row</button>
+      <button class="bc-btn" type="button" id="bcAdd10"><i class="fa-solid fa-table-list"></i> Add 10 Rows</button>
+      <button class="bc-btn" type="button" id="bcToggleBulk"><i class="fa-solid fa-paste"></i> Paste from Excel</button>
+      <button class="bc-btn" type="button" id="bcEntryClear"><i class="fa-solid fa-eraser"></i> Clear Rows</button>
+    </div>
+
+    <div id="bcBulkPaste" class="bc-bulk-paste hidden">
+      <div class="bc-help"><b>Excel / bulk paste:</b> paste rows in this order: Name, Mobile, Email, Country, Language, Reference No, Tag, Telegram Chat ID. Tab-separated Excel rows and comma-separated rows are supported.</div>
+      <textarea id="bcPasteText" placeholder="Rahim Ahmed&#9;+8801712345678&#9;rahim@example.com&#9;Bangladesh&#9;Bengali&#10;Karim Ali&#9;+8801812345678&#9;karim@example.com&#9;Bangladesh&#9;Bengali"></textarea>
+      <div class="bc-actions bc-bulk-actions"><button class="bc-btn" type="button" id="bcPasteApply"><i class="fa-solid fa-arrow-down"></i> Add Pasted Rows</button></div>
+    </div>
+
+    <div class="bc-entry-table-wrap">
+      <table class="bc-entry-table">
+        <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Email</th><th>Country</th><th>Language</th><th>Reference No.</th><th>Tag</th><th>Telegram Chat ID</th><th></th></tr></thead>
+        <tbody id="bcEntryRows"></tbody>
+      </table>
+    </div>
+
+    <div class="bc-modal-footer">
+      <span id="bcEntryCount" class="bc-help">0 receiver rows</span>
+      <div class="bc-actions">
+        <button class="bc-btn" type="button" data-close>Cancel</button>
+        <button class="bc-btn bc-primary" type="button" id="bcPasteImport"><i class="fa-solid fa-circle-check"></i> Validate & Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="bcUrlModal" class="bc-modal hidden"><div><h3>Add Media URL</h3><input id="bcUrlValue" type="url" placeholder="https://..."><input id="bcUrlTitle" type="text" placeholder="Display title"><div class="bc-actions"><button class="bc-btn" data-close>Cancel</button><button class="bc-btn bc-primary" id="bcUrlAdd">Add</button></div></div></div>
+<div id="bcReviewModal" class="bc-modal hidden"><div><h3>Review Broadcast</h3><div id="bcReviewText"></div><div class="bc-actions"><button class="bc-btn" data-close>Cancel</button><button class="bc-btn bc-primary" id="bcConfirm">Confirm Broadcast</button></div></div></div>
+<div id="bcToast" class="bc-toast"></div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('broadcast_management.broadcast_asset', filename='broadcast_management.js') }}?v=1.3.4"></script>
+{% endblock %}

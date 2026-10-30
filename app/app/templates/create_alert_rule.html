@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+
+{% block title %}Alert Rule Management{% endblock %}
+
+{% block content %}
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/pages/create_alert_rule.css') }}">
+
+{% set current_rule = selected_rule or form_data or {} %}
+
+<div class="car-page" id="createAlertRulePage"
+     data-mode="{{ page_mode or 'create' }}"
+     data-rule-id="{{ selected_rule.rule_id if selected_rule else '' }}">
+
+  <div class="car-topbar">
+    <div>
+      <div class="car-breadcrumb">
+        Alert Management <span>/</span> Alert Rules
+      </div>
+      <div class="car-title">Alert Rule Management</div>
+      <div class="car-subtitle">
+        Create, view, update and delete workflow and date-based alert rules
+      </div>
+    </div>
+
+    <div class="car-top-actions">
+      {% if page_mode in ('view', 'edit') %}
+      <a class="car-btn car-btn-light"
+         href="{{ url_for('alert_management.create_alert_rule') }}">
+        <i class="fa-solid fa-plus"></i> New Rule
+      </a>
+      {% endif %}
+
+      {% if page_mode == 'view' and selected_rule %}
+      <a class="car-btn car-btn-primary"
+         href="{{ url_for('alert_management.create_alert_rule', rule_id=selected_rule.rule_id, mode='edit') }}">
+        <i class="fa-solid fa-pen"></i> Edit Rule
+      </a>
+      {% else %}
+      <button type="button" class="car-btn car-btn-primary" id="btnSaveTop">
+        <i class="fa-solid fa-floppy-disk"></i>
+        <span id="saveButtonText">
+          {{ 'Update Rule' if page_mode == 'edit' else 'Save Rule' }}
+        </span>
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <form id="alertRuleForm"
+        method="post"
+        action="{{ url_for('alert_management.create_alert_rule') }}"
+        novalidate>
+
+    <input type="hidden" name="rule_id" id="rule_id"
+           value="{{ selected_rule.rule_id if selected_rule else '' }}">
+    <input type="hidden" name="recipients_json" id="recipients_json" value="[]">
+
+    <div class="car-compact-layout">
+
+      <section class="car-card">
+        <div class="car-card-head">
+          <div>
+            <div class="car-card-title">Rule Details</div>
+            <div class="car-card-subtitle">Identity and trigger configuration</div>
+          </div>
+          <div class="car-section-number">01</div>
+        </div>
+
+        <div class="car-card-body">
+          <div class="car-grid car-grid-2">
+
+            <div class="car-field car-span-2">
+              <label for="alert_name">Alert Name <span>*</span></label>
+              <input type="text" class="car-input"
+                     id="alert_name" name="alert_name"
+                     maxlength="150" placeholder="Enter alert name">
+              <div class="car-error" data-error-for="alert_name"></div>
+            </div>
+
+            <div class="car-field">
+              <label for="module_code">Module <span>*</span></label>
+              <select class="car-select" id="module_code" name="module_code">
+                <option value="">-- Select Module --</option>
+                {% for module in modules or [] %}
+                <option value="{{ module.module_code }}"
+                        {% if current_rule.get('module_code') == module.module_code %}selected{% endif %}>
+                  {{ module.module_name }}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="car-error" data-error-for="module_code"></div>
+            </div>
+
+            <div class="car-field">
+              <label>Rule Status</label>
+              <label class="car-switch-row">
+                <input type="checkbox" id="active_flag" name="active_flag" checked>
+                <span class="car-switch"></span>
+                <span class="car-switch-text" id="activeFlagText">Active</span>
+              </label>
+            </div>
+
+            <div class="car-field car-span-2">
+              <label for="alert_description">Description</label>
+              <textarea class="car-textarea" id="alert_description"
+                        name="alert_description" rows="2"
+                        maxlength="1000"
+                        placeholder="Describe the purpose of this rule"></textarea>
+            </div>
+
+            <div class="car-field">
+              <label for="trigger_type">Alert On <span>*</span></label>
+              <select class="car-select" id="trigger_type" name="trigger_type">
+                <option value="">-- Select Trigger --</option>
+                <option value="WORKFLOW_STATUS"
+                        {% if current_rule.get('trigger_type') == 'WORKFLOW_STATUS' %}selected{% endif %}>
+                  Workflow Status
+                </option>
+                <option value="DATE_EXPIRY" id="contractEndDateTriggerOption"
+                        {% if current_rule.get('trigger_type') == 'DATE_EXPIRY' %}selected{% endif %}>
+                  Contract End Date
+                </option>
+              </select>
+              <div class="car-error" data-error-for="trigger_type"></div>
+            </div>
+
+            <div class="car-field">
+              <label for="workflow_status">Workflow Status <span id="workflowStatusRequired">*</span></label>
+              <select class="car-select" id="workflow_status" name="workflow_status">
+                <option value="">-- Select Status --</option>
+                {% for workflow in workflow_statuses or [] %}
+                {% set workflow_code = workflow.status_code or workflow.wrkflw_status %}
+                <option value="{{ workflow_code }}"
+                        {% if current_rule.get('workflow_status') == workflow_code %}selected{% endif %}>
+                  {{ workflow.status_name or workflow.wrkflw_status or workflow.status_code }}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="car-error" data-error-for="workflow_status"></div>
+            </div>
+
+            <div class="car-field car-span-2">
+              <label for="ageing_basis">Ageing Basis <span>*</span></label>
+              <select class="car-select" id="ageing_basis" name="ageing_basis">
+                <option value="">-- Select Ageing Basis --</option>
+                <option value="STATUS_CHANGED_ON"
+                        {% if current_rule.get('ageing_basis') == 'STATUS_CHANGED_ON' %}selected{% endif %}>
+                  Status Changed Date
+                </option>
+                <option value="RECORD_CREATED_ON"
+                        {% if current_rule.get('ageing_basis') == 'RECORD_CREATED_ON' %}selected{% endif %}>
+                  Record Created Date
+                </option>
+                <option value="LAST_ACTIVITY_ON"
+                        {% if current_rule.get('ageing_basis') == 'LAST_ACTIVITY_ON' %}selected{% endif %}>
+                  Last Activity Date
+                </option>
+                <option value="PRINT_DATE"
+                        {% if current_rule.get('ageing_basis') == 'PRINT_DATE' %}selected{% endif %}>
+                  Invoice Print Date
+                </option>
+                <option value="CONTRACT_END_DATE" id="contractEndDateAgeingOption"
+                        {% if current_rule.get('ageing_basis') == 'CONTRACT_END_DATE' %}selected{% endif %}>
+                  Contract End Date
+                </option>
+              </select>
+              <div class="car-error" data-error-for="ageing_basis"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="car-card">
+        <div class="car-card-head">
+          <div>
+            <div class="car-card-title">Thresholds & Behaviour</div>
+            <div class="car-card-subtitle">Severity, repeat and calendar settings</div>
+          </div>
+          <div class="car-section-number">02</div>
+        </div>
+
+        <div class="car-card-body">
+          <div class="car-threshold-grid">
+
+            <div class="car-severity-box warning">
+              <div class="car-severity-head">
+                <div><strong>Warning</strong><span>Initial alert</span></div>
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div class="car-inline-grid">
+                <div class="car-field">
+                  <label for="warning_value"><span id="warningTimingLabel">After</span> <span>*</span></label>
+                  <input type="number" class="car-input" id="warning_value"
+                         name="warning_value" min="1" placeholder="Value">
+                  <div class="car-error" data-error-for="warning_value"></div>
+                </div>
+                <div class="car-field">
+                  <label for="warning_unit">Unit <span>*</span></label>
+                  <select class="car-select" id="warning_unit" name="warning_unit">
+                    <option value="">Unit</option>
+                    <option value="MINUTES">Minutes</option>
+                    <option value="HOURS">Hours</option>
+                    <option value="DAYS">Days</option>
+                  </select>
+                  <div class="car-error" data-error-for="warning_unit"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="car-severity-box critical">
+              <div class="car-severity-head">
+                <div><strong>Critical</strong><span>Highest alert</span></div>
+                <i class="fa-solid fa-circle-exclamation"></i>
+              </div>
+              <div class="car-inline-grid">
+                <div class="car-field">
+                  <label for="critical_value"><span id="criticalTimingLabel">After</span> <span>*</span></label>
+                  <input type="number" class="car-input" id="critical_value"
+                         name="critical_value" min="1" placeholder="Value">
+                  <div class="car-error" data-error-for="critical_value"></div>
+                </div>
+                <div class="car-field">
+                  <label for="critical_unit">Unit <span>*</span></label>
+                  <select class="car-select" id="critical_unit" name="critical_unit">
+                    <option value="">Unit</option>
+                    <option value="MINUTES">Minutes</option>
+                    <option value="HOURS">Hours</option>
+                    <option value="DAYS">Days</option>
+                  </select>
+                  <div class="car-error" data-error-for="critical_unit"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="car-severity-box repeat">
+              <div class="car-severity-head">
+                <div><strong>Repeat</strong><span>Reminder cycle</span></div>
+                <i class="fa-solid fa-rotate"></i>
+              </div>
+              <div class="car-inline-grid">
+                <div class="car-field">
+                  <label for="repeat_value">Every</label>
+                  <input type="number" class="car-input" id="repeat_value"
+                         name="repeat_value" min="1" placeholder="Value">
+                </div>
+                <div class="car-field">
+                  <label for="repeat_unit">Unit</label>
+                  <select class="car-select" id="repeat_unit" name="repeat_unit">
+                    <option value="">Unit</option>
+                    <option value="MINUTES">Minutes</option>
+                    <option value="HOURS">Hours</option>
+                    <option value="DAYS">Days</option>
+                  </select>
+                </div>
+                <div class="car-field car-span-2">
+                  <label for="maximum_repeat_count">Maximum Repeats</label>
+                  <input type="number" class="car-input"
+                         id="maximum_repeat_count"
+                         name="maximum_repeat_count" min="0"
+                         placeholder="0 means unlimited">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="car-option-grid compact">
+            <label class="car-option-card">
+              <input type="checkbox" id="business_hours_only" name="business_hours_only">
+              <span><strong>Business Hours</strong><small>Working hours only</small></span>
+            </label>
+            <label class="car-option-card">
+              <input type="checkbox" id="exclude_weekends" name="exclude_weekends">
+              <span><strong>Exclude Weekends</strong><small>Ignore weekend ageing</small></span>
+            </label>
+            <label class="car-option-card">
+              <input type="checkbox" id="exclude_holidays" name="exclude_holidays">
+              <span><strong>Exclude Holidays</strong><small>Use holiday calendar</small></span>
+            </label>
+            <label class="car-option-card">
+              <input type="checkbox" id="auto_resolve" name="auto_resolve" checked>
+              <span><strong>Auto Resolve</strong><small>Close when condition clears</small></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="car-card">
+      <div class="car-card-head compact-head">
+        <div>
+          <div class="car-card-title">Recipients</div>
+          <div class="car-card-subtitle">Notification recipients and channels</div>
+        </div>
+        <div class="car-head-actions">
+          <button type="button" class="car-btn car-btn-light" id="btnAddRecipient">
+            <i class="fa-solid fa-plus"></i> Add Recipient
+          </button>
+          <div class="car-section-number">03</div>
+        </div>
+      </div>
+
+      <div class="car-card-body compact-body">
+        <div class="car-table-shell">
+          <div class="car-table-wrap">
+            <table class="car-table recipient-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Recipient Type</th>
+                  <th>Recipient</th>
+                  <th class="car-center">In-App</th>
+                  <th class="car-center">Email</th>
+                  <th class="car-center">WhatsApp</th>
+                  <th class="car-center">SMS</th>
+                  <th class="car-center">Delete</th>
+                </tr>
+              </thead>
+              <tbody id="recipientTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <details class="car-card car-preview-card">
+      <summary class="car-card-head">
+        <div>
+          <div class="car-card-title">Rule Preview</div>
+          <div class="car-card-subtitle">Expand to review generated condition</div>
+        </div>
+        <i class="fa-solid fa-chevron-down"></i>
+      </summary>
+      <div class="car-card-body">
+        <div class="car-preview-layout">
+          <div class="car-preview-box">
+            <div class="car-preview-label">Summary</div>
+            <div class="car-preview-text" id="ruleSummaryPreview">
+              Complete required fields to generate the preview.
+            </div>
+          </div>
+          <div class="car-preview-box code">
+            <div class="car-preview-label">Condition</div>
+            <pre id="conditionPreview">No condition generated</pre>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    {% if page_mode != 'view' %}
+    <div class="car-bottom-actions">
+      <button type="button" class="car-btn car-btn-light" id="btnResetForm">
+        Reset
+      </button>
+      <button type="submit" class="car-btn car-btn-primary" id="btnSaveBottom">
+        <i class="fa-solid fa-floppy-disk"></i>
+        {{ 'Update Alert Rule' if page_mode == 'edit' else 'Save Alert Rule' }}
+      </button>
+    </div>
+    {% endif %}
+  </form>
+
+  <section class="car-card car-list-card">
+    <div class="car-card-head compact-head">
+      <div>
+        <div class="car-card-title">Created Alert Rules</div>
+        <div class="car-card-subtitle">
+          View, update or delete existing rules
+        </div>
+      </div>
+      <div class="car-list-tools">
+        <input type="search" class="car-search" id="ruleSearch"
+               placeholder="Search alert rules...">
+        <span class="car-count">{{ alert_rules|length }} rule(s)</span>
+      </div>
+    </div>
+
+    <div class="car-card-body compact-body">
+      <div class="car-table-shell">
+        <div class="car-table-wrap">
+          <table class="car-table rules-table" id="alertRulesTable">
+            <thead>
+              <tr>
+                <th>Rule</th>
+                <th>Module</th>
+                <th>Workflow Status</th>
+                <th>Warning</th>
+                <th>Critical</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th class="car-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for rule in alert_rules %}
+              <tr data-search="{{ (rule.alert_name ~ ' ' ~ rule.module_code ~ ' ' ~ rule.workflow_status)|lower }}">
+                <td>
+                  <strong>{{ rule.alert_name }}</strong>
+                  <small>#{{ rule.rule_id }}</small>
+                </td>
+                <td>{{ rule.module_code }}</td>
+                <td>{% if rule.trigger_type == 'DATE_EXPIRY' %}Contract End Date{% else %}{{ rule.workflow_status }}{% endif %}</td>
+                <td>{{ rule.warning_after_minutes }} min</td>
+                <td>{{ rule.critical_after_minutes }} min</td>
+                <td>
+                  <span class="car-status {{ 'active' if rule.active_flag in ('Y', 1, true) else 'inactive' }}">
+                    {{ 'Active' if rule.active_flag in ('Y', 1, true) else 'Inactive' }}
+                  </span>
+                </td>
+                <td>{{ rule.updated_on or rule.created_on or '-' }}</td>
+                <td class="car-center">
+                  <div class="car-row-actions">
+                    <a class="car-icon-btn view" title="View"
+                       href="{{ url_for('alert_management.create_alert_rule', rule_id=rule.rule_id, mode='view') }}">
+                      <i class="fa-solid fa-eye"></i>
+                    </a>
+                    <a class="car-icon-btn edit" title="Edit"
+                       href="{{ url_for('alert_management.create_alert_rule', rule_id=rule.rule_id, mode='edit') }}">
+                      <i class="fa-solid fa-pen"></i>
+                    </a>
+                    <button type="button" class="car-icon-btn delete btn-delete-rule"
+                            title="Delete" data-rule-id="{{ rule.rule_id }}"
+                            data-rule-name="{{ rule.alert_name }}">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr class="car-empty-row">
+                <td colspan="8">No alert rules have been created.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="car-modal-backdrop" id="deleteModal" hidden>
+  <div class="car-modal" role="dialog" aria-modal="true">
+    <div class="car-modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <h3>Delete Alert Rule?</h3>
+    <p id="deleteModalText">This action cannot be undone.</p>
+    <div class="car-modal-actions">
+      <button type="button" class="car-btn car-btn-light" id="btnCancelDelete">Cancel</button>
+      <button type="button" class="car-btn car-btn-danger" id="btnConfirmDelete">Delete Rule</button>
+    </div>
+  </div>
+</div>
+
+<div class="car-toast-wrap" id="toastWrap"></div>
+
+<script id="alert-rule-reference-data" type="application/json">
+{
+  "users": {{ (users or []) | tojson }},
+  "roles": {{ (roles or []) | tojson }},
+  "selectedRule": {{ (selected_rule or none) | tojson }},
+  "selectedRecipients": {{ (selected_recipients or []) | tojson }}
+}
+</script>
+<script src="{{ url_for('static', filename='js/pages/create_alert_rule.js') }}"></script>
+{% endblock %}

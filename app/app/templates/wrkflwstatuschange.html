@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow Status Change{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/wrkflwstatuschange.css') }}">
+
+<div class="wf-page">
+
+  <div class="wf-topbar">
+    <div>
+      <div class="wf-title">Workflow Status Change</div>
+      <div class="wf-subtitle">Review lead details and update workflow status</div>
+    </div>
+
+    {% if lead is defined and lead %}
+      <button type="button" class="wf-btn wf-btn-light" onclick="openQuickView()">Quick View</button>
+    {% endif %}
+  </div>
+
+  <form id="patientGridLoadForm" method="GET" action="{{ url_for('wrkflwstatuschange') }}" style="display:none;">
+    <input type="hidden" id="lead_selector_hidden" name="lead_selector" value="">
+    <input type="hidden" name="scroll_to" value="lead_snapshot">
+  </form>
+
+  <section class="wf-card">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Patient Grid</div>
+      <div class="wf-card-sub">Like search by passport no, lead no, patient name, nationality, hospital, city, or status</div>
+    </div>
+
+    <div class="wf-card-body">
+      <div class="wf-search-row" style="margin-bottom:14px;">
+        <div class="wf-field wf-search-box">
+          <label for="patientGridSearch">Like Search</label>
+          <input
+            type="text"
+            id="patientGridSearch"
+            class="wf-input"
+            placeholder="Type passport no / lead no / patient name / hospital / city / status"
+            onkeyup="filterPatientGrid()"
+          >
+        </div>
+
+        <div class="wf-page-size">
+          <label for="patientGridPageSize">Rows</label>
+          <select id="patientGridPageSize" class="wf-select" onchange="changePatientGridPageSize()">
+            <option value="5" selected>5 / page</option>
+            <option value="10">10 / page</option>
+            <option value="20">20 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+        </div>
+
+        <div>
+          <button type="button" class="wf-btn wf-btn-light" onclick="resetPatientGridSearch()">Clear Search</button>
+        </div>
+      </div>
+
+      <div class="wf-table-wrap">
+        <table class="wf-table" id="patientGridTable">
+          <thead>
+            <tr>
+              <th>Passport No</th>
+              <th>Lead No</th>
+              <th>Patient Name</th>
+              <th>Nationality</th>
+              <th>Hospital</th>
+              <th>City</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="patientGridBody">
+            {% if patient_grid_rows %}
+              {% for row in patient_grid_rows %}
+                {% set row_lead_id = row.lead_id if row.lead_id is defined else (row.id if row.id is defined else '') %}
+                <tr class="patient-grid-row">
+                  <td>
+                    <button
+                      type="button"
+                      class="wf-link-btn"
+                      onclick="loadPatientLead('{{ row_lead_id }}')"
+                      title="Click to load patient and lead details"
+                    >
+                      {{ row.passport_no or '' }}
+                    </button>
+                  </td>
+                  <td>{{ row.lead_no or '' }}</td>
+                  <td>{{ row.patient_name or '' }}</td>
+                  <td>{{ row.nationality or '' }}</td>
+                  <td>{{ row.hospital_name or '' }}</td>
+                  <td>{{ row.city or '' }}</td>
+                  <td>
+                    <span class="wf-pill status-pill" data-status="{{ row.wrkflw_status or '' }}">
+                      <span class="wf-dot"></span>
+                      {{ row.wrkflw_status or '' }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr id="patientGridNoDataRow">
+                <td colspan="7" class="wf-table-empty">No patient records available.</td>
+              </tr>
+            {% endif %}
+
+            <tr id="patientGridNoMatchRow" class="wf-hidden">
+              <td colspan="7" class="wf-table-empty">No matching records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-grid-footer">
+        <div id="patientGridMeta" class="wf-grid-meta">Showing 0 to 0 of 0 records</div>
+
+        <div id="patientGridPagination" class="wf-pagination">
+          <button type="button" class="wf-page-btn" id="patientGridFirstBtn" onclick="goToPatientGridPage(1)">First</button>
+          <button type="button" class="wf-page-btn" id="patientGridPrevBtn" onclick="goToPatientGridPage(patientGridState.currentPage - 1)">Prev</button>
+          <span id="patientGridPageNumbers" class="wf-pagination"></span>
+          <button type="button" class="wf-page-btn" id="patientGridNextBtn" onclick="goToPatientGridPage(patientGridState.currentPage + 1)">Next</button>
+          <button type="button" class="wf-page-btn" id="patientGridLastBtn" onclick="goToPatientGridPage(patientGridState.totalPages)">Last</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if lead is defined and lead %}
+  <section class="wf-card" id="leadSnapshotSection">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Lead Snapshot</div>
+      <div class="wf-card-sub">Basic record verification before workflow update</div>
+    </div>
+
+    <div class="wf-card-body">
+      <div class="wf-table-wrap">
+        <table class="wf-table">
+          <thead>
+            <tr>
+              <th>Lead No</th>
+              <th>Passport</th>
+              <th>Patient</th>
+              <th>Nationality</th>
+              <th>Hospital</th>
+              <th>City</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ lead.lead_no or '' }}</td>
+              <td>{{ lead.passport_no or '' }}</td>
+              <td>{{ lead.patient_name or '' }}</td>
+              <td>{{ lead.nationality or '' }}</td>
+              <td>{{ lead.hospital_name or '' }}</td>
+              <td>{{ lead.city or '' }}</td>
+              <td>
+                <span class="wf-pill status-pill" data-status="{{ lead.wrkflw_status or '' }}">
+                  <span class="wf-dot"></span>
+                  {{ lead.wrkflw_status or '' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if patient is defined and patient %}
+  <section class="wf-card">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Patient Details</div>
+    </div>
+
+    <div class="wf-card-body">
+      <div class="wf-grid-4">
+        <div class="wf-field">
+          <label>Given Name</label>
+          <input class="wf-input" value="{{ patient.given_name or '' }}" readonly>
+        </div>
+
+        <div class="wf-field">
+          <label>Surname</label>
+          <input class="wf-input" value="{{ patient.surname or '' }}" readonly>
+        </div>
+
+        <div class="wf-field">
+          <label>Passport</label>
+          <input class="wf-input" value="{{ patient.passport_no or '' }}" readonly>
+        </div>
+
+        <div class="wf-field">
+          <label>DOB</label>
+          <input class="wf-input" value="{{ patient.dob or '' }}" readonly>
+        </div>
+      </div>
+
+      <div style="height:14px;"></div>
+
+      <div class="wf-grid-4">
+        <div class="wf-field">
+          <label>Hospital Department</label>
+          <input
+            class="wf-input"
+            value="{{ lead.hospital_department or '-' }}"
+            readonly
+          >
+        </div>
+
+        <div class="wf-field">
+          <label>Doctor Name</label>
+          <input
+            class="wf-input"
+            value="{{ lead.doctor_name or '-' }}"
+            readonly
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if (attender1 is defined and attender1) or (attender2 is defined and attender2) or (attender3 is defined and attender3) %}
+  <section class="wf-card">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Attenders</div>
+    </div>
+
+    <div class="wf-card-body">
+
+      {% if attender1 is defined and attender1 %}
+      <div class="wf-attender">
+        <div class="wf-attender-head">Attender 1</div>
+        <div class="wf-attender-body">
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Given Name</label>
+              <input class="wf-input" value="{{ attender1.given_name or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Surname</label>
+              <input class="wf-input" value="{{ attender1.surname or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Passport</label>
+              <input class="wf-input" value="{{ attender1.passport_no or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>DOB</label>
+              <input class="wf-input" value="{{ attender1.dob or '' }}" readonly>
+            </div>
+          </div>
+
+          <div style="height:14px;"></div>
+
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Relationship</label>
+              <input class="wf-input" value="{{ attender1.relationship or '' }}" readonly>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if attender2 is defined and attender2 %}
+      <div class="wf-attender">
+        <div class="wf-attender-head">Attender 2</div>
+        <div class="wf-attender-body">
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Given Name</label>
+              <input class="wf-input" value="{{ attender2.given_name or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Surname</label>
+              <input class="wf-input" value="{{ attender2.surname or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Passport</label>
+              <input class="wf-input" value="{{ attender2.passport_no or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>DOB</label>
+              <input class="wf-input" value="{{ attender2.dob or '' }}" readonly>
+            </div>
+          </div>
+
+          <div style="height:14px;"></div>
+
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Relationship</label>
+              <input class="wf-input" value="{{ attender2.relationship or '' }}" readonly>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if attender3 is defined and attender3 %}
+      <div class="wf-attender">
+        <div class="wf-attender-head">Attender 3</div>
+        <div class="wf-attender-body">
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Given Name</label>
+              <input class="wf-input" value="{{ attender3.given_name or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Surname</label>
+              <input class="wf-input" value="{{ attender3.surname or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>Passport</label>
+              <input class="wf-input" value="{{ attender3.passport_no or '' }}" readonly>
+            </div>
+            <div class="wf-field">
+              <label>DOB</label>
+              <input class="wf-input" value="{{ attender3.dob or '' }}" readonly>
+            </div>
+          </div>
+
+          <div style="height:14px;"></div>
+
+          <div class="wf-grid-4">
+            <div class="wf-field">
+              <label>Relationship</label>
+              <input class="wf-input" value="{{ attender3.relationship or '' }}" readonly>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </section>
+  {% endif %}
+
+  {% if lead is defined and lead %}
+  <section class="wf-card">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Uploaded Documents</div>
+      <div class="wf-card-sub">All uploaded document(s) mapped to Passport No {{ lead.passport_no or '' }}</div>
+    </div>
+
+    <div class="wf-card-body">
+      {% if lead_documents %}
+        <div class="wf-doc-list">
+          {% for doc in lead_documents %}
+            <div class="wf-doc-item">
+              <div class="wf-doc-top">
+                <div>
+                  <div class="wf-doc-name">{{ loop.index }}. {{ doc.file_name or 'Document' }}</div>
+                  <div class="wf-doc-meta">
+                    {% if doc.file_type %}<span>Type: {{ doc.file_type }}</span>{% endif %}
+                    {% if doc.file_size %}<span>Size: {{ doc.file_size }}</span>{% endif %}
+                    {% if doc.uploaded_at %}<span>Uploaded On: {{ doc.uploaded_at }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="wf-doc-actions">
+                  <a href="{{ url_for('view_vil_doc', doc_id=doc.doc_id) }}" target="_blank" rel="noopener noreferrer" class="wf-doc-btn wf-doc-btn-primary">View</a>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="wf-no-record">No uploaded documents available for this Passport No.</div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if lead is defined and lead %}
+  <section class="wf-card">
+    <div class="wf-card-head">
+      <div class="wf-card-title">Transition</div>
+      <div class="wf-card-sub">Only this section allows workflow changes</div>
+    </div>
+
+    <div class="wf-card-body">
+
+      <div class="wf-status-bar">
+        <div class="wf-status-card">
+          <div class="wf-cap">Current Status</div>
+          <div class="wf-val">
+            <span class="wf-pill status-pill" data-status="{{ lead.wrkflw_status or '' }}">
+              <span class="wf-dot"></span>
+              {{ lead.wrkflw_status or '' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="wf-status-card">
+          <div class="wf-cap">Next Status</div>
+          <div class="wf-val">
+            <span class="wf-pill wf-pill-next status-pill" id="nextStatusBadge" data-status="{{ lead.wrkflw_status or '' }}">
+              <span class="wf-dot"></span>
+              {{ lead.wrkflw_status or '' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <form id="wfTransitionForm" method="POST" action="{{ url_for('wrkflwstatuschange') }}">
+        {% if csrf_token is defined %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+
+        <input type="hidden" name="lead_id" value="{{ lead.id }}">
+
+        <div class="wf-grid-3">
+          <div class="wf-field">
+            <label for="wrkflw_status">Workflow Status</label>
+            <select id="wrkflw_status" name="wrkflw_status" class="wf-select">
+              <option value="">-- Select Workflow Status --</option>
+              {% if workflow_status_options %}
+                {% for status in workflow_status_options %}
+                  {% set status_value = status.value if status.value is defined else status %}
+                  {% set status_label = status.label if status.label is defined else status %}
+                  <option value="{{ status_value }}" {% if (lead.wrkflw_status or '') == status_value %}selected{% endif %}>
+                    {{ status_label }}
+                  </option>
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="wf-field">
+            <label for="vil_date">VIL Date</label>
+            <input type="date" id="vil_date" name="vil_date" class="wf-input" value="{{ lead.vil_date or '' }}">
+          </div>
+
+          <div class="wf-field">
+            <label for="appointment_date">Appointment Date</label>
+            <input type="date" id="appointment_date" name="appointment_date" class="wf-input" value="{{ lead.appt_date or '' }}">
+          </div>
+        </div>
+
+        <div style="height:14px;"></div>
+
+        <div class="wf-grid-2">
+          <div class="wf-field">
+            <label for="remarks">Remarks</label>
+            <textarea id="remarks" name="remarks" class="wf-textarea">{{ lead.remarks or '' }}</textarea>
+          </div>
+
+          <div class="wf-field">
+            <label for="ivac">IVAC</label>
+            <select id="ivac" name="ivac" class="wf-select">
+              <option value="">-- Select IVAC --</option>
+              {% if ivac_options %}
+                {% for item in ivac_options %}
+                  {% set ivac_value = item.value if item.value is defined else item %}
+                  {% set ivac_label = item.label if item.label is defined else item %}
+                  <option value="{{ ivac_value }}" {% if (lead.ivac or '') == ivac_value %}selected{% endif %}>
+                    {{ ivac_label }}
+                  </option>
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
+        </div>
+
+        <div class="wf-sticky-actions">
+          <div class="wf-sticky-actions-inner">
+            <button type="button" class="wf-btn wf-btn-light" onclick="clearWorkflowForm()">Clear</button>
+            <button type="submit" class="wf-btn wf-btn-primary">Submit</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+
+{% if lead is defined and lead %}
+<div id="drawerOverlay" class="wf-drawer-overlay" onclick="closeQuickView()"></div>
+
+<div id="drawer" class="wf-drawer">
+  <div class="wf-drawer-head">
+    <div>
+      <h3>Quick View</h3>
+      <p>Lead, patient, attender, workflow details, and uploaded documents</p>
+    </div>
+    <button type="button" class="wf-drawer-close" onclick="closeQuickView()">✕</button>
+  </div>
+
+  <div class="wf-drawer-body">
+
+    <div class="wf-qv-group">
+      <div class="wf-qv-head">Lead</div>
+      <div class="wf-qv-body">
+        <div class="wf-qv-grid">
+          <div class="wf-qv-item"><div class="cap">Lead No</div><div class="val">{{ lead.lead_no or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Status</div><div class="val">{{ lead.wrkflw_status or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Passport</div><div class="val">{{ lead.passport_no or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Patient</div><div class="val">{{ lead.patient_name or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Nationality</div><div class="val">{{ lead.nationality or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Hospital</div><div class="val">{{ lead.hospital_name or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">City</div><div class="val">{{ lead.city or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Doctor</div><div class="val">{{ lead.doctor_name or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">IVAC</div><div class="val">{{ lead.ivac or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">VIL Date</div><div class="val">{{ lead.vil_date or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Appointment Date</div><div class="val">{{ lead.appt_date or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Remarks</div><div class="val">{{ lead.remarks or '' }}</div></div>
+        </div>
+      </div>
+    </div>
+
+    {% if patient is defined and patient %}
+    <div class="wf-qv-group">
+      <div class="wf-qv-head">Patient</div>
+      <div class="wf-qv-body">
+        <div class="wf-qv-grid">
+          <div class="wf-qv-item"><div class="cap">Given Name</div><div class="val">{{ patient.given_name or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Surname</div><div class="val">{{ patient.surname or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Passport</div><div class="val">{{ patient.passport_no or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">DOB</div><div class="val">{{ patient.dob or '' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Hospital Name</div><div class="val">{{ lead.hospital_name or '-' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Hospital Department</div><div class="val">{{ lead.hospital_department or '-' }}</div></div>
+          <div class="wf-qv-item"><div class="cap">Doctor Name</div><div class="val">{{ lead.doctor_name or '-' }}</div></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if (attender1 is defined and attender1) or (attender2 is defined and attender2) or (attender3 is defined and attender3) %}
+    <div class="wf-qv-group">
+      <div class="wf-qv-head">Attenders</div>
+      <div class="wf-qv-body">
+        <div class="wf-qv-grid">
+
+          {% if attender1 is defined and attender1 %}
+          <div class="wf-qv-item">
+            <div class="cap">Attender 1</div>
+            <div class="val">
+              {{ attender1.given_name or '' }} {{ attender1.surname or '' }} • {{ attender1.passport_no or '' }} • {{ attender1.relationship or '' }}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if attender2 is defined and attender2 %}
+          <div class="wf-qv-item">
+            <div class="cap">Attender 2</div>
+            <div class="val">
+              {{ attender2.given_name or '' }} {{ attender2.surname or '' }} • {{ attender2.passport_no or '' }} • {{ attender2.relationship or '' }}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if attender3 is defined and attender3 %}
+          <div class="wf-qv-item">
+            <div class="cap">Attender 3</div>
+            <div class="val">
+              {{ attender3.given_name or '' }} {{ attender3.surname or '' }} • {{ attender3.passport_no or '' }} • {{ attender3.relationship or '' }}
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="wf-qv-group">
+      <div class="wf-qv-head">Uploaded Documents</div>
+      <div class="wf-qv-body">
+        {% if lead_documents %}
+          <div class="wf-doc-inline-list">
+            {% for doc in lead_documents %}
+              <div class="wf-doc-inline-item">
+                <div class="wf-doc-inline-head">
+                  <div class="wf-doc-inline-name">{{ loop.index }}. {{ doc.file_name or 'Document' }}</div>
+                  <a href="{{ url_for('view_vil_doc', doc_id=doc.doc_id) }}" target="_blank" rel="noopener noreferrer" class="wf-doc-btn wf-doc-btn-primary">View</a>
+                </div>
+                <div class="wf-doc-inline-meta">
+                  {% if doc.file_type %}Type: {{ doc.file_type }}{% endif %}
+                  {% if doc.file_type and doc.uploaded_at %} • {% endif %}
+                  {% if doc.uploaded_at %}Uploaded On: {{ doc.uploaded_at }}{% endif %}
+                  {% if doc.uploaded_at and doc.file_size %} • {% endif %}
+                  {% if doc.file_size %}Size: {{ doc.file_size }}{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="wf-no-record">No uploaded documents available for this Passport No.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+<div id="wfPopupOverlay" class="wf-popup-overlay" onclick="handlePopupOverlayClick(event)">
+  <div id="wfPopup" class="wf-popup wf-popup-info" onclick="event.stopPropagation()">
+    <div class="wf-popup-head">
+      <div class="wf-popup-title">
+        <span id="wfPopupIcon" class="wf-popup-icon">i</span>
+        <span id="wfPopupTitle">Message</span>
+      </div>
+      <button type="button" class="wf-popup-close" onclick="closeWorkflowPopup()">✕</button>
+    </div>
+    <div id="wfPopupBody" class="wf-popup-body"></div>
+    <div class="wf-popup-actions">
+      <button type="button" class="wf-btn wf-btn-primary" onclick="closeWorkflowPopup()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script id="wfStatusColorMapData" type="application/json">
+{{ (status_color_map or {}) | tojson }}
+</script>
+
+<script id="wfFlashMessagesData" type="application/json">
+{{ (get_flashed_messages(with_categories=true) or []) | tojson }}
+</script>
+
+<script src="{{ url_for('static', filename='js/pages/wrkflwstatuschange.js') }}"></script>
+
+{% endblock %}

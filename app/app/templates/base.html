@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <title>{% block title %}Hospital System{% endblock %} | Cadupius Healthassist</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="teriqen-session-idle-seconds" content="{{ (config.get('SESSION_LIFETIME_MINUTES', 5)|int) * 60 }}">
+  <meta name="teriqen-session-heartbeat-url" content="{{ url_for('session_heartbeat') }}">
+  <meta name="teriqen-session-logout-url" content="{{ url_for('logout') }}">
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/pages/base.css') }}">
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+
+<body>
+
+  {% set allowed = session.get('allowed_screens', []) %}
+
+
+  <!-- =========================================================
+       SIDEBAR
+  ========================================================== -->
+  <div class="sidebar">
+
+    <!-- Sidebar branding intentionally removed -->
+
+<!-- DASHBOARD -->
+    <h2>
+      <a href="{{ url_for('dashboard') }}">
+        <i class="fa-solid fa-hospital"></i>
+        Dashboard
+      </a>
+    </h2>
+
+
+    <!-- =====================================================
+         FILE UPLOAD
+    ====================================================== -->
+    {% if 'FILE_UPLOAD' in allowed or 'FILE_UPLOAD_STATUS' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-file-arrow-up"></i>
+        File Upload
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'FILE_UPLOAD' in allowed %}
+      <a href="{{ url_for('file_upload') }}">
+        <i class="fa-regular fa-file"></i>
+        File Upload
+      </a>
+      {% endif %}
+
+      {% if 'FILE_UPLOAD_STATUS' in allowed %}
+      <a href="{{ url_for('file_upload_status') }}">
+        <i class="fa-solid fa-list-check"></i>
+        File Upload Status
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         PARTNER DETAILS
+    ====================================================== -->
+    {% if 'PARTNER_REGISTRATION' in allowed
+          or 'PARTNER_VIEW_MODIFY' in allowed
+          or 'HOSPITAL_PARTNER_MAPPING' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-handshake"></i>
+        Partner Details
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'PARTNER_REGISTRATION' in allowed %}
+      <a href="/partner-creation">
+        <i class="fa-solid fa-user-plus"></i>
+        Partner Registration
+      </a>
+      {% endif %}
+
+      {% if 'PARTNER_VIEW_MODIFY' in allowed %}
+      <a href="/partner-view">
+        <i class="fa-solid fa-user-pen"></i>
+        Partner View/Modify
+      </a>
+      {% endif %}
+
+      {% if 'HOSPITAL_PARTNER_MAPPING' in allowed %}
+      <a href="/hospital-partner-mapping">
+        <i class="fa-solid fa-link"></i>
+        Hospital &rarr; Partner Mapping
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         PATIENT DETAILS
+    ====================================================== -->
+    {% if 'PATIENT_CREATION' in allowed
+          or 'PATIENT_VIEW_MODIFY' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-user-injured"></i>
+        Patient Details
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'PATIENT_CREATION' in allowed %}
+      <a href="/patient-creation">
+        <i class="fa-solid fa-user-plus"></i>
+        Patient Creation
+      </a>
+      {% endif %}
+
+      {% if 'PATIENT_VIEW_MODIFY' in allowed %}
+      <a href="/patient-view">
+        <i class="fa-solid fa-user-pen"></i>
+        Patient View/Modify
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         PATIENT PROCESS
+    ====================================================== -->
+    {% if 'LEAD_GENERATION' in allowed
+          or 'WORKFLOW_STATUS_CHANGE' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-stethoscope"></i>
+        Patient Process
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'LEAD_GENERATION' in allowed %}
+      <a href="/lead-generation">
+        <i class="fa-solid fa-bullseye"></i>
+        Lead Generation
+      </a>
+      {% endif %}
+
+      {% if 'WORKFLOW_STATUS_CHANGE' in allowed %}
+      <a href="{{ url_for('wrkflwstatuschange') }}">
+        <i class="fa-solid fa-arrows-rotate"></i>
+        Workflow Status Change
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         QUEUE MANAGEMENT
+    ====================================================== -->
+    {% if 'OPERATION_QUEUE' in allowed
+          or 'MANUAL_REVIEW' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-list-check"></i>
+        Queue Management
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'OPERATION_QUEUE' in allowed %}
+      <a href="{{ url_for('operation_queue') }}">
+        <i class="fa-solid fa-inbox"></i>
+        Operation Queue
+      </a>
+      {% endif %}
+
+      {% if 'MANUAL_REVIEW' in allowed %}
+      <a href="/manual_review">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        Manual Review
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         INVOICE MANAGEMENT
+    ====================================================== -->
+    {% if 'INVOICE_GENERATION' in allowed
+          or 'INVOICE_PRINTING' in allowed
+          or 'INVOICE_RECONCILIATION' in allowed
+          or 'AGENT_PAYMENT' in allowed
+          or 'WHATSAPP_STUB' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        Invoice Management
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'INVOICE_GENERATION' in allowed %}
+      <a href="{{ url_for('invoicegeneration') }}">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        Invoice Generation
+      </a>
+      {% endif %}
+
+      {% if 'INVOICE_PRINTING' in allowed %}
+      <a href="{{ url_for('invoiceprinting') }}">
+        <i class="fa-solid fa-print"></i>
+        Invoice Printing
+      </a>
+      {% endif %}
+
+      {% if 'INVOICE_RECONCILIATION' in allowed %}
+      <a href="{{ url_for('invoice_reconciliation') }}">
+        <i class="fa-solid fa-file-signature"></i>
+        Invoice Reconciliation
+      </a>
+      {% endif %}
+
+      {% if 'AGENT_PAYMENT' in allowed %}
+      <a href="/agent-payment">
+        <i class="fa-solid fa-money-check-dollar"></i>
+        Agent Payment
+      </a>
+      {% endif %}
+
+      {% if 'WHATSAPP_STUB' in allowed %}
+      <a href="{{ url_for('whatsapp_stub') }}">
+        <i class="fa-solid fa-comments"></i>
+        Whatsapp Stub
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         ALERT MANAGEMENT
+    ====================================================== -->
+    {% if 'ALERT_DASHBOARD' in allowed
+          or 'CREATE_ALERT_RULE' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-bell"></i>
+        Alert Management
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'ALERT_DASHBOARD' in allowed %}
+      <a href="{{ url_for('alert_management.alert_dashboard') }}">
+        <i class="fa-solid fa-gauge-high"></i>
+        Alert Dashboard
+      </a>
+      {% endif %}
+
+      {% if 'CREATE_ALERT_RULE' in allowed %}
+      <a href="{{ url_for('alert_management.create_alert_rule') }}">
+        <i class="fa-solid fa-circle-plus"></i>
+        Create Alert Rule
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- =====================================================
+         BROADCAST MANAGEMENT
+    ====================================================== -->
+    {% if 'BROADCAST_CENTRE' in allowed
+          or 'BROADCAST_HISTORY' in allowed
+          or 'BROADCAST_TEMPLATES' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-bullhorn"></i>
+        Broadcast Management
+      </div>
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+      {% if 'BROADCAST_CENTRE' in allowed %}
+      <a href="{{ url_for('broadcast_management.broadcast_centre') }}">
+        <i class="fa-solid fa-paper-plane"></i>
+        Broadcast Centre
+      </a>
+      {% endif %}
+
+      {% if 'BROADCAST_HISTORY' in allowed %}
+      <a href="{{ url_for('broadcast_management.broadcast_history') }}">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Broadcast History
+      </a>
+      {% endif %}
+
+      {% if 'BROADCAST_TEMPLATES' in allowed %}
+      <a href="{{ url_for('broadcast_management.broadcast_templates') }}">
+        <i class="fa-solid fa-layer-group"></i>
+        Message Templates
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- =====================================================
+         REPORTS
+    ====================================================== -->
+    {% if 'OPERATIONAL_REPORTS' in allowed
+          or 'INVOICE_MANAGEMENT_REPORTS' in allowed
+          or 'AGENT_PAYMENT_REPORTS' in allowed
+          or 'SLA_REPORTS' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-chart-line"></i>
+        Reports
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'OPERATIONAL_REPORTS' in allowed %}
+      <a href="{{ url_for('operational_reports') }}">
+        <i class="fa-solid fa-clipboard-list"></i>
+        Operational Reports
+      </a>
+      {% endif %}
+
+      {% if 'INVOICE_MANAGEMENT_REPORTS' in allowed %}
+      <a href="{{ url_for('invoice_management_reports') }}">
+        <i class="fa-solid fa-file-invoice"></i>
+        Invoice Management Reports
+      </a>
+      {% endif %}
+
+      {% if 'AGENT_PAYMENT_REPORTS' in allowed %}
+      <a href="{{ url_for('agent_payment_reports') }}">
+        <i class="fa-solid fa-money-check"></i>
+        Agent Payment Reports
+      </a>
+      {% endif %}
+
+      {% if 'SLA_REPORTS' in allowed %}
+      <a href="{{ url_for('sla_reports') }}">
+        <i class="fa-solid fa-clock"></i>
+        SLA Reports
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+
+
+    <!-- =====================================================
+         SYSTEM MONITORING
+    ====================================================== -->
+    {% if 'SYSTEM_MONITORING_DASHBOARD' in allowed
+          or 'SCHEDULER_MONITOR' in allowed
+          or 'PROCESS_MONITOR' in allowed
+          or 'QUEUE_MONITOR' in allowed
+          or 'EXECUTION_HISTORY' in allowed
+          or 'ERROR_MONITOR' in allowed
+          or 'SYSTEM_HEALTH' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-desktop"></i>
+        System Monitoring
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'SYSTEM_MONITORING_DASHBOARD' in allowed %}
+      <a href="{{ url_for('system_monitoring.operations_control_center') }}">
+        <i class="fa-solid fa-gauge-high"></i>
+        Operations Control Center
+      </a>
+      {% endif %}
+
+      {% if 'SCHEDULER_MONITOR' in allowed %}
+      <a href="{{ url_for('system_monitoring.scheduler_monitor') }}">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Scheduler Monitor
+      </a>
+      {% endif %}
+
+      {% if 'PROCESS_MONITOR' in allowed %}
+      <a href="{{ url_for('system_monitoring.process_monitor') }}">
+        <i class="fa-solid fa-gears"></i>
+        Process Monitor
+      </a>
+      {% endif %}
+
+      {% if 'QUEUE_MONITOR' in allowed %}
+      <a href="{{ url_for('system_monitoring.queue_monitor') }}">
+        <i class="fa-solid fa-layer-group"></i>
+        Queue Monitor
+      </a>
+      {% endif %}
+
+      {% if 'EXECUTION_HISTORY' in allowed %}
+      <a href="{{ url_for('system_monitoring.execution_history') }}">
+        <i class="fa-solid fa-list-check"></i>
+        Execution History
+      </a>
+      {% endif %}
+
+      {% if 'ERROR_MONITOR' in allowed %}
+      <a href="{{ url_for('system_monitoring.error_monitor') }}">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        Error Monitor
+      </a>
+      {% endif %}
+
+      {% if 'SYSTEM_HEALTH' in allowed %}
+      <a href="{{ url_for('system_monitoring.system_health') }}">
+        <i class="fa-solid fa-heart-pulse"></i>
+        System Health
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+    <!-- =====================================================
+         USER MANAGEMENT
+    ====================================================== -->
+    {% if 'USER_SCREEN_ACCESS' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-users-gear"></i>
+        User Management
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      <a href="{{ url_for('user_screen_access') }}">
+        <i class="fa-solid fa-user-shield"></i>
+        User Access Management
+      </a>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         SYSTEM CONTROL
+    ====================================================== -->
+    {% if 'USER_MANAGEMENT' in allowed
+          or 'EMAIL_TEMPLATE' in allowed
+          or 'SLA_RULE_BUILDER' in allowed
+          or 'ROUND_ROBIN_ASSIGNMENT' in allowed
+          or 'INVOICE_TEMPLATE_BUILDER' in allowed
+          or 'HOSPITAL_DEPARTMENT_MAPPING' in allowed %}
+
+    <div class="menu-item">
+      <div class="menu-label">
+        <i class="fa-solid fa-gears"></i>
+        System Control
+      </div>
+
+      <i class="fa-solid fa-chevron-down arrow"></i>
+    </div>
+
+    <div class="submenu">
+
+      {% if 'USER_MANAGEMENT' in allowed %}
+      <a href="{{ url_for('user_management') }}">
+        <i class="fa-solid fa-users-gear"></i>
+        User Management
+      </a>
+      {% endif %}
+
+
+      {% if 'EMAIL_TEMPLATE' in allowed %}
+      <a href="/email-template-builder">
+        <i class="fa-solid fa-envelope-open-text"></i>
+        Email Template Builder
+      </a>
+      {% endif %}
+
+
+      {% if 'SLA_RULE_BUILDER' in allowed %}
+      <a href="/sla-rule-builder">
+        <i class="fa-solid fa-clock"></i>
+        SLA Rule Builder
+      </a>
+      {% endif %}
+
+
+      <!-- ROUND ROBIN ASSIGNMENT -->
+      {% if 'ROUND_ROBIN_ASSIGNMENT' in allowed %}
+      <a href="{{ url_for('round_robin_assignment') }}">
+        <i class="fa-solid fa-shuffle"></i>
+        Round Robin Assignment
+      </a>
+      {% endif %}
+
+
+      {% if 'INVOICE_TEMPLATE_BUILDER' in allowed %}
+      <a href="/invoice-template-builder">
+        <i class="fa-solid fa-file-invoice"></i>
+        Invoice Template Builder
+      </a>
+      {% endif %}
+
+
+      {% if 'HOSPITAL_DEPARTMENT_MAPPING' in allowed %}
+      <a href="/hospital-department-mapping">
+        <i class="fa-solid fa-hospital-user"></i>
+        Hospital Department Mapping
+      </a>
+      {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- PUSH LOGOUT TO BOTTOM -->
+    <div class="sidebar-spacer"></div>
+
+
+    <!-- LOGOUT -->
+    <a class="logout-link"
+       href="{{ url_for('logout') }}"
+       data-logout-url="{{ url_for('logout') }}"
+       onclick="return handleAppLogout(event, this.dataset.logoutUrl)">
+
+      <i class="fa-solid fa-right-from-bracket"></i>
+      Logout
+
+    </a>
+
+  </div>
+
+
+  <!-- =========================================================
+       MAIN CONTENT
+  ========================================================== -->
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+
+</body>
+
+</html>

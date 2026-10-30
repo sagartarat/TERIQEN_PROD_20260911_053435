@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Execution History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Execution History</div>
+      <div class="sm-breadcrumb">System Monitoring / Execution History</div>
+      <div class="sm-page-subtitle">Historical scheduler execution runs with processing counts, runtime and exception state.</div>
+    </div>
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.execution_history') }}"><i class="fa-solid fa-rotate"></i> Refresh</a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.operations_control_center') }}"><i class="fa-solid fa-gauge-high"></i> Control Center</a>
+    </div>
+  </div>
+
+  <form class="sm-filter-bar" method="get" action="{{ url_for('system_monitoring.execution_history') }}">
+    <div class="sm-filter-field">
+      <label>Scheduler</label>
+      <select name="scheduler_id">
+        <option value="">All Schedulers</option>
+        {% for item in scheduler_options|default([]) %}
+        <option value="{{ item.id }}" {% if filters.scheduler_id|string == item.id|string %}selected{% endif %}>{{ item.scheduler_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for item in status_options|default([]) %}
+        <option value="{{ item }}" {% if filters.status|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="sm-filter-field">
+      <label>From</label>
+      <input type="datetime-local" name="from_time" value="{{ filters.from_time|default('') }}">
+    </div>
+    <div class="sm-filter-field">
+      <label>To</label>
+      <input type="datetime-local" name="to_time" value="{{ filters.to_time|default('') }}">
+    </div>
+    <div class="sm-filter-field">
+      <label>Execution ID</label>
+      <input type="text" name="execution_id" value="{{ filters.execution_id|default('') }}" placeholder="Run / execution ID">
+    </div>
+    <div class="sm-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a class="btn btn-light" href="{{ url_for('system_monitoring.execution_history') }}">Clear</a>
+    </div>
+  </form>
+
+  <div class="sm-summary-grid">
+    <div class="sm-summary-card"><div class="sm-summary-label">Executions</div><div class="sm-summary-value">{{ summary.total|default(0) }}</div><div class="sm-summary-sub">Selected period</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Success</div><div class="sm-summary-value">{{ summary.success|default(0) }}</div><div class="sm-summary-sub">Completed successfully</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Warning</div><div class="sm-summary-value">{{ summary.warning|default(0) }}</div><div class="sm-summary-sub">Completed with warnings</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Failed</div><div class="sm-summary-value">{{ summary.failed|default(0) }}</div><div class="sm-summary-sub">Failed executions</div></div>
+    <div class="sm-summary-card"><div class="sm-summary-label">Average Runtime</div><div class="sm-summary-value">{% if summary.avg_duration_ms is not none %}{{ summary.avg_duration_ms }}ms{% else %}-{% endif %}</div><div class="sm-summary-sub">Selected period</div></div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Scheduler Execution Log</div>
+        <div class="sm-section-subtitle">Recorded execution history</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if execution_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Execution ID</th>
+            <th>Scheduler</th>
+            <th>Module</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Duration</th>
+            <th>Found</th>
+            <th>Processed</th>
+            <th>Success</th>
+            <th>Failed</th>
+            <th>Skipped</th>
+            <th>Status</th>
+            <th>Server</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in execution_rows %}
+          <tr>
+            <td>{{ row.execution_id or row.id }}</td>
+            <td><span class="sm-cell-title">{{ row.scheduler_name or '-' }}</span><span class="sm-cell-sub">{{ row.scheduler_code or '-' }}</span></td>
+            <td>{{ row.module_name or '-' }}</td>
+            <td>{{ row.started_on or '-' }}</td>
+            <td>{{ row.completed_on or '-' }}</td>
+            <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+            <td>{{ row.records_found|default(0, true) }}</td>
+            <td>{{ row.records_processed|default(0, true) }}</td>
+            <td>{{ row.success_count|default(0, true) }}</td>
+            <td>{{ row.failure_count|default(0, true) }}</td>
+            <td>{{ row.skipped_count|default(0, true) }}</td>
+            <td><span class="sm-status {{ (row.execution_status or 'UNKNOWN')|lower }}">{{ row.execution_status or 'UNKNOWN' }}</span></td>
+            <td>{{ row.server_name or '-' }}</td>
+            <td><a class="sm-link" href="{{ url_for('system_monitoring.execution_detail', execution_id=row.id) }}">Details</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-list-check"></i>
+        <strong>No executions found</strong>
+        No scheduler executions match the current filters.
+      </div>
+      {% endif %}
+    </div>
+
+    {% include "system_monitoring/_pagination.html" %}
+  </section>
+
+</div>
+{% endblock %}

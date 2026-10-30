@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Whatsapp Stub{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/whatsapp_stub.css') }}">
+
+<div class="ws-page">
+  <div class="ws-card">
+    <div class="ws-header">
+      <h2>Whatsapp Stub</h2>
+      <p>Use this screen to simulate incoming WhatsApp requests inside the application.</p>
+    </div>
+
+    <div class="ws-body">
+      <form id="whatsappStubForm" method="post" enctype="multipart/form-data" novalidate>
+        <div class="ws-grid">
+          <div class="ws-field">
+            <label for="mobile_number">Mobile Number</label>
+            <input
+              type="text"
+              id="mobile_number"
+              name="mobile_number"
+              placeholder="Enter mobile number"
+            >
+          </div>
+
+          <div class="ws-field">
+            <label for="message">Whatsapp Message</label>
+            <textarea
+              id="message"
+              name="message"
+              placeholder="Enter free text WhatsApp message here..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="ws-field">
+            <label for="attachments">Attachments</label>
+            <input
+              type="file"
+              id="attachments"
+              name="attachments"
+              multiple
+              accept=".jpg,.jpeg,.png,.pdf,.txt,.xls,.xlsx,.doc,.docx"
+            >
+            <div class="ws-file-note">
+              Allowed: JPG, JPEG, PNG, PDF, TXT, XLS, XLSX, DOC, DOCX<br>
+              Maximum total attachment size per message: 10 MB
+            </div>
+
+            <div id="selectedFilesBox" class="ws-file-list">
+              <h5>Selected Files</h5>
+              <div id="selectedFilesList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ws-actions">
+          <button type="submit" class="ws-btn ws-btn-primary" id="submitBtn">Submit</button>
+          <button type="button" class="ws-btn ws-btn-secondary" id="clearBtn">Clear</button>
+        </div>
+
+        <div id="statusBox" class="ws-status"></div>
+
+        <div class="ws-preview">
+          <h4>Latest Submitted Preview</h4>
+          <div class="ws-preview-row"><strong>Mobile Number:</strong> <span id="previewMobile">-</span></div>
+          <div class="ws-preview-row"><strong>Message:</strong> <span id="previewMessage">-</span></div>
+          <div class="ws-preview-row"><strong>Attachments:</strong> <span id="previewAttachments">-</span></div>
+          <div class="ws-note">This stub uses same-origin application route to avoid browser CORS issues.</div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/whatsapp_stub.js') }}"></script>
+{% endblock %}

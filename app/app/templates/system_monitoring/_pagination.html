@@ -1,0 +1,31 @@
+{% if pagination is defined and pagination %}
+<div class="sm-pagination">
+  <div class="sm-pagination-info">
+    Showing {{ pagination.start_record|default(0) }} to {{ pagination.end_record|default(0) }}
+    of {{ pagination.total_records|default(0) }} records
+  </div>
+
+  <div class="sm-pagination-links">
+    <a class="sm-page-btn {% if not pagination.has_prev %}disabled{% endif %}"
+       href="{{ pagination.prev_url or '#' }}">
+      <i class="fa-solid fa-chevron-left"></i>
+    </a>
+
+    {% for item in pagination.pages|default([]) %}
+      {% if item.is_ellipsis %}
+        <span class="sm-page-btn disabled">…</span>
+      {% else %}
+        <a class="sm-page-btn {% if item.active %}active{% endif %}"
+           href="{{ item.url or '#' }}">
+          {{ item.number }}
+        </a>
+      {% endif %}
+    {% endfor %}
+
+    <a class="sm-page-btn {% if not pagination.has_next %}disabled{% endif %}"
+       href="{{ pagination.next_url or '#' }}">
+      <i class="fa-solid fa-chevron-right"></i>
+    </a>
+  </div>
+</div>
+{% endif %}

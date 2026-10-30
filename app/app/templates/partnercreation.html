@@ -1,0 +1,1251 @@
+{% extends "base.html" %}
+
+{% block title %}Partner Creation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/partnercreation.css') }}">
+
+<script>
+  // The application layout already has its own content scrollbar.
+  // Lock the browser/body scrollbar only on the Partner Creation page.
+  document.documentElement.classList.add("partner-page-scroll-lock");
+  document.body.classList.add("partner-page-scroll-lock");
+</script>
+
+<div class="partner-page">
+
+  <div class="partner-hero">
+    <div class="partner-page-header">
+      <div class="partner-title-block">
+        <h1>Partner Registration</h1>
+        <p>Create, view, and modify Hospital, Agency or Service Partners through the same modern enterprise workspace used in File Upload.</p>
+      </div>
+
+      <div class="partner-header-actions">
+        <a href="{{ url_for('partner_view') }}" class="partner-btn partner-btn-light">
+          <i class="fa-solid fa-user-pen"></i> Partner View/Modify
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      {% if message != 'Login successful' %}
+      <div class="partner-alert {% if category == 'success' %}partner-alert-success{% elif category == 'warning' %}partner-alert-warning{% else %}partner-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+<div class="partner-panel">
+
+  <div class="card-head">
+    <div>
+      <div class="card-title">Partner Form</div>
+      <div class="card-sub" id="cardSub">
+        Create a new partner. Mandatory fields (red star). Tax fields are mandatory only if GST Required = Yes.
+      </div>
+    </div>
+
+    <!-- Shows ONLY when mode=view or mode=modify -->
+    <div class="mode-banner" id="modeBanner">
+      <div id="modeTitle">MODE</div>
+      <small id="modeSub"></small>
+      <div class="mode-actions">
+        <button class="mode-btn" id="backBtn" type="button">
+          <i class="fa-solid fa-arrow-left"></i> Back to View
+        </button>
+        <button class="mode-btn primary" id="switchToEditBtn" type="button" style="display:none;">
+          <i class="fa-solid fa-pen-to-square"></i> Switch to Modify
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <form method="POST"
+          id="partnerForm"
+          enctype="multipart/form-data"
+          novalidate
+          action="{{ url_for('partner_creation', mode=mode, key=key) }}">
+
+
+      {% if csrf_token is defined %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% endif %}
+
+      <!-- key (short_name PK) -->
+      <input type="hidden" id="keyHidden" name="key" value="{{ key or '' }}">
+
+      <!-- base URLs for JS -->
+      <input type="hidden" id="partnerCreationBaseUrl" value="{{ url_for('partner_creation') }}">
+      <input type="hidden" id="partnerViewUrl" value="{{ url_for('partner_view') }}">
+
+      <!-- ================= Partner Type ================= -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><i class="fa-solid fa-id-card-clip"></i> Partner Type</div>
+          <div class="section-hint">Please select Partner Type</div>
+        </div>
+        <div class="section-body">
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Partner Type <span class="req">*</span></label>
+            <div class="radio-row">
+              <label class="radio-chip">
+                <input type="radio" name="partnerType" value="Hospital" required
+                  {% if not partner or partner.partner_type == 'Hospital' %}checked{% endif %}>
+                Hospital
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="partnerType" value="Agency" required
+                  {% if partner and partner.partner_type == 'Agency' %}checked{% endif %}>
+                Agency
+              </label>
+
+              <label class="radio-chip">
+                <input type="radio" name="partnerType" value="Service Partner" required
+                  {% if partner and partner.partner_type == 'Service Partner' %}checked{% endif %}>
+                Service Partner
+              </label>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Contract Start Date <span class="req">*</span></label>
+              <input class="input" type="date" name="contract_start" required data-label="Contract Start Date"
+                     value="{{ partner.contstart_date if partner else '' }}">
+            </div>
+            <div class="form-group">
+              <label>Contract End Date <span class="req">*</span></label>
+              <input class="input" type="date" name="contract_end" required data-label="Contract End Date"
+                     value="{{ partner.contend_date if partner else '' }}">
+            </div>
+          </div>
+
+          <div class="form-grid-2" id="agencyPercentageWrap" style="margin-top:14px; display:none;">
+            <div class="form-group">
+              <label>Agency %age</label>
+              <input class="input"
+                     type="number"
+                     id="agentPercentage"
+                     name="agent_percentage"
+                     data-label="Agency %age"
+                     min="0"
+                     max="100"
+                     step="0.01"
+                     inputmode="decimal"
+                     placeholder="0.00"
+                     value="{{ '%.2f'|format(partner.agent_percentage|float) if partner and partner.agent_percentage is not none else '' }}">
+            </div>
+            <div class="form-group" aria-hidden="true"></div>
+          </div>
+
+          <!-- =====================================================
+               PARTNER ROLE / CAPABILITY
+               ===================================================== -->
+          <div style="margin-top:16px; padding:14px 16px; border:1px solid #d9e6f4; border-radius:14px; background:#f8fbff;">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+              <div>
+                <div style="font-size:13px; font-weight:800; color:#123b70;">
+                  Partner Role / Capability
+                </div>
+                <div style="font-size:11px; color:#7183a0; margin-top:2px;">
+                  Controls how TERIQEN uses this Partner across Invoice, VIL, Appointment and Referral functions.
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+
+              <div class="form-group">
+                <label>Invoice Eligible</label>
+                <div class="radio-row">
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="invoice_eligible"
+                           value="Yes"
+                           {% if partner and partner.invoice_eligible == 'Yes' %}checked{% elif not partner %}checked{% endif %}>
+                    Yes
+                  </label>
+
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="invoice_eligible"
+                           value="No"
+                           {% if partner and partner.invoice_eligible == 'No' %}checked{% endif %}>
+                    No
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Hospital Coordinator</label>
+                <div class="radio-row">
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="hospital_coordinator"
+                           value="Yes"
+                           {% if partner and partner.hospital_coordinator == 'Yes' %}checked{% elif not partner %}checked{% endif %}>
+                    Yes
+                  </label>
+
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="hospital_coordinator"
+                           value="No"
+                           {% if partner and partner.hospital_coordinator == 'No' %}checked{% endif %}>
+                    No
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Referral Partner</label>
+                <div class="radio-row">
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="referral_partner"
+                           value="Yes"
+                           {% if partner and partner.referral_partner == 'Yes' %}checked{% endif %}>
+                    Yes
+                  </label>
+
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="referral_partner"
+                           value="No"
+                           {% if partner and partner.referral_partner == 'No' %}checked{% elif not partner %}checked{% endif %}>
+                    No
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Direct Treating Hospital</label>
+                <div class="radio-row">
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="direct_treating_hospital"
+                           value="Yes"
+                           {% if partner and partner.direct_treating_hospital == 'Yes' %}checked{% elif not partner %}checked{% endif %}>
+                    Yes
+                  </label>
+
+                  <label class="radio-chip">
+                    <input type="radio"
+                           name="direct_treating_hospital"
+                           value="No"
+                           {% if partner and partner.direct_treating_hospital == 'No' %}checked{% endif %}>
+                    No
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            <div id="partnerCapabilityHint"
+                 style="margin-top:10px; padding:9px 11px; border-radius:10px; background:#eef6ff; color:#45617f; font-size:11px;">
+              Hospital default: Invoice Eligible = Yes, Hospital Coordinator = Yes, Referral Partner = No, Direct Treating Hospital = Yes.
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= Demographic Information ================= -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><i class="fa-solid fa-user"></i> Demographic Information</div>
+          <div class="section-hint">Please enter Partner Demographic Information</div>
+        </div>
+
+        <div class="section-body">
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label>Legal Name <span class="req">*</span></label>
+              <input class="input" name="legal_name" required data-label="Legal Name"
+                     value="{{ partner.legal_name if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>Short Name <span class="req">*</span></label>
+              <input class="input" id="shortName" name="short_name" required data-label="Short Name"
+                     value="{{ partner.short_name if partner else '' }}">
+            </div>
+
+            <div class="form-group" aria-hidden="true"></div>
+
+            <div class="form-group full">
+              <label>Address <span class="req">*</span></label>
+              <textarea class="textarea" name="address" required data-label="Address"
+                        placeholder="Enter full address...">{{ partner.partner_address if partner else '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Country <span class="req">*</span></label>
+              <select class="select" name="country" id="countrySelect" required data-label="Country">
+                <option value="">Please select Country Name</option>
+                {% for country in countries %}
+                <option value="{{ country['country_name'] }}"
+                  {% if partner and partner.partner_country == country['country_name'] %}selected{% endif %}>
+                  {{ country['country_name'] }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>State <span class="req">*</span></label>
+              <select class="select" name="state" id="stateSelect" required data-label="State">
+                <option value="">
+                  {% if partner and partner.partner_state %}{{ partner.partner_state }}{% else %}Please select State Name{% endif %}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>City <span class="req">*</span></label>
+              <select class="select" name="city" id="citySelect" required data-label="City">
+                <option value="">
+                  {% if partner and partner.partner_city %}{{ partner.partner_city }}{% else %}Please select City Name{% endif %}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Pin Code <span class="req">*</span></label>
+              <input class="input" name="pincode" required data-label="Pin Code"
+                     value="{{ partner.partner_pincode if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>Currency <span class="req">*</span></label>
+              <select class="select" name="currency" id="currencySelect" required data-label="Currency">
+                <option value="">Please select Currency</option>
+                {% for ccy in currencies %}
+                <option value="{{ ccy['ccy_code'] }}"
+                  {% if partner and partner.partner_ccy == ccy['ccy_code'] %}selected{% endif %}>
+                  {{ ccy['ccy_code'] }} - {{ ccy['ccy_name'] }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Email <span class="req">*</span></label>
+              <input class="input" type="email" name="email" required data-label="Email"
+                     value="{{ partner.partner_email if partner else '' }}">
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= Tax Information ================= -->
+      <div class="section" id="taxSection">
+        <div class="section-head">
+          <div class="section-title"><i class="fa-solid fa-receipt"></i> Tax Information</div>
+          <div class="section-hint">Mandatory only if GST Required = Yes</div>
+        </div>
+
+        <div class="section-body">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>GST Required <span class="req">*</span></label>
+              <div class="radio-row">
+                <label class="radio-chip">
+                  <input type="radio" id="gstYes" name="gst" value="Yes"
+                    {% if not partner or (partner.gst_required|string)|lower == 'yes' %}checked{% endif %}>
+                  Yes
+                </label>
+                <label class="radio-chip">
+                  <input type="radio" id="gstNo" name="gst" value="No"
+                    {% if partner and (partner.gst_required|string)|lower == 'no' %}checked{% endif %}>
+                  No
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>GST Number <span class="req">*</span></label>
+              <input class="input" id="gstNumber" name="gst_number" data-label="GST Number"
+                     value="{{ partner.gst_number if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>PAN Number <span class="req">*</span></label>
+              <input class="input" id="panNumber" name="pan_number" data-label="PAN Number"
+                     value="{{ partner.pan_number if partner else '' }}">
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top:14px">
+            <div class="form-group">
+              <label>Place of Supply <span class="req">*</span></label>
+              <select class="select" id="placeOfSupply" name="place_of_supply" data-label="Place of Supply">
+                <option value="">
+                  {% if partner and partner.placeof_supply %}{{ partner.placeof_supply }}{% else %}Please select Place of Supply{% endif %}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Tax Preference <span class="req">*</span></label>
+              <select class="select" id="taxPreference" name="tax_preference" data-label="Tax Preference">
+                <option value="">Please select Tax Preference</option>
+                <option value="Taxable" {% if partner and partner.tax_preference == 'Taxable' %}selected{% endif %}>Taxable</option>
+                <option value="Tax Exempted" {% if partner and partner.tax_preference == 'Tax Exempted' %}selected{% endif %}>Tax Exempted</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>TDS <span class="req">*</span></label>
+              <select class="select" id="tdsSelect" name="tds" data-label="TDS">
+                <option value="">Please select %age</option>
+                <option value="0"  {% if partner and (partner.tds_percentage|float)|int == 0  %}selected{% endif %}>0%</option>
+                <option value="1"  {% if partner and (partner.tds_percentage|float)|int == 1  %}selected{% endif %}>1%</option>
+                <option value="2"  {% if partner and (partner.tds_percentage|float)|int == 2  %}selected{% endif %}>2%</option>
+                <option value="5"  {% if partner and (partner.tds_percentage|float)|int == 5  %}selected{% endif %}>5%</option>
+                <option value="10" {% if partner and (partner.tds_percentage|float)|int == 10 %}selected{% endif %}>10%</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= Contact Information ================= -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><i class="fa-solid fa-phone"></i> Contact Information</div>
+          <div class="section-hint">Please enter Contact information</div>
+        </div>
+
+        <div class="section-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Primary Contact Person <span class="req">*</span></label>
+              <input class="input" name="primary_contact_person" required data-label="Primary Contact Person"
+                     value="{{ partner.prim_contper if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>Primary Contact No <span class="req">*</span></label>
+              <input class="input" name="primary_contact_no" required data-label="Primary Contact No"
+                     value="{{ partner.prim_contno if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>Alt Contact Person</label>
+              <input class="input" name="secondary_contact_person" data-label="Alt Contact Person"
+                     value="{{ partner.alt_contper if partner else '' }}">
+            </div>
+
+            <div class="form-group">
+              <label>Alt Contact No</label>
+              <input class="input" name="secondary_contact_no" data-label="Alt Contact No"
+                     value="{{ partner.alt_contno if partner else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= Partner Documents ================= -->
+      <div class="section" id="partnerDocumentSection">
+        <div class="section-head">
+          <div class="section-title">
+            <i class="fa-solid fa-file-shield"></i> Partner Documents
+          </div>
+          <div class="section-hint">Multiple files allowed. Maximum 10 MB per file.</div>
+        </div>
+
+        <div class="section-body">
+          {% if mode != 'view' %}
+          <div class="partner-document-upload">
+            <div class="partner-upload-box">
+              <div class="partner-upload-box-top">
+                <div class="partner-upload-box-title">Upload Partner Documents</div>
+                <div class="partner-upload-badges">
+                  <span class="partner-upload-badge partner-upload-badge-info">Multiple Files</span>
+                  <span class="partner-upload-badge partner-upload-badge-success">PDF / Image / Doc / XLS / PPT</span>
+                  <span class="partner-upload-badge partner-upload-badge-warning">10 MB / File</span>
+                </div>
+              </div>
+
+              <input
+                type="file"
+                id="partnerDocuments"
+                name="partner_documents"
+                class="partner-upload-input"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.jpg,.jpeg,.png,.webp">
+
+              <div class="partner-upload-size-badge">
+                <span class="partner-upload-size-pill" id="selectedDocumentSummary">Selected: 0 files / 0 B</span>
+              </div>
+
+              <div class="partner-upload-help-text">
+                Each individual file must be <b>10 MB or smaller</b>. Supported types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV, TXT, JPG, JPEG, PNG and WEBP.
+              </div>
+            </div>
+
+            <div class="partner-selected-documents-block">
+              <div class="partner-selected-documents-label">List of Documents Selected</div>
+              <div class="partner-doc-list-box">
+                <div id="selectedDocumentEmpty" class="partner-doc-empty">No documents selected</div>
+                <ul id="selectedDocumentList" class="partner-doc-ul"></ul>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="existing-document-block">
+            <div class="existing-document-heading">
+              <div>
+                <strong>Attached Documents</strong>
+                <span>Documents already saved for this partner.</span>
+              </div>
+              <span class="document-count-badge">{{ partner_documents|length if partner_documents else 0 }}</span>
+            </div>
+
+            {% if partner_documents %}
+            <div class="partner-document-table-wrap">
+              <table class="partner-document-table">
+                <thead>
+                  <tr>
+                    <th>File Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Uploaded By</th>
+                    <th>Uploaded On</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for doc in partner_documents %}
+                  <tr>
+                    <td>
+                      <div class="document-name-cell">
+                        <i class="fa-regular fa-file-lines"></i>
+                        <span title="{{ doc.original_file_name }}">{{ doc.original_file_name }}</span>
+                      </div>
+                    </td>
+                    <td>{{ (doc.file_extension or 'FILE')|upper }}</td>
+                    <td>
+                      {% if doc.file_size_bytes < 1048576 %}
+                        {{ (doc.file_size_bytes / 1024)|round(1) }} KB
+                      {% else %}
+                        {{ (doc.file_size_bytes / 1048576)|round(2) }} MB
+                      {% endif %}
+                    </td>
+                    <td>{{ doc.uploaded_by or 'SYSTEM' }}</td>
+                    <td>{{ doc.uploaded_on or '' }}</td>
+                    <td>
+                      <div class="document-actions">
+                        <a
+                          class="document-action view"
+                          href="{{ url_for('partner_document_view', document_id=doc.id) }}"
+                          target="_blank"
+                          rel="noopener"
+                          title="View document">
+                          <i class="fa-regular fa-eye"></i> View
+                        </a>
+                        <a
+                          class="document-action download"
+                          href="{{ url_for('partner_document_download', document_id=doc.id) }}"
+                          title="Download document">
+                          <i class="fa-solid fa-download"></i> Download
+                        </a>
+                        {% if mode == 'modify' %}
+                        <button
+                          type="submit"
+                          class="document-action delete"
+                          formaction="{{ url_for('partner_document_delete', document_id=doc.id) }}"
+                          formmethod="post"
+                          formnovalidate
+                          data-document-delete="true"
+                          onclick="return confirm('Delete this attached document?');"
+                          title="Delete document">
+                          <i class="fa-regular fa-trash-can"></i> Delete
+                        </button>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="document-empty-state">
+              <i class="fa-regular fa-folder-open"></i>
+              <div>
+                <strong>No documents attached</strong>
+                <span>Uploaded documents will appear here.</span>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="form-footer" id="formFooter">
+        <button class="btn btn-primary" id="submitBtn" type="submit">
+          <i class="fa-solid fa-check"></i> SUBMIT
+        </button>
+        <button class="btn btn-danger" id="clearBtn" type="reset">
+          <i class="fa-solid fa-eraser"></i> CLEAR
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* =========================================================
+   PAGE-SPECIFIC JS ONLY (sidebar handled by static/js/app.js)
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function () {
+
+  // Modes: "" (registration), "view", "modify"
+  const MODE = ("{{ mode or '' }}").toLowerCase();
+  const KEY  = ("{{ key or '' }}");
+
+  const form = document.getElementById("partnerForm");
+  if(!form) return;
+
+  // ===== Partner document selection =====
+  // Keep the existing backend contract unchanged:
+  // - field name: partner_documents
+  // - multiple files allowed
+  // - maximum 10 MB PER FILE
+  const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
+  const documentInput = document.getElementById("partnerDocuments");
+  const selectedDocumentList = document.getElementById("selectedDocumentList");
+  const selectedDocumentEmpty = document.getElementById("selectedDocumentEmpty");
+  const selectedDocumentSummary = document.getElementById("selectedDocumentSummary");
+  let selectedDocumentFiles = [];
+
+  function formatDocumentSize(bytes){
+    const units = ["B", "KB", "MB", "GB"];
+    let value = Number(bytes || 0);
+    let unitIndex = 0;
+
+    while(value >= 1024 && unitIndex < units.length - 1){
+      value /= 1024;
+      unitIndex += 1;
+    }
+
+    const decimals = unitIndex === 0 ? 0 : (value < 10 ? 1 : 0);
+    return value.toFixed(decimals) + " " + units[unitIndex];
+  }
+
+  function totalSelectedDocumentBytes(){
+    return selectedDocumentFiles.reduce(
+      (total, file) => total + Number(file.size || 0),
+      0
+    );
+  }
+
+  function updateSelectedDocumentSummary(){
+    if(!selectedDocumentSummary) return;
+
+    const fileCount = selectedDocumentFiles.length;
+    const fileWord = fileCount === 1 ? "file" : "files";
+    selectedDocumentSummary.textContent =
+      `Selected: ${fileCount} ${fileWord} / ${formatDocumentSize(totalSelectedDocumentBytes())}`;
+  }
+
+  function renderSelectedDocuments(){
+    if(!selectedDocumentList) return;
+
+    selectedDocumentList.innerHTML = "";
+
+    if(selectedDocumentFiles.length === 0){
+      selectedDocumentList.style.display = "none";
+      if(selectedDocumentEmpty) selectedDocumentEmpty.style.display = "block";
+      updateSelectedDocumentSummary();
+      return;
+    }
+
+    if(selectedDocumentEmpty) selectedDocumentEmpty.style.display = "none";
+    selectedDocumentList.style.display = "block";
+
+    selectedDocumentFiles.forEach((file, index) => {
+      const listItem = document.createElement("li");
+      listItem.className = "partner-doc-li";
+
+      const meta = document.createElement("div");
+      meta.className = "partner-doc-meta";
+
+      const icon = document.createElement("i");
+      icon.className = "fa-regular fa-file-lines";
+
+      const textWrap = document.createElement("div");
+      textWrap.className = "partner-doc-meta-text";
+
+      const fileName = document.createElement("strong");
+      fileName.textContent = file.name;
+      fileName.title = file.name;
+
+      const fileSize = document.createElement("span");
+      fileSize.textContent = formatDocumentSize(file.size);
+
+      textWrap.appendChild(fileName);
+      textWrap.appendChild(fileSize);
+      meta.appendChild(icon);
+      meta.appendChild(textWrap);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "partner-doc-remove";
+      removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i> Remove';
+      removeButton.title = "Remove selected file";
+      removeButton.addEventListener("click", function(){
+        selectedDocumentFiles.splice(index, 1);
+        syncDocumentInput();
+      });
+
+      listItem.appendChild(meta);
+      listItem.appendChild(removeButton);
+      selectedDocumentList.appendChild(listItem);
+    });
+
+    updateSelectedDocumentSummary();
+  }
+
+  function syncDocumentInput(){
+    if(!documentInput) return;
+
+    const transfer = new DataTransfer();
+    selectedDocumentFiles.forEach(file => transfer.items.add(file));
+    documentInput.files = transfer.files;
+    renderSelectedDocuments();
+  }
+
+  if(documentInput){
+    documentInput.addEventListener("change", function(){
+      const incomingFiles = Array.from(documentInput.files || []);
+      const rejectedFiles = [];
+
+      incomingFiles.forEach(file => {
+        if(file.size > MAX_DOCUMENT_SIZE){
+          rejectedFiles.push(file.name);
+          return;
+        }
+
+        const isDuplicate = selectedDocumentFiles.some(existing =>
+          existing.name === file.name &&
+          existing.size === file.size &&
+          existing.lastModified === file.lastModified
+        );
+
+        if(!isDuplicate){
+          selectedDocumentFiles.push(file);
+        }
+      });
+
+      syncDocumentInput();
+
+      if(rejectedFiles.length > 0){
+        alert(
+          "These files were not selected because each file must be 10 MB or smaller:\n" +
+          rejectedFiles.join("\n")
+        );
+      }
+    });
+
+    renderSelectedDocuments();
+  }
+
+  form.addEventListener("reset", function(){
+    selectedDocumentFiles = [];
+    window.setTimeout(syncDocumentInput, 0);
+  });
+
+  const agencyPercentageWrap = document.getElementById("agencyPercentageWrap");
+  const agentPercentage = document.getElementById("agentPercentage");
+
+  function selectedPartnerTypeValue(){
+    const checked = form.querySelector('input[name="partnerType"]:checked');
+    return checked ? checked.value : "";
+  }
+
+  function applyAgencyPercentageRule(){
+    const isAgency = selectedPartnerTypeValue() === "Agency";
+    if(agencyPercentageWrap){
+      agencyPercentageWrap.style.display = isAgency ? "grid" : "none";
+    }
+    if(agentPercentage){
+      agentPercentage.disabled = !isAgency;
+      if(!isAgency){
+        agentPercentage.value = "";
+        agentPercentage.classList.remove("is-invalid");
+      }
+    }
+  }
+
+  function setCapabilityValue(fieldName, value){
+    const radio = form.querySelector(
+      'input[name="' + fieldName + '"][value="' + value + '"]'
+    );
+
+    if(radio){
+      radio.checked = true;
+    }
+  }
+
+  function applyPartnerCapabilityDefaults(){
+    const partnerType = selectedPartnerTypeValue();
+    const hint = document.getElementById("partnerCapabilityHint");
+
+    if(partnerType === "Hospital"){
+      setCapabilityValue("invoice_eligible", "Yes");
+      setCapabilityValue("hospital_coordinator", "Yes");
+      setCapabilityValue("referral_partner", "No");
+      setCapabilityValue("direct_treating_hospital", "Yes");
+
+      if(hint){
+        hint.textContent =
+          "Hospital default: Invoice Eligible = Yes, Hospital Coordinator = Yes, Referral Partner = No, Direct Treating Hospital = Yes.";
+      }
+    }
+
+    else if(partnerType === "Agency"){
+      setCapabilityValue("invoice_eligible", "No");
+      setCapabilityValue("hospital_coordinator", "No");
+      setCapabilityValue("referral_partner", "Yes");
+      setCapabilityValue("direct_treating_hospital", "No");
+
+      if(hint){
+        hint.textContent =
+          "Agency default: Invoice Eligible = No, Hospital Coordinator = No, Referral Partner = Yes, Direct Treating Hospital = No.";
+      }
+    }
+
+    else if(partnerType === "Service Partner"){
+      setCapabilityValue("invoice_eligible", "Yes");
+      setCapabilityValue("hospital_coordinator", "Yes");
+      setCapabilityValue("referral_partner", "No");
+      setCapabilityValue("direct_treating_hospital", "No");
+
+      if(hint){
+        hint.textContent =
+          "Service Partner default: Invoice Eligible = Yes, Hospital Coordinator = Yes, Referral Partner = No, Direct Treating Hospital = No.";
+      }
+    }
+  }
+
+  form.querySelectorAll('input[name="partnerType"]').forEach(radio => {
+    radio.addEventListener("change", function(){
+      applyAgencyPercentageRule();
+      applyPartnerCapabilityDefaults();
+    });
+  });
+
+  applyAgencyPercentageRule();
+
+  {% if not partner %}
+  applyPartnerCapabilityDefaults();
+  {% endif %}
+
+  const baseCreateUrl = document.getElementById("partnerCreationBaseUrl")?.value || "";
+  const partnerViewUrl = document.getElementById("partnerViewUrl")?.value || "";
+
+
+  // Mode banner and buttons
+  const modeBanner = document.getElementById("modeBanner");
+  const modeTitle  = document.getElementById("modeTitle");
+  const modeSub    = document.getElementById("modeSub");
+  const switchBtn  = document.getElementById("switchToEditBtn");
+  const backBtn    = document.getElementById("backBtn");
+
+  const submitBtn  = document.getElementById("submitBtn");
+  const formFooter = document.getElementById("formFooter");
+  const clearBtn   = document.getElementById("clearBtn");
+  const cardSub    = document.getElementById("cardSub");
+
+  const keyHidden = document.getElementById("keyHidden");
+  if (keyHidden) keyHidden.value = KEY || "";
+
+  function showBannerIfNeeded(){
+    if(!modeBanner) return;
+
+    // Registration page
+    if(MODE !== "view" && MODE !== "modify"){
+      modeBanner.style.display = "none";
+      if(cardSub) cardSub.textContent = "Create a new partner. Mandatory fields (red star). Tax fields are mandatory only if GST Required = Yes.";
+      if(submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> SUBMIT';
+      if(clearBtn) clearBtn.style.display = "";
+      if(formFooter) formFooter.style.display = "flex";
+      return;
+    }
+
+    // View/Modify
+    modeBanner.style.display = "block";
+
+    if(backBtn){
+      backBtn.addEventListener("click", function(){
+        window.location.href = partnerViewUrl || "/partner-view";
+      });
+    }
+
+    if(MODE === "view"){
+      if(modeTitle) modeTitle.innerHTML = '<i class="fa-regular fa-eye"></i> VIEW MODE';
+      if(modeSub) modeSub.textContent = "All fields are disabled (read-only).";
+      if(cardSub) cardSub.textContent = "Viewing partner details (read-only).";
+
+      if(switchBtn && KEY){
+        switchBtn.style.display = "";
+        switchBtn.onclick = function(){
+          window.location.href = (baseCreateUrl || "/partner-creation") + "?mode=modify&key=" + encodeURIComponent(KEY);
+        };
+      } else if(switchBtn){
+        switchBtn.style.display = "none";
+      }
+    }
+
+    if(MODE === "modify"){
+      if(modeTitle) modeTitle.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> MODIFY MODE';
+      if(modeSub) modeSub.textContent = "Edit fields and click UPDATE to save changes.";
+      if(cardSub) cardSub.textContent = "Modify partner details and click UPDATE to save.";
+      if(switchBtn) switchBtn.style.display = "none";
+    }
+  }
+  showBannerIfNeeded();
+
+  // Short Name as PK
+  const shortNameEl = document.getElementById("shortName");
+
+  // View mode: disable all fields & hide footer
+  if (MODE === "view") {
+    form.querySelectorAll("input, select, textarea, button").forEach(el => {
+      if (el.id === "backBtn" || el.id === "switchToEditBtn") return;
+      el.disabled = true;
+    });
+    if(formFooter) formFooter.style.display = "none";
+    return;
+  }
+
+  // Modify mode: update label and keep PK readonly (submitted)
+  if (MODE === "modify") {
+    if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> UPDATE';
+    if (shortNameEl && KEY) {
+      shortNameEl.readOnly = true;
+      shortNameEl.classList.add("readonly");
+    }
+  } else {
+    if (shortNameEl) {
+      shortNameEl.readOnly = false;
+      shortNameEl.classList.remove("readonly");
+    }
+  }
+
+  // ===== LOV loading =====
+  const countrySelect = document.getElementById("countrySelect");
+  const stateSelect   = document.getElementById("stateSelect");
+  const citySelect    = document.getElementById("citySelect");
+  const placeOfSupply = document.getElementById("placeOfSupply");
+
+  function resetSelect(selectEl, placeholderText) {
+    if(!selectEl) return;
+    selectEl.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholderText;
+    selectEl.appendChild(opt);
+  }
+
+  async function loadStates(country) {
+    if(!stateSelect) return;
+    resetSelect(stateSelect, "Please select State Name");
+    if (!country) return;
+
+    const res = await fetch("/get-states?country_name=" + encodeURIComponent(country), {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    if (!res.ok) return;
+
+    const states = await res.json();
+    if (!Array.isArray(states)) return;
+
+    states.forEach(stateName => {
+      const opt = document.createElement("option");
+      opt.value = stateName;
+      opt.textContent = stateName;
+      stateSelect.appendChild(opt);
+    });
+
+    const existing = "{{ partner.partner_state if partner else '' }}";
+    if(existing){ stateSelect.value = existing; }
+  }
+
+  async function loadCities(country) {
+    if(!citySelect) return;
+    resetSelect(citySelect, "Please select City Name");
+    if (!country) return;
+
+    const res = await fetch("/get-cities?country_name=" + encodeURIComponent(country), {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    if (!res.ok) return;
+
+    const cities = await res.json();
+    if (!Array.isArray(cities)) return;
+
+    cities.forEach(cityName => {
+      const opt = document.createElement("option");
+      opt.value = cityName;
+      opt.textContent = cityName;
+      citySelect.appendChild(opt);
+    });
+
+    const existing = "{{ partner.partner_city if partner else '' }}";
+    if(existing){ citySelect.value = existing; }
+  }
+
+  async function loadPlaceOfSupply(country) {
+    if(!placeOfSupply) return;
+    resetSelect(placeOfSupply, "Please select Place of Supply");
+    if (!country) return;
+
+    const res = await fetch("/get-place-of-supply?country_name=" + encodeURIComponent(country), {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    if (!res.ok) return;
+
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return;
+
+    rows.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.display;
+      opt.textContent = item.display;
+      placeOfSupply.appendChild(opt);
+    });
+
+    const existing = "{{ partner.placeof_supply if partner else '' }}";
+    if(existing){ placeOfSupply.value = existing; }
+  }
+
+  if(countrySelect){
+    countrySelect.addEventListener("change", async function () {
+      const country = countrySelect.value;
+
+      resetSelect(stateSelect, "Please select State Name");
+      resetSelect(citySelect, "Please select City Name");
+      resetSelect(placeOfSupply, "Please select Place of Supply");
+
+      if (!country) return;
+      await Promise.all([ loadStates(country), loadCities(country), loadPlaceOfSupply(country) ]);
+    });
+
+    (async function initLovsOnLoad(){
+      const currentCountry = countrySelect.value;
+      if(currentCountry){
+        await Promise.all([ loadStates(currentCountry), loadCities(currentCountry), loadPlaceOfSupply(currentCountry) ]);
+      }
+    })();
+  }
+
+  // ===== GST rules =====
+  const gstYes = document.getElementById("gstYes");
+  const gstNo  = document.getElementById("gstNo");
+
+  const gstNumber     = document.getElementById("gstNumber");
+  const panNumber     = document.getElementById("panNumber");
+  const taxPreference = document.getElementById("taxPreference");
+  const tdsSelect     = document.getElementById("tdsSelect");
+
+  function setRequired(el, isReq) {
+    if (!el) return;
+    if (isReq) el.setAttribute("required", "required");
+    else el.removeAttribute("required");
+  }
+
+  function applyTdsRule() {
+    const isGstRequired = gstYes && gstYes.checked;
+
+    if (!isGstRequired) {
+      if(tdsSelect){
+        tdsSelect.disabled = true;
+        tdsSelect.value = "";
+        setRequired(tdsSelect, false);
+      }
+      return;
+    }
+
+    const pref = ((taxPreference && taxPreference.value) || "").trim();
+    if (pref === "Taxable") {
+      if(tdsSelect){
+        tdsSelect.disabled = false;
+        setRequired(tdsSelect, true);
+      }
+    } else {
+      if(tdsSelect){
+        tdsSelect.disabled = true;
+        tdsSelect.value = "";
+        setRequired(tdsSelect, false);
+      }
+    }
+  }
+
+  function applyGstRule() {
+    const isGstRequired = gstYes && gstYes.checked;
+
+    if(gstNumber) gstNumber.disabled = !isGstRequired;
+    if(panNumber) panNumber.disabled = !isGstRequired;
+    if(placeOfSupply) placeOfSupply.disabled = !isGstRequired;
+    if(taxPreference) taxPreference.disabled = !isGstRequired;
+
+    if (!isGstRequired) {
+      if(gstNumber) gstNumber.value = "";
+      if(panNumber) panNumber.value = "";
+      if(placeOfSupply) placeOfSupply.value = "";
+      if(taxPreference) taxPreference.value = "";
+      if(tdsSelect){
+        tdsSelect.value = "";
+        tdsSelect.disabled = true;
+      }
+
+      setRequired(gstNumber, false);
+      setRequired(panNumber, false);
+      setRequired(placeOfSupply, false);
+      setRequired(taxPreference, false);
+      setRequired(tdsSelect, false);
+      return;
+    }
+
+    setRequired(gstNumber, true);
+    setRequired(panNumber, true);
+    setRequired(placeOfSupply, true);
+    setRequired(taxPreference, true);
+    applyTdsRule();
+  }
+
+  if(gstYes) gstYes.addEventListener("change", applyGstRule);
+  if(gstNo)  gstNo.addEventListener("change", applyGstRule);
+  if(taxPreference) taxPreference.addEventListener("change", applyTdsRule);
+
+  applyGstRule();
+
+  // ===== Validation popup =====
+  function clearInvalidMarks() {
+    document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+  }
+  function markInvalid(el) {
+    if (!el) return;
+    el.classList.add("is-invalid");
+  }
+  function focusField(el) {
+    if (!el) return;
+    el.focus({preventScroll:true});
+    el.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+  function getPartnerTypeValue() {
+    const checked = form.querySelector('input[name="partnerType"]:checked');
+    return checked ? checked.value : "";
+  }
+  function isEmptyValue(el) {
+    if (!el) return true;
+    if (el.disabled) return false;
+    return ((el.value || "").toString().trim() === "");
+  }
+
+  function validateBeforeSubmit() {
+    clearInvalidMarks();
+    const missing = [];
+
+    if (!getPartnerTypeValue()) {
+      missing.push({ label: "Partner Type", el: form.querySelector('input[name="partnerType"]') });
+    }
+
+    const requiredEls = Array.from(form.querySelectorAll("[required]"));
+    requiredEls.forEach(el => {
+      if (el.type === "radio") return;
+      if (isEmptyValue(el)) {
+        const label = el.getAttribute("data-label") || el.name || "Required field";
+        missing.push({ label: label, el: el });
+      }
+    });
+
+    if (missing.length > 0) {
+      missing.forEach(m => markInvalid(m.el));
+      focusField(missing[0].el);
+      alert(missing[0].label + " should not be empty.");
+      return false;
+    }
+
+    if (selectedPartnerTypeValue() === "Agency" && agentPercentage && !agentPercentage.disabled) {
+      const rawPercentage = (agentPercentage.value || "").trim();
+      if (rawPercentage !== "") {
+        const numericPercentage = Number(rawPercentage);
+        if (Number.isNaN(numericPercentage) || numericPercentage < 0 || numericPercentage > 100) {
+          markInvalid(agentPercentage);
+          focusField(agentPercentage);
+          alert("Agency %age should be between 0.00 and 100.00.");
+          return false;
+        }
+        agentPercentage.value = numericPercentage.toFixed(2);
+      }
+    }
+
+    if (MODE === "modify") {
+      if (!KEY) {
+        alert("Missing primary key (Short Name). Please open this record from Partner View.");
+        return false;
+      }
+      const sn = (document.getElementById("shortName")?.value || "").trim();
+      if (sn && sn !== KEY) {
+        alert("Short Name cannot be changed because it is the primary key.");
+        return false;
+      }
+      const ok = confirm("Are you sure you want to UPDATE this partner?");
+      if(!ok) return false;
+    }
+
+    return true;
+  }
+
+  form.addEventListener("submit", function (e) {
+    if (e.submitter && e.submitter.matches("[data-document-delete]")) {
+      return;
+    }
+
+    if (!validateBeforeSubmit()) {
+      e.preventDefault();
+      return false;
+    }
+  });
+
+  form.addEventListener("input", (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains("is-invalid")) {
+      if (!isEmptyValue(e.target)) e.target.classList.remove("is-invalid");
+    }
+  });
+  form.addEventListener("change", (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains("is-invalid")) {
+      if (!isEmptyValue(e.target)) e.target.classList.remove("is-invalid");
+    }
+  });
+
+});
+</script>
+{% endblock %}

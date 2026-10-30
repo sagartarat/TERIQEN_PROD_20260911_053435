@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+
+{% block title %}Email Template Builder{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/email_template_builder.css') }}">
+
+<div class="etb-page">
+  <div class="etb-shell">
+
+    <div class="etb-hero">
+      <div class="etb-hero-top">
+        <div class="etb-hero-title">
+          <h1>Template Design Workspace</h1>
+          <p>
+            Create reusable enterprise email templates with dynamic placeholders, live email body builder,
+            and a saved template listing for draft, active, and inactive templates.
+          </p>
+        </div>
+
+        <div class="etb-top-actions">
+          <a href="{{ url_for('dashboard') }}" class="etb-btn etb-btn-light">Back</a>
+          <button class="etb-btn etb-btn-light" type="button" onclick="resetTemplateBuilder()">Reset</button>
+          <button class="etb-btn etb-btn-success" type="button" onclick="saveEmailTemplate('save')">Save</button>
+          <button class="etb-btn etb-btn-primary" type="button" onclick="renderTemplatePreview()">Preview</button>
+        </div>
+      </div>
+
+      <div class="etb-stepper">
+        <div class="etb-step">
+          <div class="etb-step-number">1</div>
+          <div class="etb-step-content">
+            <strong>Add Template</strong>
+            <span>Enter Template Code, Template Name, channel, status, language, and subject details.</span>
+          </div>
+        </div>
+
+        <div class="etb-step">
+          <div class="etb-step-number">2</div>
+          <div class="etb-step-content">
+            <strong>Build Email Body</strong>
+            <span>Design the email body using formatting tools and dynamic placeholders from the mapping section.</span>
+          </div>
+        </div>
+
+        <div class="etb-step">
+          <div class="etb-step-number">3</div>
+          <div class="etb-step-content">
+            <strong>Save & Manage</strong>
+            <span>Update the selected template and view all records in the tabular grid.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="etb-stats">
+      <div class="etb-stat-card">
+        <div class="etb-stat-label">Total Templates</div>
+        <div class="etb-stat-value">{{ stats.total_templates|default(0) }}</div>
+      </div>
+      <div class="etb-stat-card">
+        <div class="etb-stat-label">Active Templates</div>
+        <div class="etb-stat-value">{{ stats.active_templates|default(0) }}</div>
+      </div>
+      <div class="etb-stat-card">
+        <div class="etb-stat-label">Draft Templates</div>
+        <div class="etb-stat-value">{{ stats.draft_templates|default(0) }}</div>
+      </div>
+      <div class="etb-stat-card">
+        <div class="etb-stat-label">Visible Placeholders</div>
+        <div class="etb-stat-value" id="etbPlaceholderCount">{{ stats.total_placeholders|default(0) }}</div>
+      </div>
+    </div>
+
+    <div class="etb-search-strip">
+      <div class="etb-field">
+        <label>Template Search</label>
+        <input type="text" id="etbSearchInput" placeholder="Search template name, code, category..." />
+      </div>
+
+      <div class="etb-field">
+        <label>Category</label>
+        <select id="etbCategory">
+          <option value="">All</option>
+          {% for item in template_categories|default([]) %}
+          <option value="{{ item }}">{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="etb-field">
+        <label>Status</label>
+        <select id="etbStatus">
+          <option value="">All</option>
+          {% for item in template_statuses|default([]) %}
+          <option value="{{ item }}">{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="etb-field">
+        <label>Language</label>
+        <select id="etbLanguage">
+          <option value="">All</option>
+          {% for item in template_languages|default([]) %}
+          <option value="{{ item }}">{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:end;">
+        <button class="etb-btn etb-btn-primary" style="width:100%;" type="button" onclick="applySavedTemplateGridFilters()">Apply</button>
+      </div>
+    </div>
+
+    <div class="etb-panel">
+      <div class="etb-panel-header">
+        <div>
+          <h2>Saved Templates</h2>
+          <small>View already saved templates across draft, active, and inactive statuses.</small>
+        </div>
+        <div class="etb-chip-row">
+          <span class="etb-chip">Draft</span>
+          <span class="etb-chip">Active</span>
+          <span class="etb-chip">Inactive</span>
+        </div>
+      </div>
+
+      <div class="etb-panel-body">
+        <div class="etb-template-grid-wrap">
+          <!-- EMAIL_TEMPLATE_DELETE_V1: Saved templates include an explicit delete action. -->
+          <table class="etb-template-grid" id="savedTemplateGrid">
+            <thead>
+              <tr>
+                <th>Template Code</th>
+                <th>Template Name</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Language</th>
+                <th>Channel</th>
+                <th>Email Subject</th>
+                <th>Description</th>
+                <th>Version</th>
+                <th>Created By</th>
+                <th>Created On</th>
+                <th>Updated By</th>
+                <th>Updated On</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="savedTemplateGridBody">
+              {% for row in saved_templates|default([]) %}
+              {% set row_status = (row.get("template_status", "") or "") %}
+              <tr
+                class="etb-saved-template-row"
+                data-search="{{ (
+                  (row.get('template_code', '') or '') ~ ' ' ~
+                  (row.get('template_name', '') or '') ~ ' ' ~
+                  (row.get('template_category', '') or '') ~ ' ' ~
+                  (row.get('template_subject', '') or '') ~ ' ' ~
+                  (row.get('template_description', '') or '')
+                )|lower }}"
+                data-category="{{ (row.get('template_category', '') or '')|lower }}"
+                data-status="{{ row_status|lower }}"
+                data-language="{{ (row.get('template_language', '') or '')|lower }}"
+                data-template-id="{{ row.get('id', '') }}"
+                data-template-code="{{ row.get('template_code', '') }}"
+                data-template-name="{{ row.get('template_name', '') }}"
+                data-template-category="{{ row.get('template_category', '') }}"
+                data-template-status="{{ row.get('template_status', '') }}"
+                data-template-language="{{ row.get('template_language', '') }}"
+                data-template-channel="{{ row.get('template_channel', '') }}"
+                data-template-description="{{ row.get('template_description', '') }}"
+                data-template-subject="{{ row.get('template_subject', '') }}"
+                data-template-body="{{ row.get('template_body', '')|e }}"
+              >
+                <td>
+                  <a
+                    href="javascript:void(0);"
+                    class="etb-template-code-link"
+                    onclick="loadTemplateIntoForm(this)"
+                  >
+                    {{ row.get("template_code", "") }}
+                  </a>
+                </td>
+                <td>{{ row.get("template_name", "") }}</td>
+                <td>{{ row.get("template_category", "") }}</td>
+                <td>
+                  <span class="etb-status-pill {{ row_status|lower }}">
+                    {{ row_status }}
+                  </span>
+                </td>
+                <td>{{ row.get("template_language", "") }}</td>
+                <td>{{ row.get("template_channel", "") }}</td>
+                <td class="etb-template-subject-cell">{{ row.get("template_subject", "") }}</td>
+                <td class="etb-template-description-cell">{{ row.get("template_description", "") }}</td>
+                <td>{{ row.get("version_no", "") }}</td>
+                <td>{{ row.get("created_by", "") }}</td>
+                <td>{{ row.get("created_on", "") }}</td>
+                <td>{{ row.get("updated_by", "") }}</td>
+                <td>{{ row.get("updated_on", "") }}</td>
+                <td>
+                  <button
+                    class="etb-btn etb-btn-danger etb-btn-sm"
+                    type="button"
+                    onclick="deleteEmailTemplate(this)"
+                    title="Delete this email template"
+                  >Delete</button>
+                </td>
+              </tr>
+              {% endfor %}
+
+              {% if not saved_templates %}
+              <tr id="savedTemplateGridEmptyRow">
+                <td colspan="14" class="etb-empty">No saved templates available.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="etb-panel">
+      <div class="etb-panel-header">
+        <div>
+          <h2>Add Template</h2>
+          <small>Capture the template master details before starting with the email body builder.</small>
+        </div>
+        <div class="etb-chip-row">
+          <span class="etb-chip">Version 1.0</span>
+          <span class="etb-chip">Email Channel</span>
+          <span class="etb-chip">Operation Queue</span>
+        </div>
+      </div>
+
+      <div class="etb-panel-body">
+
+        <input type="hidden" id="etb_template_id" value="" />
+        <input type="hidden" id="etb_is_existing_record" value="0" />
+        <input type="hidden" id="etb_loaded_original_status" value="" />
+
+        <div class="etb-grid-2">
+          <div class="etb-card">
+            <div class="etb-card-head">
+              <h3>Template Master</h3>
+            </div>
+            <div class="etb-card-body">
+              <div class="etb-form-grid">
+                <div class="etb-field etb-col-span-2">
+                  <label>Template Code</label>
+                  <input type="text" id="etb_template_code" value="{{ template_data.template_code|default('') }}" />
+                </div>
+
+                <div class="etb-field etb-col-span-2">
+                  <label>Template Name</label>
+                  <input type="text" id="etb_template_name" value="{{ template_data.template_name|default('') }}" />
+                </div>
+
+                <div class="etb-field">
+                  <label>Category</label>
+                  <select id="etb_template_category">
+                    {% for item in template_categories|default([]) %}
+                    <option value="{{ item }}" {% if template_data.template_category|default('') == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="etb-field">
+                  <label>Status</label>
+                  <select id="etb_template_status">
+                    {% for item in template_statuses|default([]) %}
+                    <option value="{{ item }}" {% if template_data.template_status|default('') == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="etb-field">
+                  <label>Language</label>
+                  <select id="etb_template_language">
+                    {% for item in template_languages|default([]) %}
+                    <option value="{{ item }}" {% if template_data.template_language|default('') == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="etb-field">
+                  <label>Channel</label>
+                  <input type="text" id="etb_template_channel" value="{{ template_data.template_channel|default('EMAIL') }}" readonly />
+                </div>
+
+                <div class="etb-field etb-col-span-2">
+                  <label>Description</label>
+                  <textarea id="etb_template_description" rows="5">{{ template_data.template_description|default('') }}</textarea>
+                </div>
+
+                <div class="etb-field etb-col-span-2">
+                  <label>Email Subject</label>
+                  <input type="text" id="etb_subject" value="{{ template_data.template_subject|default('') }}" />
+                </div>
+              </div>
+
+              <div class="etb-note" style="margin-top:12px;">
+                Use this section for template master details and your actual email template setup.
+              </div>
+
+              <div id="etbFormLockNote" class="etb-form-lock-note">
+                Inactive templates allow editing of Status only. Template Code, Channel, and Language are locked for existing records.
+              </div>
+            </div>
+          </div>
+
+          <div class="etb-card">
+            <div class="etb-card-head">
+              <h3>Email Body Builder</h3>
+              <div class="etb-chip-row">
+                <span class="etb-chip">Rich Editor</span>
+                <span class="etb-chip">Dynamic Placeholders</span>
+              </div>
+            </div>
+            <div class="etb-card-body">
+
+              <div class="etb-subject-box">
+                <div class="etb-note" style="margin:0 0 6px 0;">
+                  Subject Preview:
+                </div>
+                <div id="etbSubjectInlinePreview" class="etb-subject-chip-wrap"></div>
+              </div>
+
+              <div class="etb-editor-toolbar" id="etbEditorToolbar">
+                <button class="etb-tool-btn" type="button" onclick="formatEditor('bold')"><b>B</b></button>
+                <button class="etb-tool-btn" type="button" onclick="formatEditor('italic')"><i>I</i></button>
+                <button class="etb-tool-btn" type="button" onclick="formatEditor('underline')"><u>U</u></button>
+                <button class="etb-tool-btn" type="button" onclick="formatEditor('insertUnorderedList')">• List</button>
+                <button class="etb-tool-btn" type="button" onclick="formatEditor('insertOrderedList')">1. List</button>
+              </div>
+
+              <div id="etb_editor" class="etb-editor" contenteditable="true">{{ template_data.template_body|default('')|safe }}</div>
+
+              <div class="etb-note" style="margin-top:12px;">
+                Use the Place Holder Mapping section below to copy placeholder tokens into subject and email body.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="etb-card" style="margin-top:16px;">
+          <div class="etb-card-head">
+            <h3>Place Holder Mapping</h3>
+          </div>
+
+          <div class="etb-card-body">
+            <div class="etb-table-wrap">
+              <table class="etb-table" id="placeholderTable">
+                <thead>
+                  <tr>
+                    <th>Placeholder Key</th>
+                    <th>Placeholder Token</th>
+                    <th>Placeholder Label</th>
+                    <th>Source Table</th>
+                    <th>Source Column</th>
+                    <th>Module Name</th>
+                    <th>Data Type</th>
+                    <th>Sample Value</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="placeholderTableBody">
+                  {% for row in placeholder_mapping_rows|default([]) %}
+                  {% set placeholder_key = row.get("placeholder_key", row.get("placeholder", "")) %}
+                  <tr class="etb-mapping-row">
+                    <td>{{ placeholder_key }}</td>
+                    <td class="etb-placeholder-token">{{ "{{" ~ placeholder_key ~ "}}" }}</td>
+                    <td>{{ row.get("placeholder_label", row.get("display_name", "")) }}</td>
+                    <td>{{ row.get("source_table", "") }}</td>
+                    <td>{{ row.get("source_column", row.get("source_column_logic", "")) }}</td>
+                    <td>{{ row.get("module_name", "") }}</td>
+                    <td>{{ row.get("data_type", "") }}</td>
+                    <td>{{ row.get("sample_value", "") }}</td>
+                    <td>{{ row.get("status", "") }}</td>
+                    <td>{{ row.get("remarks", row.get("format_rule", "")) }}</td>
+                    <td>
+                      <button
+                        class="etb-mini-btn etb-mini-btn-primary"
+                        type="button"
+                        data-placeholder="{{ '{{' ~ placeholder_key ~ '}}' }}"
+                        onclick="insertPlaceholder(this.getAttribute('data-placeholder'))"
+                      >
+                        Insert
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+
+                  {% if not placeholder_mapping_rows %}
+                  <tr>
+                    <td colspan="11" class="etb-empty">No placeholder mapping rows available.</td>
+                  </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="etb-pagination">
+              <div class="etb-pagination-info">
+                Showing <span id="etbPageStart">0</span> to <span id="etbPageEnd">0</span> of <span id="etbPageTotal">{{ placeholder_mapping_rows|default([])|length }}</span> rows
+              </div>
+
+              <div class="etb-pagination-actions">
+                <button class="etb-btn etb-btn-light etb-btn-sm" type="button" onclick="prevPage()">Prev</button>
+                <span class="etb-page-indicator" id="etbPageNumber">Page 1 of 1</span>
+                <button class="etb-btn etb-btn-light etb-btn-sm" type="button" onclick="nextPage()">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="etb-footer">
+      <div class="etb-footer-actions">
+        <button class="etb-btn etb-btn-light" type="button" onclick="history.back()">Close</button>
+        <button class="etb-btn etb-btn-success" type="button" onclick="saveEmailTemplate('save')">Save</button>
+        <button class="etb-btn etb-btn-primary" type="button" onclick="renderTemplatePreview()">Preview</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="etbPreviewOverlay" class="etb-preview-overlay" onclick="closePreviewDrawer()"></div>
+
+<div id="etbPreviewDrawer" class="etb-preview-drawer" aria-hidden="true">
+  <div class="etb-preview-head">
+    <div>
+      <h3>Template Preview</h3>
+      <div class="etb-note">Rendered preview with sample placeholder values.</div>
+    </div>
+    <button class="etb-btn etb-btn-light" type="button" onclick="closePreviewDrawer()">Close</button>
+  </div>
+
+  <div class="etb-preview-body">
+    <div class="etb-preview-block">
+      <div class="etb-preview-label">Template Code</div>
+      <div class="etb-preview-content" id="etbPreviewTemplateCode"></div>
+    </div>
+
+    <div class="etb-preview-block">
+      <div class="etb-preview-label">Status</div>
+      <div class="etb-preview-content" id="etbPreviewStatus"></div>
+    </div>
+
+    <div class="etb-preview-block">
+      <div class="etb-preview-label">Subject</div>
+      <div class="etb-preview-subject" id="etbPreviewSubject"></div>
+    </div>
+
+    <div class="etb-preview-block">
+      <div class="etb-preview-label">Body</div>
+      <div class="etb-preview-content" id="etbPreviewBody"></div>
+    </div>
+  </div>
+</div>
+
+<script id="etbPreviewValuesJson" type="application/json">
+  {{ preview_values|default({}, true)|tojson|safe }}
+</script>
+
+<script src="{{ url_for('static', filename='js/pages/email_template_builder.js', v='email-template-delete-v1') }}"></script>
+
+{% endblock %}

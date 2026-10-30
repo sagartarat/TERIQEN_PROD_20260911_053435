@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}File Upload Status{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/file_upload_status.css') }}">
+
+<div class="fus-page">
+
+  <div class="fus-page-header">
+    <div class="fus-title-block">
+      <h1>File Upload Status</h1>
+      <p>Enterprise tracking workspace for uploaded files, processing status, uploader details, and actions.</p>
+    </div>
+
+    <div class="fus-header-actions">
+      <a href="{{ url_for('file_upload') }}" class="fus-btn fus-btn-primary">
+        <i class="bi bi-upload"></i>
+        New Upload
+      </a>
+    </div>
+  </div>
+
+  {% set ns = namespace(total=0, success=0, partial=0, failed=0) %}
+  {% if upload_rows %}
+    {% for row in upload_rows %}
+      {% set ns.total = ns.total + 1 %}
+      {% set status = (row.fileupld_status or 'PENDING')|upper %}
+      {% if status == 'SUCCESS' %}
+        {% set ns.success = ns.success + 1 %}
+      {% elif status == 'PARTIAL' %}
+        {% set ns.partial = ns.partial + 1 %}
+      {% elif status == 'FAILED' or status == 'REJECTED' %}
+        {% set ns.failed = ns.failed + 1 %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  <div class="fus-summary-row">
+    <div class="fus-summary-card">
+      <div class="fus-summary-label">Total Records</div>
+      <div class="fus-summary-value">{{ ns.total }}</div>
+    </div>
+
+    <div class="fus-summary-card fus-summary-card-success">
+      <div class="fus-summary-label">Successful Uploads</div>
+      <div class="fus-summary-value">{{ ns.success }}</div>
+    </div>
+
+    <div class="fus-summary-card fus-summary-card-warning">
+      <div class="fus-summary-label">Partial Uploads</div>
+      <div class="fus-summary-value">{{ ns.partial }}</div>
+    </div>
+
+    <div class="fus-summary-card fus-summary-card-danger">
+      <div class="fus-summary-label">Failed / Rejected</div>
+      <div class="fus-summary-value">{{ ns.failed }}</div>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="fus-alert {% if category == 'success' %}fus-alert-success{% else %}fus-alert-danger{% endif %}">
+          <div>{{ message }}</div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="fus-panel">
+    <div class="fus-panel-header">
+      <div>
+        <h2>Search & Filter</h2>
+        <small>Filter the uploaded file records by file name, status, and uploader.</small>
+      </div>
+    </div>
+
+    <div class="fus-panel-body">
+      <form method="GET" action="{{ url_for('file_upload_status') }}">
+        <div class="fus-filters">
+          <div class="fus-field">
+            <label for="search_file_name">File Name</label>
+            <input
+              type="text"
+              id="search_file_name"
+              name="file_name"
+              value="{{ request.args.get('file_name', '') }}"
+              placeholder="Search file name"
+            >
+          </div>
+
+          <div class="fus-field">
+            <label for="search_status">Status</label>
+            <select id="search_status" name="fileupld_status">
+              <option value="">All Status</option>
+              <option value="PENDING" {% if request.args.get('fileupld_status') == 'PENDING' %}selected{% endif %}>PENDING</option>
+              <option value="PROCESSING" {% if request.args.get('fileupld_status') == 'PROCESSING' %}selected{% endif %}>PROCESSING</option>
+              <option value="SUCCESS" {% if request.args.get('fileupld_status') == 'SUCCESS' %}selected{% endif %}>SUCCESS</option>
+              <option value="PARTIAL" {% if request.args.get('fileupld_status') == 'PARTIAL' %}selected{% endif %}>PARTIAL</option>
+              <option value="FAILED" {% if request.args.get('fileupld_status') == 'FAILED' %}selected{% endif %}>FAILED</option>
+              <option value="REJECTED" {% if request.args.get('fileupld_status') == 'REJECTED' %}selected{% endif %}>REJECTED</option>
+            </select>
+          </div>
+
+          <div class="fus-field">
+            <label for="search_uploaded_by">Uploaded By</label>
+            <input
+              type="text"
+              id="search_uploaded_by"
+              name="fileupld_by"
+              value="{{ request.args.get('fileupld_by', '') }}"
+              placeholder="Uploaded by"
+            >
+          </div>
+
+          <div class="fus-filter-actions">
+            <button type="submit" class="fus-btn fus-btn-primary" style="width:100%;">
+              <i class="bi bi-search"></i>
+              Search
+            </button>
+            <a href="{{ url_for('file_upload_status') }}" class="fus-btn fus-btn-light" style="width:100%;">
+              <i class="bi bi-arrow-clockwise"></i>
+              Reset
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="fus-panel">
+    <div class="fus-panel-header">
+      <div>
+        <h2>Upload Records</h2>
+        <small>View upload status, audit trail, remarks, and available actions.</small>
+      </div>
+    </div>
+
+    <div class="fus-table-toolbar">
+      <div class="fus-toolbar-pill">
+        <i class="bi bi-table"></i>
+        Total Records: {{ upload_rows|length if upload_rows else 0 }}
+      </div>
+
+      {% if upload_rows %}
+      <div class="fus-page-size">
+        <span>Rows per page</span>
+        <select id="fusRowsPerPage">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="fus-table-wrap">
+      <table class="fus-table">
+        <thead>
+          <tr>
+            <th style="min-width:70px;">Sl No</th>
+            <th style="min-width:260px;">File Name</th>
+            <th style="min-width:170px;">Upload Type</th>
+            <th style="min-width:140px;">Status</th>
+            <th style="min-width:160px;">Uploaded By</th>
+            <th style="min-width:190px;">Uploaded At</th>
+            <th style="min-width:260px;">Rejection Remarks</th>
+            <th style="min-width:180px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="fusTableBody">
+          {% if upload_rows %}
+            {% for row in upload_rows %}
+              {% set status = (row.fileupld_status or 'PENDING')|upper %}
+              <tr class="fus-data-row">
+                <td class="fus-serial-no">{{ loop.index }}</td>
+                <td>
+                  <div class="fus-file-name">{{ row.file_name or '-' }}</div>
+                </td>
+                <td>{{ row.upload_type or '-' }}</td>
+                <td>
+                  {% if status == 'SUCCESS' %}
+                    <span class="fus-badge fus-badge-success">{{ status }}</span>
+                  {% elif status == 'FAILED' %}
+                    <span class="fus-badge fus-badge-failed">{{ status }}</span>
+                  {% elif status == 'PARTIAL' %}
+                    <span class="fus-badge fus-badge-partial">{{ status }}</span>
+                  {% elif status == 'PROCESSING' %}
+                    <span class="fus-badge fus-badge-processing">{{ status }}</span>
+                  {% elif status == 'REJECTED' %}
+                    <span class="fus-badge fus-badge-rejected">{{ status }}</span>
+                  {% else %}
+                    <span class="fus-badge fus-badge-pending">{{ status }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ row.fileupld_by or '-' }}</td>
+                <td>{{ row.fileupld_at or '-' }}</td>
+                <td>
+                  <div class="fus-remarks">{{ row.rejection_remarks or '-' }}</div>
+                </td>
+                <td>
+                  <div class="fus-actions">
+                    {% if row.id %}
+                      <a href="{{ url_for('download_uploaded_file', upload_id=row.id) }}" class="fus-btn fus-btn-light fus-btn-sm">
+                        <i class="bi bi-download"></i>
+                        Download
+                      </a>
+                    {% else %}
+                      <button type="button" class="fus-btn fus-btn-outline fus-btn-sm" disabled>
+                        Download
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" class="fus-empty">No upload records found.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if upload_rows %}
+      <div class="fus-pagination">
+        <div class="fus-pagination-left">
+          <button type="button" id="fusPrevPage" class="fus-page-btn">Prev</button>
+          <div id="fusPageNumbers" class="fus-pagination-right"></div>
+          <button type="button" id="fusNextPage" class="fus-page-btn">Next</button>
+        </div>
+
+        <div class="fus-muted" id="fusPaginationInfo">
+          Showing <strong>{{ upload_rows|length }}</strong> record(s)
+        </div>
+      </div>
+
+      <div class="fus-footer">
+        <div class="fus-muted">
+          Showing <strong id="fusFooterRecordCount">{{ upload_rows|length }}</strong> record(s)
+        </div>
+        <div class="fus-muted">
+          Upload tracking and file actions available above
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if upload_rows %}
+<script src="{{ url_for('static', filename='js/pages/file_upload_status.js') }}"></script>
+{% endif %}
+
+{% endblock %}

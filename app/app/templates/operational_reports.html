@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Operational Reports{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/operational_reports.css') }}">
+
+<div class="op-report-page">
+
+    <div class="op-page-header">
+        <h1>Operational Reports</h1>
+        <p>Generate professional operational reports and analytics</p>
+    </div>
+
+    <div class="op-card">
+        <div class="op-card-header">
+            <h2 id="reportTitle">Queue Ageing Report</h2>
+        </div>
+
+        <div class="op-card-body">
+
+            <div class="op-filter-grid">
+
+                <div class="op-field">
+                    <label>From Date</label>
+                    <input type="date" id="from_date">
+                </div>
+
+                <div class="op-field">
+                    <label>To Date</label>
+                    <input type="date" id="to_date">
+                </div>
+
+                <div class="op-field">
+                    <label>Country</label>
+                    <select id="country">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>Hospital</label>
+                    <select id="hospital_shrtnm">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>Agency</label>
+                    <select id="agent_shrtnm">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>User</label>
+                    <select id="assigned_to">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>Status</label>
+                    <select id="wrkflw_status">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>All Like Search</label>
+                    <input type="text" id="search" placeholder="Like Search...">
+                </div>
+
+            </div>
+
+            <div class="op-actions">
+                <button class="op-btn op-btn-light" onclick="clearReportFilters()">Clear</button>
+                <button class="op-btn op-btn-primary" onclick="generateQueueAgeingReport()">Generate Report</button>
+                <button class="op-btn op-btn-success" onclick="exportQueueAgeingExcel()">Export Excel</button>
+                <button class="op-btn op-btn-danger" onclick="exportQueueAgeingPdf()">Export PDF</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="op-kpi-grid">
+        <div class="op-kpi"><div class="label">Total Records</div><div class="value" id="kpi_total">0</div></div>
+        <div class="op-kpi"><div class="label">Open</div><div class="value" id="kpi_open">0</div></div>
+        <div class="op-kpi"><div class="label">Closed</div><div class="value" id="kpi_closed">0</div></div>
+        <div class="op-kpi"><div class="label">High Priority</div><div class="value" id="kpi_high">0</div></div>
+        <div class="op-kpi"><div class="label">Breached</div><div class="value" id="kpi_breached">0</div></div>
+    </div>
+
+    <div class="op-card">
+
+        <div class="op-card-header">
+            <h2 id="gridTitle">Queue Ageing Report Results</h2>
+        </div>
+
+        <div class="op-table-wrap">
+            <table class="op-table">
+
+                <thead>
+                    <tr>
+                        <th>Thread ID</th>
+                        <th>Created On</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>SLA Status</th>
+                        <th>Ageing</th>
+                        <th>Passport</th>
+                        <th>Patient Name</th>
+                        <th>Hospital</th>
+                        <th>Agency</th>
+                        <th>Country</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+
+                <tbody id="reportBody">
+                    <tr>
+                        <td colspan="12" class="empty-row">
+                            No records available. Select filters and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/report_helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/operational_reports.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Alert Management{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/alert_dashboard.css') }}">
+<style>
+  .alt-activity-list { display: flex; flex-direction: column; gap: 10px; }
+  .alt-activity-item { border: 1px solid #dde5ef; border-radius: 8px; padding: 10px 12px; background: #ffffff; }
+  .alt-activity-item-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .alt-activity-item-title { font-size: 13px; font-weight: 700; color: #172b4d; }
+  .alt-activity-item-time { font-size: 11px; color: #6b778c; white-space: nowrap; }
+  .alt-activity-item-meta { margin-top: 4px; font-size: 11px; color: #5e6c84; }
+  .alt-activity-item-detail { margin-top: 5px; font-size: 12px; color: #344563; }
+  .alt-btn:disabled, .alt-icon-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .alt-modal-overlay { position: fixed; inset: 0; z-index: 1300; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(19,31,49,.55); }
+  .alt-modal-overlay.show { display: flex; }
+  .alt-modal { width: 390px; max-width: 100%; border-radius: 12px; background: #fff; box-shadow: 0 22px 60px rgba(0,0,0,.24); overflow: hidden; }
+  .alt-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; color: #fff; background: #213852; }
+  .alt-modal-title { font-size: 15px; font-weight: 700; }
+  .alt-modal-close { width: 32px; height: 32px; border: 0; border-radius: 7px; color: #fff; background: rgba(255,255,255,.12); cursor: pointer; }
+  .alt-modal-body { padding: 18px; }
+  .alt-modal-help { margin: 0 0 14px; color: #5e6c84; font-size: 12px; line-height: 1.5; }
+  .alt-snooze-field { display: grid; grid-template-columns: minmax(0,1fr) 120px; gap: 10px; }
+  .alt-snooze-unit { height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid #cfd8e3; border-radius: 7px; background: #f7f9fc; color: #344563; font-size: 12px; font-weight: 700; }
+  .alt-modal-error { min-height: 18px; margin-top: 7px; color: #b42318; font-size: 11px; }
+  .alt-modal-actions { display: flex; justify-content: flex-end; gap: 9px; padding: 13px 17px; border-top: 1px solid #e5ebf2; background: #f8fafc; }
+</style>
+
+<div class="alt-page" id="alertPage"
+     data-alert-action-url="{{ url_for('alert_management.update_alert_actions') }}">
+
+  {% if error_message %}
+    <div class="alt-dashboard-message alt-dashboard-error">
+      {{ error_message }}
+    </div>
+  {% endif %}
+
+  {% if success_message %}
+    <div class="alt-dashboard-message alt-dashboard-success">
+      {{ success_message }}
+    </div>
+  {% endif %}
+
+  <div class="alt-topbar">
+    <div>
+      <div class="alt-title">Alert Management</div>
+      <div class="alt-subtitle">Monitor delayed patient records, ageing thresholds, escalations and pending workflow actions</div>
+    </div>
+
+    <div class="alt-top-actions">
+      <button type="button" class="alt-btn alt-btn-light" id="btnRefreshTop">Refresh</button>
+      <button type="button" class="alt-btn alt-btn-light" id="btnExportTop">Export</button>
+      <button type="button" class="alt-btn alt-btn-primary" id="btnCreateRuleTop">Create Alert Rule</button>
+    </div>
+  </div>
+
+  <section class="alt-metric-grid">
+    <div class="alt-metric-card total">
+      <div class="alt-metric-label">Total Open Alerts</div>
+      <div class="alt-metric-row">
+        <strong id="metricTotalOpen">{{ metrics.total_open or 0 }}</strong>
+        <div class="alt-metric-icon"><i class="fa-solid fa-bell"></i></div>
+      </div>
+      <div class="alt-metric-foot">Across all active workflows</div>
+    </div>
+
+    <div class="alt-metric-card warning">
+      <div class="alt-metric-label">Warning</div>
+      <div class="alt-metric-row">
+        <strong id="metricWarning">{{ metrics.warning or 0 }}</strong>
+        <div class="alt-metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      </div>
+      <div class="alt-metric-foot">Initial threshold crossed</div>
+    </div>
+
+    <div class="alt-metric-card critical">
+      <div class="alt-metric-label">Critical</div>
+      <div class="alt-metric-row">
+        <strong id="metricCritical">{{ metrics.critical or 0 }}</strong>
+        <div class="alt-metric-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+      </div>
+      <div class="alt-metric-foot">Immediate action required</div>
+    </div>
+
+    <div class="alt-metric-card acknowledged">
+      <div class="alt-metric-label">Acknowledged</div>
+      <div class="alt-metric-row">
+        <strong id="metricAcknowledged">{{ metrics.acknowledged or 0 }}</strong>
+        <div class="alt-metric-icon"><i class="fa-solid fa-check-double"></i></div>
+      </div>
+      <div class="alt-metric-foot">Accepted by action owner</div>
+    </div>
+
+    <div class="alt-metric-card snoozed">
+      <div class="alt-metric-label">Snoozed</div>
+      <div class="alt-metric-row">
+        <strong id="metricSnoozed">{{ metrics.snoozed or 0 }}</strong>
+        <div class="alt-metric-icon"><i class="fa-solid fa-clock"></i></div>
+      </div>
+      <div class="alt-metric-foot">Temporarily deferred</div>
+    </div>
+  </section>
+
+  <section class="alt-card">
+    <div class="alt-card-head">
+      <div>
+        <div class="alt-card-title">Filter Criteria</div>
+        <div class="alt-card-subtitle">Search alerts by name, severity, workflow, owner, agency, country or ageing</div>
+      </div>
+    </div>
+
+    <div class="alt-card-body">
+      <div class="alt-filter-grid">
+        <div class="alt-field">
+          <label>Alert Name</label>
+          <select class="alt-select" id="alert_name">
+            <option value="">All Alert Names</option>
+            {% for alert in alert_names or [] %}
+              <option value="{{ alert.alert_code or alert.rule_code or alert.alert_name or alert.rule_name }}">
+                {{ alert.alert_name or alert.rule_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Severity</label>
+          <select class="alt-select" id="severity">
+            <option value="">All Severities</option>
+            <option value="WARNING">Warning</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Alert Status</label>
+          <select class="alt-select" id="alert_status">
+            <option value="">All Statuses</option>
+            <option value="OPEN">Open</option>
+            <option value="ACKNOWLEDGED">Acknowledged</option>
+            <option value="SNOOZED">Snoozed</option>
+            <option value="RESOLVED">Resolved</option>
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Workflow Status</label>
+          <select class="alt-select" id="workflow_status">
+            <option value="">All Workflow Statuses</option>
+            {% for workflow in workflow_statuses or [] %}
+              <option value="{{ workflow.workflow_status or workflow.status_code or workflow.wrkflw_status or workflow.status_name }}">
+                {{ workflow.workflow_status or workflow.status_name or workflow.wrkflw_status or workflow.status_code }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Assigned User</label>
+          <select class="alt-select" id="assigned_user">
+            <option value="">All Users</option>
+            {% for user in users or [] %}
+              <option value="{{ user.user_code }}">
+                {{ user.user_code }}{% if user.user_name %} - {{ user.user_name }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Agency</label>
+          <select class="alt-select" id="agency">
+            <option value="">All Agencies</option>
+            {% for agency in agencies or [] %}
+              <option value="{{ agency.agency or agency.partner_code or agency.partner_shrtnm or agency.agency_code or agency.agency_name }}">
+                {{ agency.agency or agency.partner_name or agency.partner_shrtnm or agency.agency_name or agency.partner_code }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Country</label>
+          <select class="alt-select" id="country">
+            <option value="">All Countries</option>
+            {% for country in countries or [] %}
+              <option value="{{ country.country or country.country_code or country.country_name }}">
+                {{ country.country or country.country_name or country.country_code }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="alt-field">
+          <label>Passport Number</label>
+          <input type="text" class="alt-input" id="passport_no" placeholder="Enter passport number">
+        </div>
+
+        <div class="alt-field">
+          <label>Ageing From (Days)</label>
+          <input type="number" class="alt-input" id="ageing_from" min="0" placeholder="0">
+        </div>
+
+        <div class="alt-field">
+          <label>Ageing To (Days)</label>
+          <input type="number" class="alt-input" id="ageing_to" min="0" placeholder="30">
+        </div>
+
+        <div class="alt-field">
+          <label>From Date</label>
+          <input type="date" class="alt-input" id="from_date">
+        </div>
+
+        <div class="alt-field">
+          <label>To Date</label>
+          <input type="date" class="alt-input" id="to_date">
+        </div>
+
+        <div class="alt-filter-actions">
+          <button type="button" class="alt-btn alt-btn-light" id="btnClearFilters">Clear</button>
+          <button type="button" class="alt-btn alt-btn-primary" id="btnSearchAlerts">Search</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="alt-layout">
+    <section class="alt-card alt-main-grid">
+      <div class="alt-card-head">
+        <div>
+          <div class="alt-card-title">Active Alert Records</div>
+          <div class="alt-card-subtitle">Review patient ageing, acknowledge alerts, snooze, reassign or resolve</div>
+        </div>
+      </div>
+
+      <div class="alt-card-body">
+        <div class="alt-toolbar">
+          <div class="alt-toolbar-left">
+            <div class="alt-chip">Visible Alerts <strong id="toolbarVisibleCount">{{ visible_alert_count or 0 }}</strong></div>
+            <div class="alt-chip">Selected Alerts <strong id="toolbarSelectedCount">{{ selected_alert_count or 0 }}</strong></div>
+          </div>
+
+          <div class="alt-toolbar-right">
+            <div class="alt-search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="quickSearch" placeholder="Search patient, passport, alert ID">
+            </div>
+            <button type="button" class="alt-btn alt-btn-light" id="btnBulkAcknowledge">Acknowledge</button>
+            <button type="button" class="alt-btn alt-btn-light" id="btnBulkResolve">Resolve</button>
+          </div>
+        </div>
+
+        <div style="height:14px;"></div>
+
+        <div class="alt-table-shell">
+          <div class="alt-table-wrap">
+            <table class="alt-table" id="alertTable">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllAlerts"></th>
+                  <th>Alert ID</th>
+                  <th>Alert Name</th>
+                  <th>Severity</th>
+                  <th>Patient</th>
+                  <th>Passport No</th>
+                  <th>Workflow Status</th>
+                  <th>Status Since</th>
+                  <th>Ageing</th>
+                  <th>Assigned To</th>
+                  <th>Agency / Country</th>
+                  <th>Alert Status</th>
+                  <th>Last Alert</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="alertTableBody">
+                {% if alerts and alerts|length > 0 %}
+                  {% for row in alerts %}
+                  <tr
+                    data-alert-id="{{ row.alert_id }}"
+                    data-alert-name="{{ row.alert_name or row.rule_name }}"
+                    data-severity="{{ row.severity }}"
+                    data-alert-status="{{ row.alert_status }}"
+                    data-workflow-status="{{ row.workflow_status }}"
+                    data-assigned-user="{{ row.assigned_user_code }}"
+                    data-agency="{{ row.agency }}"
+                    data-country="{{ row.country }}"
+                    data-passport-no="{{ row.passport_no }}"
+                    data-ageing-days="{{ row.ageing_days or 0 }}"
+                    data-ageing-display="{{ row.ageing_display or '' }}"
+                    data-warning-threshold-minutes="{{ row.warning_after_minutes or 0 }}"
+                    data-warning-unit="{{ row.warning_unit or 'MINUTES' }}"
+                    data-critical-threshold-minutes="{{ row.critical_after_minutes or 0 }}"
+                    data-critical-unit="{{ row.critical_unit or 'MINUTES' }}"
+                    data-snooze-unit="{{ row.snooze_unit or 'MINUTES' }}"
+                    data-warning-threshold-display="{{ row.warning_threshold_display or '' }}"
+                    data-critical-threshold-display="{{ row.critical_threshold_display or '' }}"
+                    data-patient-name="{{ row.patient_name or '' }}"
+                    data-operation-queue-no="{{ row.operation_queue_no or '' }}"
+                    data-assigned-user-name="{{ row.assigned_user_name or '' }}"
+                    data-status-since="{{ row.status_since or '' }}"
+                  >
+                    <td><input type="checkbox" class="alt-check alert-row-check"></td>
+                    <td><strong>{{ row.alert_id }}</strong></td>
+                    <td>{{ row.alert_name or row.rule_name }}</td>
+                    <td><span class="alt-badge {{ (row.severity or 'WARNING')|lower }}">{{ row.severity }}</span></td>
+                    <td>
+                      <div class="alt-patient">
+                        <div class="alt-patient-avatar">{{ (row.patient_name or 'P')[:1] }}</div>
+                        <div>
+                          <strong>{{ row.patient_name }}</strong>
+                          <small>{{ row.operation_queue_no }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ row.passport_no }}</td>
+                    <td>{{ row.workflow_status }}</td>
+                    <td>{{ row.status_since }}</td>
+                    <td><span class="alt-ageing">{{ row.ageing_days }} Days</span></td>
+                    <td>{{ row.assigned_user_code }} - {{ row.assigned_user_name }}</td>
+                    <td>{{ row.agency }}<br><small>{{ row.country }}</small></td>
+                    <td><span class="alt-badge alert-status-badge status-{{ (row.alert_status or 'OPEN')|lower }}">{{ row.alert_status }}</span></td>
+                    <td>{{ row.last_alert_on }}</td>
+                    <td>
+                      <div class="alt-actions">
+                        <button type="button" class="alt-icon-btn btn-view-alert" title="View"><i class="fa-regular fa-eye"></i></button>
+                        <button type="button" class="alt-icon-btn btn-ack-alert" title="Acknowledge"><i class="fa-solid fa-check"></i></button>
+                        <button type="button" class="alt-icon-btn btn-snooze-alert" title="Snooze"><i class="fa-regular fa-clock"></i></button>
+                        <button type="button" class="alt-icon-btn btn-resolve-alert" title="Resolve"><i class="fa-solid fa-circle-check"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr class="alt-empty-row">
+                    <td colspan="14">No alert records found</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="alt-pagination">
+          <span id="paginationText">Showing {{ visible_alert_count or 0 }} of {{ total_count or 0 }} alerts</span>
+          <div class="alt-page-buttons">
+            <button type="button"><i class="fa-solid fa-angle-left"></i></button>
+            <button type="button" class="active">1</button>
+            <button type="button"><i class="fa-solid fa-angle-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="alt-card alt-summary">
+      <div class="alt-card-head">
+        <div>
+          <div class="alt-card-title">Alert Summary</div>
+          <div class="alt-card-subtitle">Live distribution for currently visible records</div>
+        </div>
+      </div>
+
+      <div class="alt-card-body">
+        <div class="alt-summary-top">
+          <div class="alt-summary-focus">
+            <small>Current View</small>
+            <strong id="summaryCurrentView">All Active Alerts</strong>
+          </div>
+
+          <div class="alt-summary-state">
+            <span>Highest Severity</span>
+            <div class="alt-state-pill" id="summarySeverityPill">{{ visible_summary.highest_severity or "NORMAL" }}</div>
+          </div>
+        </div>
+
+        <div class="alt-summary-list">
+          <div class="alt-summary-item">
+            <span>Total Visible</span>
+            <strong id="summaryVisible">{{ visible_summary.total_visible or visible_alert_count or 0 }}</strong>
+          </div>
+          <div class="alt-summary-item">
+            <span>Warning</span>
+            <strong id="summaryWarning">{{ visible_summary.warning_count or 0 }}</strong>
+          </div>
+          <div class="alt-summary-item">
+            <span>Critical</span>
+            <strong id="summaryCritical">{{ visible_summary.critical_count or 0 }}</strong>
+          </div>
+          <div class="alt-summary-item">
+            <span>Acknowledged</span>
+            <strong id="summaryAcknowledged">{{ visible_summary.acknowledged_count or 0 }}</strong>
+          </div>
+          <div class="alt-summary-item highlight">
+            <span>Selected for Action</span>
+            <strong id="summarySelected">0</strong>
+          </div>
+        </div>
+
+        <div class="alt-summary-actions">
+          <button type="button" class="alt-btn alt-btn-light" id="btnClearSelection">Clear Selection</button>
+          <button type="button" class="alt-btn alt-btn-primary" id="btnOpenSelected" disabled>Open Selected Alert</button>
+        </div>
+
+        <div class="alt-footnote">
+          Alerts are created from configurable ageing thresholds. When the workflow status changes, the corresponding alert can be automatically resolved.
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="alt-toast-wrap" id="toastWrap"></div>
+
+<div class="alt-drawer-overlay" id="alertDrawerOverlay"></div>
+<aside class="alt-drawer" id="alertDrawer" aria-hidden="true">
+  <div class="alt-drawer-head">
+    <div>
+      <div class="alt-drawer-title">Alert Details</div>
+      <div class="alt-drawer-subtitle" id="drawerAlertId">-</div>
+    </div>
+    <button type="button" class="alt-drawer-close" id="btnCloseDrawer"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <div class="alt-drawer-body">
+    <div class="alt-drawer-badges">
+      <span class="alt-badge" id="drawerSeverity">-</span>
+      <span class="alt-badge" id="drawerStatus">-</span>
+    </div>
+
+    <div class="alt-detail-section">
+      <div class="alt-detail-title">Patient Information</div>
+      <div class="alt-detail-grid">
+        <div><span>Patient Name</span><strong id="drawerPatientName">-</strong></div>
+        <div><span>Passport No</span><strong id="drawerPassportNo">-</strong></div>
+        <div><span>Operation Queue</span><strong id="drawerQueueNo">-</strong></div>
+        <div><span>Country</span><strong id="drawerCountry">-</strong></div>
+        <div><span>Agency</span><strong id="drawerAgency">-</strong></div>
+        <div><span>Assigned To</span><strong id="drawerAssignedTo">-</strong></div>
+      </div>
+    </div>
+
+    <div class="alt-detail-section">
+      <div class="alt-detail-title">Alert Information</div>
+      <div class="alt-detail-grid">
+        <div><span>Alert Name</span><strong id="drawerAlertName">-</strong></div>
+        <div><span>Workflow Status</span><strong id="drawerWorkflow">-</strong></div>
+        <div><span>Status Since</span><strong id="drawerStatusSince">-</strong></div>
+        <div><span>Total Ageing</span><strong class="alt-critical-text" id="drawerAgeing">-</strong></div>
+        <div><span>Warning Threshold</span><strong id="drawerWarningThreshold">-</strong></div>
+        <div><span>Critical Threshold</span><strong id="drawerCriticalThreshold">-</strong></div>
+      </div>
+    </div>
+
+    <div class="alt-detail-section">
+      <div class="alt-detail-title">Latest Activity</div>
+      <div class="alt-activity-list" id="drawerActivity">
+        <div class="alt-empty-state">No activity available</div>
+      </div>
+    </div>
+
+    <div class="alt-drawer-actions">
+      <button type="button" class="alt-btn alt-btn-light" id="drawerReassign">Reassign</button>
+      <button type="button" class="alt-btn alt-btn-light" id="drawerSnooze">Snooze</button>
+      <button type="button" class="alt-btn alt-btn-primary" id="drawerAcknowledge">Acknowledge</button>
+      <button type="button" class="alt-btn alt-btn-success" id="drawerResolve">Resolve</button>
+    </div>
+  </div>
+</aside>
+
+<div class="alt-modal-overlay" id="snoozeModalOverlay" aria-hidden="true">
+  <div class="alt-modal" role="dialog" aria-modal="true" aria-labelledby="snoozeModalTitle">
+    <div class="alt-modal-head">
+      <div class="alt-modal-title" id="snoozeModalTitle">Snooze Alert</div>
+      <button type="button" class="alt-modal-close" id="btnCloseSnoozeModal" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="alt-modal-body">
+      <p class="alt-modal-help">
+        Enter the snooze duration. The unit is taken automatically from the Alert Rule for the current alert severity.
+      </p>
+      <label for="snoozeValue" style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;color:#48576a;">Duration</label>
+      <div class="alt-snooze-field">
+        <input type="number" class="alt-input" id="snoozeValue" min="1" step="1" inputmode="numeric" autocomplete="off" placeholder="Enter number">
+        <div class="alt-snooze-unit" id="snoozeUnitDisplay">Minutes</div>
+      </div>
+      <div class="alt-modal-error" id="snoozeValueError"></div>
+    </div>
+    <div class="alt-modal-actions">
+      <button type="button" class="alt-btn alt-btn-light" id="btnCancelSnooze">Cancel</button>
+      <button type="button" class="alt-btn alt-btn-primary" id="btnConfirmSnooze">Snooze</button>
+    </div>
+  </div>
+</div>
+
+<script id="initial-alert-records" type="application/json">
+{{ (alerts or []) | tojson }}
+</script>
+
+<script src="{{ url_for('static', filename='js/pages/alert_dashboard.js') }}"></script>
+
+{% endblock %}

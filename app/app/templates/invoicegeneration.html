@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Generation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoicegeneration.css') }}">
+
+<div class="inv-page" id="invoicePage">
+
+  <div class="inv-topbar">
+    <div>
+      <div class="inv-title">Invoice Generation</div>
+      <div class="inv-subtitle">Generate hospital-wise invoices from rule-eligible patient records</div>
+    </div>
+
+    <div class="inv-top-actions">
+      <button type="button" class="inv-btn inv-btn-light" id="btnClearTop">Clear</button>
+      <button type="button" class="inv-btn inv-btn-primary" id="btnGenerateTop" disabled>Generate Invoice</button>
+    </div>
+  </div>
+
+  <section class="inv-card">
+    <div class="inv-card-head">
+      <div>
+        <div class="inv-card-title">Filter Criteria</div>
+        <div class="inv-card-subtitle">Select hospital to load invoice-eligible records</div>
+      </div>
+    </div>
+
+    <div class="inv-card-body">
+      <div class="inv-filter-grid">
+        <div class="inv-field">
+          <label>Hospital Short Name <span>*</span></label>
+          <select class="inv-select" name="hospital_short_name" id="hospital_short_name">
+            <option value="">-- Select Hospital --</option>
+            {% for hospital in hospitals %}
+              <option value="{{ hospital }}">{{ hospital }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="inv-field">
+          <label>Selection Basis</label>
+          <input type="text" class="inv-input" id="workflow_status" value="RULE-BASED ELIGIBILITY" readonly>
+        </div>
+
+        <div class="inv-filter-actions">
+          <button type="button" class="inv-btn inv-btn-primary" id="btnSearch">Search</button>
+        </div>
+      </div>
+
+      <div class="inv-details-section">
+        <div class="inv-details-title">Invoice Header Details</div>
+        <div class="inv-details-subtitle">Hospital invoice fields displayed in a separate section under Filter Criteria</div>
+
+        <div class="inv-details-grid">
+          <div class="inv-field">
+            <label>Invoice Number</label>
+            <input type="text" class="inv-input" id="invoice_number" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>Hospital Name</label>
+            <input type="text" class="inv-input" id="display_hospital_name" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>Pincode</label>
+            <input type="text" class="inv-input" id="hospital_pincode" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>GST #</label>
+            <input type="text" class="inv-input" id="hospital_gst" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>PAN #</label>
+            <input type="text" class="inv-input" id="hospital_pan" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>Hospital Country</label>
+            <input type="text" class="inv-input" id="hospital_country" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>Hospital State</label>
+            <input type="text" class="inv-input" id="hospital_state" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>Place of Supply</label>
+            <input type="text" class="inv-input" id="placeof_supply" readonly>
+          </div>
+
+          <div class="inv-field">
+            <label>City</label>
+            <input type="text" class="inv-input" id="hospital_city" readonly>
+          </div>
+
+          <div class="inv-field inv-field-full">
+            <label>Hospital Address</label>
+            <input type="text" class="inv-input" id="hospital_address" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="inv-layout">
+
+    <section class="inv-card inv-main-grid">
+      <div class="inv-card-head">
+        <div>
+          <div class="inv-card-title">Invoice Candidate Records</div>
+          <div class="inv-card-subtitle">Select records, edit invoice amount, and generate invoice</div>
+        </div>
+      </div>
+
+      <div class="inv-card-body">
+        <div class="inv-toolbar">
+          <div class="inv-toolbar-left">
+            <div class="inv-chip">Selected Rows <strong id="toolbarSelectedCount">0</strong></div>
+            <div class="inv-chip">Current Hospital <strong id="toolbarHospitalName">Not Selected</strong></div>
+          </div>
+
+          <div class="inv-toolbar-right">
+            <div class="inv-chip">GST <strong>18%</strong></div>
+            <div class="inv-chip">Finance Grid</div>
+          </div>
+        </div>
+
+        <div style="height:14px;"></div>
+
+        <div class="inv-table-shell">
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllRows"></th>
+                  <th>Sl. No</th>
+                  <th>Lead No</th>
+                  <th>Passport No</th>
+                  <th>Patient Name</th>
+                  <th>Status</th>
+                  <th>Invoice Amount</th>
+                  <th>SAC Code</th>
+                  <th>GST %</th>
+                  <th>TDS %</th>
+                  <th>GST Amount</th>
+                  <th>TDS Amount</th>
+                  <th>Net Invoice Amount</th>
+                  <th>Hospital Name</th>
+                </tr>
+              </thead>
+              <tbody id="invoiceTableBody">
+                {% if records and records|length > 0 %}
+                  {% for row in records %}
+                  <tr
+                    data-lead-no="{{ row.lead_no }}"
+                    data-passport-no="{{ row.passport_no }}"
+                    data-patient-name="{{ row.patient_name }}"
+                    data-status="{{ row.status }}"
+                    data-status-date="{{ row.status_date or '' }}"
+                    data-sac-code="{{ row.sac_code or '999723' }}"
+                    data-gst-percentage="{{ row.gst_percentage or '18%' }}"
+                    data-tds-percentage="{{ row.tds_percentage or '0' }}"
+                    data-inv-currency="{{ row.inv_currency or 'INR' }}"
+                    data-hospital="{{ row.hospital or row.hospital_short_name }}"
+                  >
+                    <td><input type="checkbox" class="inv-check row-check"></td>
+                    <td class="inv-index">{{ loop.index }}</td>
+                    <td>{{ row.lead_no }}</td>
+                    <td>{{ row.passport_no }}</td>
+                    <td>{{ row.patient_name }}</td>
+                    <td>{{ row.status }}</td>
+                    <td class="inv-money">
+                      <input type="number" class="inv-amount-input base-amount-input" value="0.00" min="0" step="0.01">
+                    </td>
+                    <td>{{ row.sac_code or '999723' }}</td>
+                    <td class="gst-percent">{{ row.gst_percentage or '18%' }}</td>
+                    <td class="tds-percent">{{ row.tds_percentage or '0' }}</td>
+                    <td class="inv-money gst-amount">0.00</td>
+                    <td class="inv-money tds-amount">0.00</td>
+                    <td class="inv-money net-amount">0.00</td>
+                    <td>{{ row.hospital or row.hospital_short_name }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr class="inv-empty-row">
+                    <td colspan="14">Select Hospital Short Name and click Search to load records</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="inv-card inv-summary">
+      <div class="inv-card-head">
+        <div>
+          <div class="inv-card-title">Invoice Summary</div>
+          <div class="inv-card-subtitle">Live totals for selected records</div>
+        </div>
+      </div>
+
+      <div class="inv-card-body">
+        <div class="inv-summary-top">
+          <div class="inv-summary-hospital">
+            <small>Hospital Name</small>
+            <strong id="summaryHospitalName">Not Selected</strong>
+          </div>
+
+          <div class="inv-summary-state">
+            <span>Generation Status</span>
+            <div class="inv-state-pill pending" id="summaryStatePill">Pending Selection</div>
+          </div>
+        </div>
+
+        <div class="inv-summary-list">
+          <div class="inv-summary-item">
+            <span>Invoice Date</span>
+            <strong id="summaryInvoiceDate">-</strong>
+          </div>
+          <div class="inv-summary-item">
+            <span>Selected Records</span>
+            <strong id="summarySelectedRecords">0</strong>
+          </div>
+          <div class="inv-summary-item">
+            <span>Total Base Amount</span>
+            <strong id="summaryBaseAmount">0.00</strong>
+          </div>
+          <div class="inv-summary-item">
+            <span>Total GST Amount</span>
+            <strong id="summaryGstAmount">0.00</strong>
+          </div>
+          <div class="inv-summary-item">
+            <span>Total TDS Amount</span>
+            <strong id="summaryTdsAmount">0.00</strong>
+          </div>
+          <div class="inv-summary-item net">
+            <span>Total Net Amount</span>
+            <strong id="summaryNetAmount">0.00</strong>
+          </div>
+        </div>
+
+        <div class="inv-summary-actions">
+          <button type="button" class="inv-btn inv-btn-light" id="btnClearSelection">Clear Selection</button>
+          <button type="button" class="inv-btn inv-btn-primary" id="btnGenerateBottom" disabled>Generate Invoice</button>
+        </div>
+
+        <div class="inv-footnote">
+          Invoice generation will be enabled only after selecting at least one record and entering a valid invoice amount greater than zero.
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<div class="inv-toast-wrap" id="toastWrap"></div>
+
+<div class="inv-modal" id="generateConfirmModal" aria-hidden="true">
+  <div class="inv-modal-card">
+    <div class="inv-modal-head">
+      <div class="inv-modal-title">Confirm Invoice Generation</div>
+    </div>
+    <div class="inv-modal-body">
+      You are about to generate invoice for <strong id="modalSelectedCount">0</strong> selected record(s) for
+      <strong id="modalHospitalName">Not Selected</strong>.
+      <br><br>
+      Invoice Date: <strong id="modalInvoiceDate">-</strong>
+      <br><br>
+      Total Net Invoice Amount: <strong id="modalNetAmount">0.00</strong>
+    </div>
+    <div class="inv-modal-actions">
+      <button type="button" class="inv-btn inv-btn-light" id="btnCancelGenerate">Cancel</button>
+      <button type="button" class="inv-btn inv-btn-primary" id="btnConfirmGenerate">Confirm Generate</button>
+    </div>
+  </div>
+</div>
+
+<script id="initial-invoice-records" type="application/json">
+{{ (records or []) | tojson }}
+</script>
+
+<script src="{{ url_for('static', filename='js/pages/invoicegeneration.js') }}"></script>
+
+{% endblock %}

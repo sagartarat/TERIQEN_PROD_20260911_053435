@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Operations Control Center{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/operations_control_center.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set summary = monitoring_summary|default({}) %}
+{% set overall_status = summary.get('overall_status', 'UNKNOWN')|upper %}
+
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Operations Control Center</div>
+      <div class="sm-breadcrumb">System Monitoring / Operations Control Center</div>
+      <div class="sm-page-subtitle">
+        Central operational view of schedulers, background processes, queues, services and exceptions.
+      </div>
+    </div>
+
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.operations_control_center') }}">
+        <i class="fa-solid fa-rotate"></i> Refresh
+      </a>
+      <a class="top-btn" href="{{ url_for('system_monitoring.execution_history') }}">
+        <i class="fa-solid fa-list-check"></i> Execution History
+      </a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.system_health') }}">
+        <i class="fa-solid fa-heart-pulse"></i> System Health
+      </a>
+    </div>
+  </div>
+
+  <div class="sm-health-banner {{ overall_status|lower }}">
+    <div class="sm-health-main">
+      <div class="sm-health-icon">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+      <div>
+        <div class="sm-health-name">SYSTEM HEALTH: {{ overall_status }}</div>
+        <div class="sm-health-message">
+          {{ summary.get('overall_message') or 'Health summary will appear after monitoring data is available.' }}
+        </div>
+      </div>
+    </div>
+    <div class="sm-health-time">
+      Last refreshed:
+      {{ summary.get('last_refreshed_on') or '-' }}
+    </div>
+  </div>
+
+  <div class="sm-kpi-grid">
+    <div class="sm-kpi blue">
+      <div class="sm-kpi-label">Active Jobs</div>
+      <div class="sm-kpi-value">{{ summary.get('active_jobs', 0) }}</div>
+      <div class="sm-kpi-foot">{{ summary.get('active_jobs', 0) }} of {{ summary.get('total_jobs', 0) }} registered jobs active</div>
+    </div>
+
+    <div class="sm-kpi blue">
+      <div class="sm-kpi-label">Running Now</div>
+      <div class="sm-kpi-value">{{ summary.get('running_jobs', 0) }}</div>
+      <div class="sm-kpi-foot">Schedulers currently executing</div>
+    </div>
+
+    <div class="sm-kpi red">
+      <div class="sm-kpi-label">Failed Today</div>
+      <div class="sm-kpi-value">{{ summary.get('failed_today', 0) }}</div>
+      <div class="sm-kpi-foot">Failed scheduler/process executions today</div>
+    </div>
+
+    <div class="sm-kpi amber">
+      <div class="sm-kpi-label">Queue Backlog</div>
+      <div class="sm-kpi-value">{{ summary.get('queue_backlog', 0) }}</div>
+      <div class="sm-kpi-foot">
+        Oldest pending:
+        {% if summary.get('oldest_backlog_minutes') is not none %}
+          {{ summary.get('oldest_backlog_minutes') }} min
+        {% else %}
+          -
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="sm-kpi green">
+      <div class="sm-kpi-label">Success Rate</div>
+      <div class="sm-kpi-value">
+        {% if summary.get('success_rate') is not none %}
+          {{ summary.get('success_rate') }}%
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="sm-kpi-foot">{{ summary.get('executions_today', 0) }} executions today</div>
+    </div>
+
+    <div class="sm-kpi red">
+      <div class="sm-kpi-label">Critical Incidents</div>
+      <div class="sm-kpi-value">{{ summary.get('critical_incidents', 0) }}</div>
+      <div class="sm-kpi-foot">Open critical monitoring incidents</div>
+    </div>
+  </div>
+
+  <div class="sm-dashboard-grid">
+
+    <div class="sm-dashboard-column">
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Scheduler Health</div>
+            <div class="sm-section-subtitle">Latest execution state for registered schedulers</div>
+          </div>
+          <a class="top-btn" href="{{ url_for('system_monitoring.scheduler_monitor') }}">
+            View All
+          </a>
+        </div>
+
+        <div class="sm-table-wrap">
+          {% if scheduler_rows %}
+          <table class="sm-table">
+            <thead>
+              <tr>
+                <th>Scheduler / Job</th>
+                <th>Module</th>
+                <th>Frequency</th>
+                <th>Last Run</th>
+                <th>Next Run</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Records</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in scheduler_rows %}
+              {% set row_status = (row.status or 'UNKNOWN')|lower %}
+              <tr>
+                <td>
+                  <span class="sm-cell-title">{{ row.scheduler_name or '-' }}</span>
+                  <span class="sm-cell-sub">{{ row.scheduler_code or '-' }}</span>
+                </td>
+                <td>{{ row.module_name or '-' }}</td>
+                <td>{{ row.frequency_label or '-' }}</td>
+                <td>{{ row.last_run_on or '-' }}</td>
+                <td>{{ row.next_run_on or '-' }}</td>
+                <td><span class="sm-status {{ row_status }}">{{ row.status or 'UNKNOWN' }}</span></td>
+                <td>
+                  {% if row.duration_ms is not none %}
+                    {{ row.duration_ms }} ms
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {{ row.records_processed|default(0, true) }}
+                  /
+                  {{ row.records_found|default(0, true) }}
+                </td>
+                <td>
+                  <a class="sm-link"
+                     href="{{ url_for('system_monitoring.scheduler_detail', scheduler_id=row.id) }}">
+                    Details
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="sm-empty">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <strong>No scheduler monitoring data available</strong>
+            Scheduler rows will appear after registered jobs begin reporting execution data.
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Process Monitor</div>
+            <div class="sm-section-subtitle">Business processing state independent of scheduler runtime</div>
+          </div>
+          <a class="top-btn" href="{{ url_for('system_monitoring.process_monitor') }}">
+            View All
+          </a>
+        </div>
+
+        <div class="sm-table-wrap">
+          {% if process_rows %}
+          <table class="sm-table">
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Pending</th>
+                <th>Processing</th>
+                <th>Success</th>
+                <th>Manual Review</th>
+                <th>Failed</th>
+                <th>Oldest Pending</th>
+                <th>Health</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in process_rows %}
+              {% set health_status = (row.health_status or 'UNKNOWN')|lower %}
+              <tr>
+                <td>
+                  <span class="sm-cell-title">{{ row.process_name or '-' }}</span>
+                  <span class="sm-cell-sub">{{ row.process_code or '-' }}</span>
+                </td>
+                <td>{{ row.pending_count|default(0, true) }}</td>
+                <td>{{ row.processing_count|default(0, true) }}</td>
+                <td>{{ row.success_count|default(0, true) }}</td>
+                <td>{{ row.manual_review_count|default(0, true) }}</td>
+                <td>{{ row.failed_count|default(0, true) }}</td>
+                <td>
+                  {% if row.oldest_pending_minutes is not none %}
+                    {{ row.oldest_pending_minutes }} min
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td><span class="sm-status {{ health_status }}">{{ row.health_status or 'UNKNOWN' }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="sm-empty">
+            <i class="fa-solid fa-gears"></i>
+            <strong>No process monitoring data available</strong>
+            Process statistics will appear after process instrumentation is enabled.
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Recent Execution History</div>
+            <div class="sm-section-subtitle">Most recent scheduler executions across TERIQEN</div>
+          </div>
+          <a class="top-btn" href="{{ url_for('system_monitoring.execution_history') }}">
+            View History
+          </a>
+        </div>
+
+        <div class="sm-table-wrap">
+          {% if recent_executions %}
+          <table class="sm-table">
+            <thead>
+              <tr>
+                <th>Run ID</th>
+                <th>Scheduler</th>
+                <th>Started</th>
+                <th>Completed</th>
+                <th>Duration</th>
+                <th>Found</th>
+                <th>Success</th>
+                <th>Failed</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in recent_executions %}
+              <tr>
+                <td>
+                  <a class="sm-link"
+                     href="{{ url_for('system_monitoring.execution_detail', execution_id=row.id) }}">
+                    {{ row.execution_id or row.id }}
+                  </a>
+                </td>
+                <td>{{ row.scheduler_name or '-' }}</td>
+                <td>{{ row.started_on or '-' }}</td>
+                <td>{{ row.completed_on or '-' }}</td>
+                <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+                <td>{{ row.records_found|default(0, true) }}</td>
+                <td>{{ row.success_count|default(0, true) }}</td>
+                <td>{{ row.failure_count|default(0, true) }}</td>
+                <td><span class="sm-status {{ (row.execution_status or 'UNKNOWN')|lower }}">{{ row.execution_status or 'UNKNOWN' }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="sm-empty">
+            <i class="fa-solid fa-list-check"></i>
+            <strong>No execution history available</strong>
+            Execution history will appear after scheduler runs are logged.
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+
+    <div class="sm-dashboard-column">
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Service Health</div>
+            <div class="sm-section-subtitle">Application and dependency connectivity checks</div>
+          </div>
+          <a class="sm-link" href="{{ url_for('system_monitoring.system_health') }}">Details</a>
+        </div>
+
+        {% if service_rows %}
+        <div class="sm-service-grid">
+          {% for row in service_rows %}
+          <div class="sm-service-card">
+            <div class="sm-service-name">{{ row.service_name or '-' }}</div>
+            <div class="sm-service-meta">
+              <span class="sm-status {{ (row.status or 'UNKNOWN')|lower }}">{{ row.status or 'UNKNOWN' }}</span>
+              <span>
+                {% if row.response_time_ms is not none %}
+                  {{ row.response_time_ms }} ms
+                {% else %}
+                  {{ row.status_detail or '-' }}
+                {% endif %}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="sm-empty">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <strong>No service health checks available</strong>
+          Service status will appear after health checks are configured.
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Queue Backlog</div>
+            <div class="sm-section-subtitle">Pending records by monitored queue</div>
+          </div>
+          <a class="sm-link" href="{{ url_for('system_monitoring.queue_monitor') }}">Details</a>
+        </div>
+
+        {% if queue_rows %}
+        <div class="sm-queue-list">
+          {% for row in queue_rows %}
+          <div class="sm-queue-row">
+            <div class="sm-queue-row-top">
+              <div class="sm-queue-name">{{ row.queue_name or '-' }}</div>
+              <div class="sm-queue-count">{{ row.pending_count|default(0, true) }}</div>
+            </div>
+            <div class="sm-queue-meta">
+              Processing {{ row.processing_count|default(0, true) }}
+              · Failed {{ row.failed_count|default(0, true) }}
+              · Oldest
+              {% if row.oldest_pending_minutes is not none %}
+                {{ row.oldest_pending_minutes }} min
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="sm-empty">
+          <i class="fa-solid fa-layer-group"></i>
+          <strong>No queue monitoring data available</strong>
+          Queue backlog will appear after queue sources are registered.
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="sm-section">
+        <div class="sm-section-head">
+          <div>
+            <div class="sm-section-title">Recent Failures & Exceptions</div>
+            <div class="sm-section-subtitle">Latest items requiring operational attention</div>
+          </div>
+          <a class="sm-link" href="{{ url_for('system_monitoring.error_monitor') }}">View All</a>
+        </div>
+
+        {% if recent_errors %}
+        <div class="sm-error-list">
+          {% for row in recent_errors %}
+          <div class="sm-error-row">
+            <div class="sm-error-time">{{ row.occurred_on or '-' }}</div>
+            <div>
+              <div class="sm-error-title">{{ row.error_message or 'No error message recorded' }}</div>
+              <div class="sm-error-sub">
+                {{ row.module_name or '-' }}
+                {% if row.reference_type or row.reference_id %}
+                  · {{ row.reference_type or '' }} {{ row.reference_id or '' }}
+                {% endif %}
+              </div>
+            </div>
+            <span class="sm-severity {{ (row.severity or 'ERROR')|lower }}">{{ row.severity or 'ERROR' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="sm-empty">
+          <i class="fa-solid fa-circle-check"></i>
+          <strong>No recent exceptions</strong>
+          No monitoring exceptions are currently available for this view.
+        </div>
+        {% endif %}
+      </section>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

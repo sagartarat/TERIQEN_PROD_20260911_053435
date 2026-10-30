@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Scheduler Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Scheduler Monitor</div>
+      <div class="sm-breadcrumb">System Monitoring / Scheduler Monitor</div>
+      <div class="sm-page-subtitle">Monitor registered scheduler configuration, heartbeat, last execution and next execution.</div>
+    </div>
+
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.scheduler_monitor') }}">
+        <i class="fa-solid fa-rotate"></i> Refresh
+      </a>
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.operations_control_center') }}">
+        <i class="fa-solid fa-gauge-high"></i> Control Center
+      </a>
+    </div>
+  </div>
+
+  <form class="sm-filter-bar" method="get" action="{{ url_for('system_monitoring.scheduler_monitor') }}">
+    <div class="sm-filter-field">
+      <label>Search</label>
+      <input type="text" name="q" value="{{ filters.q|default('') }}" placeholder="Scheduler name or code">
+    </div>
+
+    <div class="sm-filter-field">
+      <label>Module</label>
+      <select name="module">
+        <option value="">All Modules</option>
+        {% for item in module_options|default([]) %}
+        <option value="{{ item }}" {% if filters.module|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="sm-filter-field">
+      <label>Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for item in status_options|default([]) %}
+        <option value="{{ item }}" {% if filters.status|default('') == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="sm-filter-field">
+      <label>Enabled</label>
+      <select name="enabled">
+        <option value="">All</option>
+        <option value="Y" {% if filters.enabled|default('') == 'Y' %}selected{% endif %}>Enabled</option>
+        <option value="N" {% if filters.enabled|default('') == 'N' %}selected{% endif %}>Disabled</option>
+      </select>
+    </div>
+
+    <div class="sm-filter-field">
+      <label>Heartbeat</label>
+      <select name="heartbeat">
+        <option value="">All</option>
+        <option value="HEALTHY" {% if filters.heartbeat|default('') == 'HEALTHY' %}selected{% endif %}>Healthy</option>
+        <option value="STALE" {% if filters.heartbeat|default('') == 'STALE' %}selected{% endif %}>Stale</option>
+        <option value="MISSING" {% if filters.heartbeat|default('') == 'MISSING' %}selected{% endif %}>Missing</option>
+      </select>
+    </div>
+
+    <div class="sm-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a class="btn btn-light" href="{{ url_for('system_monitoring.scheduler_monitor') }}">Clear</a>
+    </div>
+  </form>
+
+  <div class="sm-summary-grid">
+    <div class="sm-summary-card">
+      <div class="sm-summary-label">Registered</div>
+      <div class="sm-summary-value">{{ summary.registered|default(0) }}</div>
+      <div class="sm-summary-sub">Total scheduler jobs</div>
+    </div>
+    <div class="sm-summary-card">
+      <div class="sm-summary-label">Enabled</div>
+      <div class="sm-summary-value">{{ summary.enabled|default(0) }}</div>
+      <div class="sm-summary-sub">Currently enabled</div>
+    </div>
+    <div class="sm-summary-card">
+      <div class="sm-summary-label">Running</div>
+      <div class="sm-summary-value">{{ summary.running|default(0) }}</div>
+      <div class="sm-summary-sub">Executing now</div>
+    </div>
+    <div class="sm-summary-card">
+      <div class="sm-summary-label">Failed</div>
+      <div class="sm-summary-value">{{ summary.failed|default(0) }}</div>
+      <div class="sm-summary-sub">Latest state failed</div>
+    </div>
+    <div class="sm-summary-card">
+      <div class="sm-summary-label">Stale Heartbeat</div>
+      <div class="sm-summary-value">{{ summary.stale_heartbeat|default(0) }}</div>
+      <div class="sm-summary-sub">Requires review</div>
+    </div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div>
+        <div class="sm-section-title">Registered Scheduler Jobs</div>
+        <div class="sm-section-subtitle">Configuration and current operational status</div>
+      </div>
+    </div>
+
+    <div class="sm-table-wrap">
+      {% if scheduler_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr>
+            <th>Scheduler</th>
+            <th>Module</th>
+            <th>Schedule</th>
+            <th>Enabled</th>
+            <th>Heartbeat</th>
+            <th>Last Run</th>
+            <th>Next Run</th>
+            <th>Last Status</th>
+            <th>Duration</th>
+            <th>Records</th>
+            <th>Failure</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in scheduler_rows %}
+          <tr>
+            <td>
+              <span class="sm-cell-title">{{ row.scheduler_name or '-' }}</span>
+              <span class="sm-cell-sub">{{ row.scheduler_code or '-' }}</span>
+            </td>
+            <td>{{ row.module_name or '-' }}</td>
+            <td>{{ row.frequency_label or '-' }}</td>
+            <td>
+              {% if row.enabled_flag in ['Y', '1', 1, true, True] %}
+                <span class="sm-status success">ENABLED</span>
+              {% else %}
+                <span class="sm-status disabled">DISABLED</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="sm-status {{ (row.heartbeat_status or 'UNKNOWN')|lower }}">
+                {{ row.heartbeat_status or 'UNKNOWN' }}
+              </span>
+              <span class="sm-cell-sub">{{ row.last_heartbeat_on or '-' }}</span>
+            </td>
+            <td>{{ row.last_run_on or '-' }}</td>
+            <td>{{ row.next_run_on or '-' }}</td>
+            <td><span class="sm-status {{ (row.execution_status or 'UNKNOWN')|lower }}">{{ row.execution_status or 'UNKNOWN' }}</span></td>
+            <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+            <td>{{ row.records_processed|default(0, true) }} / {{ row.records_found|default(0, true) }}</td>
+            <td>{{ row.failure_count|default(0, true) }}</td>
+            <td>
+              <div class="sm-inline-actions">
+                <a class="sm-icon-action"
+                   title="View scheduler"
+                   href="{{ url_for('system_monitoring.scheduler_detail', scheduler_id=row.id) }}">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+
+                {% if row.can_run_now|default(false) %}
+                <form class="sm-form-inline"
+                      method="post"
+                      action="{{ url_for('system_monitoring.run_scheduler', scheduler_id=row.id) }}">
+                  <button class="sm-icon-action" title="Run now" type="submit">
+                    <i class="fa-solid fa-play"></i>
+                  </button>
+                </form>
+                {% endif %}
+
+                {% if row.can_toggle|default(false) %}
+                <form class="sm-form-inline"
+                      method="post"
+                      action="{{ url_for('system_monitoring.toggle_scheduler', scheduler_id=row.id) }}">
+                  <input type="hidden" name="enabled_flag"
+                         value="{% if row.enabled_flag in ['Y', '1', 1, true, True] %}N{% else %}Y{% endif %}">
+                  <button class="sm-icon-action" title="Enable / Disable" type="submit">
+                    <i class="fa-solid fa-power-off"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <strong>No scheduler jobs found</strong>
+        No scheduler records match the selected filters.
+      </div>
+      {% endif %}
+    </div>
+
+    {% include "system_monitoring/_pagination.html" %}
+  </section>
+
+</div>
+{% endblock %}

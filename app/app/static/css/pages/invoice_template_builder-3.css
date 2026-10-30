@@ -1,0 +1,3641 @@
+:root{
+  --itb-primary:#12376e;
+  --itb-primary-dark:#0f2f5d;
+  --itb-primary-soft:#eaf1fb;
+  --itb-primary-soft-2:#f4f8fd;
+  --itb-border:#d8e2f0;
+  --itb-border-dark:#b9cadf;
+  --itb-bg:#f4f7fb;
+  --itb-card:#ffffff;
+  --itb-text:#17375f;
+  --itb-text-soft:#667c9a;
+  --itb-warning:#d48a17;
+  --itb-danger:#c53b3b;
+  --itb-success:#136241;
+  --itb-shadow-soft:0 8px 24px rgba(18,55,110,.06);
+  --itb-radius:16px;
+}
+
+*{ box-sizing:border-box; }
+
+.invoice-template-page{
+  padding:16px;
+  background:var(--itb-bg);
+}
+
+.itb-shell{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.itb-page-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.itb-page-title-left h1{
+  margin:0;
+  font-size:24px;
+  font-weight:800;
+  color:var(--itb-primary-dark);
+}
+
+.itb-page-title-left p{
+  margin:4px 0 0;
+  color:var(--itb-text-soft);
+  font-size:13px;
+  line-height:1.45;
+}
+
+.itb-toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.itb-btn{
+  border:none;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.2s ease;
+  white-space:nowrap;
+}
+
+.itb-btn-primary{ background:var(--itb-primary); color:#fff; }
+.itb-btn-primary:hover{ background:var(--itb-primary-dark); }
+.itb-btn-light{ background:#fff; color:var(--itb-primary); border:1px solid var(--itb-border-dark); }
+.itb-btn-light:hover{ background:#f8fbff; }
+.itb-btn-warning{ background:var(--itb-warning); color:#fff; }
+.itb-btn-danger{ background:var(--itb-danger); color:#fff; }
+.itb-btn-sm{ padding:7px 10px; font-size:11px; border-radius:8px; }
+
+.itb-btn[disabled],
+.itb-btn.is-disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+.itb-link{
+  color:var(--itb-primary);
+  text-decoration:none;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.itb-link:hover{
+  text-decoration:underline;
+}
+
+.itb-alert{
+  padding:12px 14px;
+  border-radius:12px;
+  font-size:13px;
+  font-weight:800;
+  border:1px solid var(--itb-border);
+}
+
+.itb-alert-success{ background:#edf9f3; color:#136241; border-color:#cfead9; }
+.itb-alert-error{ background:#fff1f1; color:#a82828; border-color:#f0c9c9; }
+.itb-alert-info{ background:#eef4ff; color:#1f4fa8; border-color:#d1dffc; }
+
+.itb-card{
+  background:var(--itb-card);
+  border:1px solid var(--itb-border);
+  border-radius:var(--itb-radius);
+  box-shadow:var(--itb-shadow-soft);
+  overflow:hidden;
+}
+
+.itb-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:14px 16px;
+  border-bottom:1px solid var(--itb-border);
+  background:linear-gradient(180deg,#ffffff 0%,#f9fbfe 100%);
+}
+
+.itb-card-head h2,
+.itb-card-head h3{
+  margin:0;
+  font-size:15px;
+  font-weight:800;
+  color:var(--itb-primary-dark);
+}
+
+.itb-card-head .meta{
+  font-size:11px;
+  color:var(--itb-text-soft);
+}
+
+.itb-card-body{
+  padding:14px;
+}
+
+.itb-form-grid{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:12px;
+}
+
+.itb-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+.itb-field.col-2{ grid-column:span 2; }
+.itb-field.col-3{ grid-column:span 3; }
+.itb-field.col-4{ grid-column:span 4; }
+.itb-field.col-6{ grid-column:span 6; }
+
+.itb-label{
+  font-size:11px;
+  font-weight:800;
+  color:var(--itb-text-soft);
+  text-transform:uppercase;
+  letter-spacing:.35px;
+}
+
+.itb-input,
+.itb-select,
+.itb-textarea{
+  width:100%;
+  border:1px solid var(--itb-border-dark);
+  border-radius:10px;
+  background:#fff;
+  padding:10px 12px;
+  font-size:13px;
+  color:var(--itb-text);
+  outline:none;
+}
+
+.itb-input[readonly],
+.itb-textarea[readonly]{
+  background:#f8fbff;
+  color:#5f7391;
+  cursor:not-allowed;
+}
+
+.itb-select:disabled,
+.itb-input:disabled,
+.itb-textarea:disabled{
+  background:#f8fbff;
+  color:#5f7391;
+  cursor:not-allowed;
+}
+
+.itb-input:focus,
+.itb-select:focus,
+.itb-textarea:focus{
+  border-color:var(--itb-primary);
+  box-shadow:0 0 0 3px rgba(18,55,110,.08);
+}
+
+.itb-textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+.itb-check-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--itb-border);
+  border-radius:12px;
+  background:#f9fbff;
+}
+
+.itb-check-row input[type="checkbox"]{
+  margin-top:2px;
+}
+
+.itb-check-copy{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+
+.itb-check-copy strong{
+  font-size:12px;
+  color:var(--itb-primary-dark);
+}
+
+.itb-check-copy span{
+  font-size:11px;
+  color:var(--itb-text-soft);
+  line-height:1.45;
+}
+
+.itb-check-row.is-disabled{
+  opacity:.58;
+  background:#f3f6fa;
+}
+
+.itb-check-row.is-disabled input[type="checkbox"]{
+  cursor:not-allowed;
+}
+
+.itb-grid-tools{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.itb-grid-tools-left,
+.itb-grid-tools-right{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.itb-muted{
+  color:var(--itb-text-soft);
+}
+
+.itb-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+}
+
+.itb-badge-active{ background:#edf9f3; color:#136241; }
+.itb-badge-inactive{ background:#f3f4f6; color:#5b6473; }
+.itb-badge-draft{ background:#fff7e8; color:#9b6300; }
+.itb-badge-default{ background:#eef4ff; color:#1f4fa8; }
+.itb-badge-view{ background:#eef4ff; color:#1f4fa8; }
+.itb-badge-edit{ background:#edf9f3; color:#136241; }
+.itb-badge-print{ background:#fff7e8; color:#9b6300; }
+
+.itb-record-grid-wrap,
+.itb-table-wrap{
+  border:1px solid var(--itb-border);
+  border-radius:12px;
+  overflow:auto;
+  background:#fff;
+}
+
+.itb-record-grid,
+.itb-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.itb-record-grid{
+  min-width:980px;
+}
+
+.itb-record-grid thead th,
+.itb-table thead th{
+  background:var(--itb-primary-soft);
+  color:var(--itb-primary-dark);
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  padding:10px 8px;
+  border-bottom:1px solid var(--itb-border);
+  text-align:left;
+  white-space:nowrap;
+}
+
+.itb-record-grid tbody td,
+.itb-table tbody td{
+  padding:9px 8px;
+  border-bottom:1px solid #edf3f9;
+  vertical-align:middle;
+  font-size:12px;
+  color:var(--itb-text);
+}
+
+.itb-record-grid tbody tr:last-child td,
+.itb-table tbody tr:last-child td{
+  border-bottom:none;
+}
+
+.itb-record-grid tbody tr:hover,
+.itb-table tbody tr:hover{
+  background:#f9fbfe;
+}
+
+.itb-empty-state{
+  padding:24px 16px;
+  text-align:center;
+  color:var(--itb-text-soft);
+  font-size:13px;
+}
+
+.itb-builder-layout{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+}
+
+.itb-library-tools{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.itb-library-search{
+  flex:1;
+  min-width:260px;
+}
+
+.itb-library-search input{
+  width:100%;
+  border:1px solid var(--itb-border-dark);
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:13px;
+}
+
+.itb-library-pagination{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.itb-library-meta{
+  font-size:12px;
+  color:var(--itb-text-soft);
+  font-weight:700;
+}
+
+.itb-prototype-shell{
+  background:#eef3f9;
+  border:1px solid var(--itb-border);
+  border-radius:16px;
+  padding:16px;
+}
+
+.itb-a4{
+  width:100%;
+  max-width:1024px;
+  margin:0 auto;
+  background:#fff;
+  border:1px solid var(--itb-border);
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05);
+  padding:20px;
+}
+
+.itb-proto-header{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 240px;
+  gap:20px;
+  align-items:start;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--itb-border);
+}
+
+.itb-proto-company-wrap{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  min-width:0;
+}
+
+.itb-logo-box{
+  flex:0 0 74px;
+  width:74px;
+  height:74px;
+  border:1px solid var(--itb-border);
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  font-size:14px;
+  color:var(--itb-text-soft);
+  background:#fafcff;
+  font-weight:700;
+  text-transform:uppercase;
+}
+
+.itb-logo-box img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+
+.itb-proto-company{
+  min-width:0;
+  flex:1;
+}
+
+.itb-proto-company h3{
+  margin:0 0 6px;
+  font-size:18px;
+  line-height:1.15;
+  color:var(--itb-primary-dark);
+  font-weight:900;
+}
+
+.itb-proto-meta{
+  font-size:11px;
+  color:var(--itb-text-soft);
+  line-height:1.5;
+  word-break:break-word;
+}
+
+.itb-proto-title{
+  text-align:right;
+  min-width:0;
+}
+
+.itb-proto-title .doc{
+  font-size:27px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  letter-spacing:.4px;
+  line-height:1.1;
+  margin-bottom:6px;
+}
+
+.itb-proto-title .no{
+  font-size:12px;
+  color:var(--itb-text-soft);
+  line-height:1.45;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  max-width:100%;
+}
+
+.itb-proto-title .no:empty{
+  display:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  line-height:0 !important;
+  min-height:0 !important;
+}
+
+.itb-proto-top{
+  display:grid;
+  grid-template-columns:minmax(0,1.18fr) minmax(0,.98fr);
+  gap:14px;
+  margin-top:16px;
+}
+
+.itb-proto-panel{
+  border:1px solid var(--itb-border);
+  border-radius:16px;
+  padding:14px;
+  background:#fff;
+}
+
+.itb-proto-panel h4{
+  margin:0 0 10px;
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  text-transform:uppercase;
+  letter-spacing:.25px;
+}
+
+.itb-billto-editor{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.itb-field-row{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.itb-inline-note{
+  font-size:10px;
+  color:var(--itb-text-soft);
+  font-weight:700;
+}
+
+.itb-billto-name-input{
+  font-size:18px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+}
+
+.itb-billto-body-input{
+  min-height:136px;
+  font-size:12px;
+  line-height:1.55;
+}
+
+.itb-info-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+.itb-info-box{
+  background:var(--itb-primary-soft-2);
+  border:1px solid var(--itb-border);
+  border-radius:14px;
+  padding:10px 12px;
+  min-height:74px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+}
+
+.itb-info-box-label{
+  font-size:11px;
+  font-weight:900;
+  color:#4f678d;
+  text-transform:uppercase;
+}
+
+.itb-info-box input{
+  border:none;
+  background:transparent;
+  padding:0;
+  border-radius:0;
+  box-shadow:none !important;
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  width:100%;
+  min-width:0;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+
+.itb-info-box .itb-print-value{
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  white-space:pre-line;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  max-width:100%;
+}
+
+.itb-proto-table{
+  margin-top:14px;
+  border:1px solid var(--itb-border);
+  border-radius:14px;
+  overflow:auto;
+  background:#fff;
+}
+
+.itb-proto-table table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:0;
+}
+
+.itb-proto-table th{
+  background:var(--itb-primary-soft);
+  color:var(--itb-primary-dark);
+  padding:10px 8px;
+  font-size:11px;
+  font-weight:900;
+  text-align:left;
+  border-bottom:1px solid var(--itb-border);
+}
+
+.itb-proto-table td{
+  padding:8px;
+  border-bottom:1px solid #edf3f9;
+  vertical-align:top;
+  font-size:12px;
+  color:var(--itb-text);
+}
+
+.itb-proto-table th.itb-ta-right,
+.itb-proto-table td.itb-ta-right{
+  text-align:right;
+}
+
+.itb-proto-table th.itb-ta-center,
+.itb-proto-table td.itb-ta-center{
+  text-align:center;
+}
+
+.itb-proto-table tr:last-child td{
+  border-bottom:none;
+}
+
+.itb-inline-actions{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.itb-required-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  background:#f6f8fc;
+  border:1px solid var(--itb-border);
+  color:var(--itb-primary-dark);
+}
+
+.itb-proto-bottom{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 350px;
+  gap:14px;
+}
+
+.itb-notes-box,
+.itb-total-box{
+  border:1px solid var(--itb-border);
+  border-radius:16px;
+  background:#fff;
+}
+
+.itb-notes-box{
+  padding:14px;
+}
+
+.itb-notes-box h4{
+  margin:0 0 8px;
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  text-transform:uppercase;
+}
+
+.itb-notes-box textarea{
+  width:100%;
+  min-height:112px;
+  border:1px solid var(--itb-border-dark);
+  border-radius:10px;
+  padding:10px 12px;
+  resize:vertical;
+  font-size:12px;
+}
+
+.itb-notes-print{
+  white-space:pre-line;
+  line-height:1.6;
+  font-size:12px;
+  color:var(--itb-text);
+}
+
+.itb-total-box{
+  overflow:hidden;
+}
+
+.itb-total-row{
+  display:grid;
+  grid-template-columns:1fr 160px;
+  gap:10px;
+  align-items:center;
+  padding:10px 12px;
+  border-bottom:1px solid #edf3f9;
+  font-size:12px;
+}
+
+.itb-total-row:last-child{
+  border-bottom:none;
+}
+
+.itb-total-row span:first-child{
+  color:var(--itb-text-soft);
+  font-weight:800;
+}
+
+.itb-total-input{
+  width:100%;
+  border:none;
+  background:transparent;
+  padding:0;
+  text-align:right;
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  box-shadow:none !important;
+}
+
+.itb-total-row .itb-print-value{
+  text-align:right;
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+}
+
+.itb-total-row.grand{
+  background:var(--itb-primary-dark);
+}
+
+.itb-total-row.grand span:first-child,
+.itb-total-row.grand .itb-total-input,
+.itb-total-row.grand .itb-print-value{
+  color:#fff;
+}
+
+.itb-proto-footer{
+  margin-top:14px;
+  border-top:1px dashed var(--itb-border-dark);
+  padding-top:10px;
+  text-align:center;
+  font-size:10px;
+  color:var(--itb-text-soft);
+  line-height:1.5;
+}
+
+.itb-validation-list{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+
+.itb-validation-item{
+  border:1px solid var(--itb-border);
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--itb-text);
+  background:#fafcff;
+}
+
+.itb-validation-item.is-ok{
+  background:#edf9f3;
+  border-color:#cfead9;
+  color:#136241;
+}
+
+.itb-validation-item.is-missing{
+  background:#fff4f4;
+  border-color:#f0c9c9;
+  color:#a82828;
+}
+
+.itb-drawer-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,34,62,.32);
+  opacity:0;
+  visibility:hidden;
+  transition:.2s ease;
+  z-index:1050;
+}
+
+.itb-drawer-backdrop.is-open{
+  opacity:1;
+  visibility:visible;
+}
+
+.itb-preview-drawer{
+  position:fixed;
+  top:0;
+  right:0;
+  width:min(860px,95vw);
+  height:100vh;
+  background:#fff;
+  box-shadow:-10px 0 30px rgba(0,0,0,.12);
+  transform:translateX(100%);
+  transition:.25s ease;
+  z-index:1060;
+  display:flex;
+  flex-direction:column;
+}
+
+.itb-preview-drawer.is-open{
+  transform:translateX(0);
+}
+
+.itb-preview-drawer-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border-bottom:1px solid var(--itb-border);
+  background:#fff;
+}
+
+.itb-preview-drawer-head h3{
+  margin:0;
+  font-size:16px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+}
+
+.itb-preview-drawer-body{
+  flex:1;
+  overflow:auto;
+  padding:16px;
+  background:#eef3f9;
+}
+
+.itb-preview-static{
+  pointer-events:none;
+}
+
+.itb-preview-billto-name{
+  margin:0 0 6px;
+  font-size:18px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  word-break:break-word;
+  white-space:pre-line;
+}
+
+.itb-preview-billto-body{
+  font-size:12px;
+  color:var(--itb-text-soft);
+  line-height:1.55;
+  white-space:pre-line;
+  word-break:break-word;
+}
+
+.itb-preview-info-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+.itb-preview-info-box{
+  background:var(--itb-primary-soft-2);
+  border:1px solid var(--itb-border);
+  border-radius:14px;
+  padding:10px 12px;
+  min-height:74px;
+}
+
+.itb-preview-info-label{
+  font-size:11px;
+  font-weight:900;
+  color:#4f678d;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+
+.itb-preview-info-value{
+  font-size:12px;
+  font-weight:900;
+  color:var(--itb-primary-dark);
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  white-space:pre-line;
+  max-width:100%;
+}
+
+.itb-view-only .js-insert-token,
+.itb-view-only .js-editable-only{
+  display:none !important;
+}
+
+.itb-view-only .itb-required-chip{
+  background:#eef4ff;
+}
+
+.itb-mode-banner{
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.itb-print-mode .itb-page-title,
+.itb-print-mode #screenModeBanner,
+.itb-print-mode .itb-alert,
+.itb-print-mode .itb-card:not(.itb-print-card),
+.itb-print-mode .itb-inline-actions,
+.itb-print-mode .itb-drawer-backdrop,
+.itb-print-mode .itb-preview-drawer{
+  display:none !important;
+}
+
+.itb-print-card{
+  border:none;
+  box-shadow:none;
+  background:transparent;
+  overflow:visible;
+}
+
+.itb-print-card .itb-card-body{
+  padding:0;
+}
+
+.itb-print-only{
+  display:none;
+}
+
+.itb-print-mode .itb-print-only{
+  display:block;
+}
+
+.itb-print-mode .itb-builder-only{
+  display:none !important;
+}
+
+/* Runtime print safety: no builder/helper inputs should appear below invoice footer */
+.itb-print-mode #template_description,
+.itb-print-mode input[type="hidden"],
+.itb-print-mode .js-master-input,
+.itb-print-mode .js-prototype-control{
+  display:none !important;
+  visibility:hidden !important;
+  width:0 !important;
+  height:0 !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:0 !important;
+  max-height:0 !important;
+  padding:0 !important;
+  margin:0 !important;
+  border:0 !important;
+  box-shadow:none !important;
+  overflow:hidden !important;
+}
+
+.itb-print-mode .itb-prototype-shell{
+  background:transparent;
+  border:none;
+  padding:0;
+}
+
+.itb-print-mode .invoice-template-page{
+  padding:0;
+  background:#fff;
+}
+
+.itb-print-mode .itb-shell{
+  gap:0;
+}
+
+.itb-print-mode .app-sidebar,
+.itb-print-mode .sidebar,
+.itb-print-mode .topbar,
+.itb-print-mode .navbar,
+.itb-print-mode .header,
+.itb-print-mode .footer,
+.itb-print-mode .app-header,
+.itb-print-mode .main-sidebar,
+.itb-print-mode .layout-sidebar {
+  display:none !important;
+}
+
+.itb-print-mode .main-content,
+.itb-print-mode .content-wrapper,
+.itb-print-mode .page-wrapper,
+.itb-print-mode .app-content,
+.itb-print-mode .right-panel,
+.itb-print-mode .main-panel,
+.itb-print-mode .container-fluid {
+  margin-left:0 !important;
+  padding-left:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+}
+
+.itb-print-mode .invoice-template-page{
+  padding:12px !important;
+  background:#fff !important;
+}
+
+.itb-print-mode .itb-proto-top{
+  align-items:start !important;
+}
+
+.itb-print-mode .itb-proto-panel{
+  height:auto !important;
+  min-height:unset !important;
+  align-self:start !important;
+}
+
+.itb-print-toolbar{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+@media print{
+  .itb-print-toolbar{
+    display:none !important;
+  }
+}
+
+@media (max-width:1200px){
+  .itb-form-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .itb-field.col-2,
+  .itb-field.col-3,
+  .itb-field.col-4,
+  .itb-field.col-6{
+    grid-column:span 2;
+  }
+  .itb-validation-list{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width:960px){
+  .itb-proto-header,
+  .itb-proto-top,
+  .itb-proto-bottom{
+    grid-template-columns:1fr;
+  }
+  .itb-info-grid,
+  .itb-preview-info-grid{
+    grid-template-columns:1fr;
+  }
+  .itb-proto-title{
+    text-align:left;
+  }
+}
+
+@media (max-width:768px){
+  .invoice-template-page{
+    padding:10px;
+  }
+  .itb-proto-company-wrap{
+    flex-direction:column;
+  }
+  .itb-validation-list{
+    grid-template-columns:1fr;
+  }
+}
+
+@media print{
+  html,
+  body{
+    width:auto !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+  }
+
+  body,
+  .itb-a4,
+  .itb-proto-panel,
+  .itb-info-box,
+  .itb-total-row,
+  .itb-total-row.grand,
+  .itb-proto-table th,
+  .itb-card-head,
+  .itb-alert,
+  .itb-badge{
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+  }
+
+  .app-sidebar,
+  .sidebar,
+  .topbar,
+  .navbar,
+  .header,
+  .footer,
+  .app-header,
+  .main-sidebar,
+  .layout-sidebar,
+  .itb-page-title,
+  #screenModeBanner,
+  .itb-alert,
+  .itb-card:not(.itb-print-card),
+  .itb-inline-actions,
+  .itb-drawer-backdrop,
+  .itb-preview-drawer,
+  .itb-print-toolbar{
+    display:none !important;
+  }
+
+  .invoice-template-page{
+    padding:0 !important;
+    margin:0 !important;
+    background:#fff !important;
+  }
+
+  .itb-shell{
+    gap:0 !important;
+  }
+
+  .itb-print-card,
+  .itb-print-mode .itb-card,
+  .itb-print-mode .itb-a4{
+    border:none !important;
+    box-shadow:none !important;
+    background:#fff !important;
+  }
+
+  .itb-print-mode .itb-a4{
+    width:100% !important;
+    max-width:none !important;
+    border-radius:0 !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  .itb-print-mode .main-content,
+  .itb-print-mode .content-wrapper,
+  .itb-print-mode .page-wrapper,
+  .itb-print-mode .app-content,
+  .itb-print-mode .right-panel,
+  .itb-print-mode .main-panel,
+  .itb-print-mode .container-fluid{
+    margin:0 !important;
+    padding:0 !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .itb-prototype-shell{
+    padding:0 !important;
+    border:none !important;
+    background:#fff !important;
+  }
+
+  .itb-proto-header{
+    grid-template-columns:minmax(0,1fr) 180px !important;
+    gap:10px !important;
+    padding-bottom:10px !important;
+  }
+
+  .itb-proto-top{
+    grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr) !important;
+    gap:10px !important;
+    margin-top:10px !important;
+  }
+
+  .itb-proto-bottom{
+    grid-template-columns:minmax(0,1fr) 260px !important;
+    gap:10px !important;
+    margin-top:10px !important;
+  }
+
+  .itb-proto-panel,
+  .itb-notes-box,
+  .itb-total-box,
+  .itb-info-box{
+    page-break-inside:avoid !important;
+  }
+
+  .itb-proto-table,
+  .itb-table-wrap,
+  .itb-record-grid-wrap{
+    overflow:visible !important;
+  }
+
+  .itb-proto-table table,
+  .itb-table,
+  .itb-record-grid{
+    width:100% !important;
+    min-width:0 !important;
+    table-layout:fixed !important;
+  }
+
+  .itb-proto-table th,
+  .itb-proto-table td,
+  .itb-table th,
+  .itb-table td,
+  .itb-record-grid th,
+  .itb-record-grid td{
+    white-space:normal !important;
+    word-break:break-word !important;
+    overflow-wrap:anywhere !important;
+  }
+
+  .itb-proto-table th,
+  .itb-proto-table td{
+    padding:6px !important;
+    font-size:11px !important;
+  }
+
+  .itb-proto-company h3{
+    font-size:16px !important;
+  }
+
+  .itb-proto-meta{
+    font-size:10px !important;
+    line-height:1.35 !important;
+  }
+
+  .itb-proto-title .doc{
+    font-size:22px !important;
+  }
+
+  .itb-proto-title .no{
+    font-size:11px !important;
+  }
+
+  .itb-preview-billto-name{
+    font-size:16px !important;
+  }
+
+  .itb-preview-billto-body,
+  .itb-notes-print{
+    font-size:11px !important;
+    line-height:1.4 !important;
+  }
+
+  .itb-info-box{
+    min-height:60px !important;
+    padding:8px 10px !important;
+  }
+
+  .itb-total-row{
+    grid-template-columns:1fr 120px !important;
+    padding:8px 10px !important;
+    font-size:11px !important;
+  }
+
+  .itb-proto-footer{
+    margin-top:10px !important;
+    padding-top:8px !important;
+    font-size:9px !important;
+  }
+}
+
+/* ============================================================
+   CADUPIUS A4 FINAL APPROVED DESIGN - 2026-09-14
+   Desktop Sandbox
+   PRINT MODE ONLY - Template Builder remains unchanged
+   ============================================================ */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+
+/* ============================================================
+   TRUE SINGLE-PAGE A4
+   ============================================================ */
+
+.itb-print-mode .itb-a4{
+  width:210mm !important;
+  min-width:210mm !important;
+  max-width:210mm !important;
+
+  height:297mm !important;
+  min-height:297mm !important;
+  max-height:297mm !important;
+
+  margin:0 auto !important;
+  padding:12.5mm 12.5mm 14.5mm 12.5mm !important;
+
+  box-sizing:border-box !important;
+
+  border:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+
+  background:#fff !important;
+
+  position:relative !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+
+  overflow:hidden !important;
+
+  font-family:Arial, Helvetica, sans-serif !important;
+  color:#102f5e !important;
+}
+
+.itb-print-mode .itb-print-card,
+.itb-print-mode .itb-print-card .itb-card-body,
+.itb-print-mode .itb-prototype-shell{
+  margin:0 !important;
+  padding:0 !important;
+  border:none !important;
+  box-shadow:none !important;
+  background:#fff !important;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.itb-print-mode .itb-proto-header{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 40mm !important;
+  gap:3.5mm !important;
+
+  align-items:start !important;
+
+  padding:0 0 3.5mm 0 !important;
+
+  border-bottom:1px solid #d8e4f3 !important;
+}
+
+
+/* Logo + company information */
+
+.itb-print-mode .itb-proto-company-wrap{
+  display:grid !important;
+
+  grid-template-columns:56mm minmax(0,1fr) !important;
+  column-gap:3.5mm !important;
+
+  align-items:center !important;
+
+  min-width:0 !important;
+}
+
+
+/* Larger horizontal Cadupius logo */
+
+.itb-print-mode .itb-logo-box{
+  width:56mm !important;
+  height:21mm !important;
+
+  min-width:56mm !important;
+  max-width:56mm !important;
+
+  border:none !important;
+  border-radius:0 !important;
+
+  padding:0 !important;
+  margin:0 !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+
+  overflow:hidden !important;
+}
+
+.itb-print-mode .itb-logo-box img{
+  width:100% !important;
+  height:100% !important;
+
+  max-width:100% !important;
+  max-height:100% !important;
+
+  object-fit:contain !important;
+  object-position:left center !important;
+}
+
+
+/* Company information shifted right */
+
+.itb-print-mode .itb-proto-company{
+  min-width:0 !important;
+  width:100% !important;
+}
+
+.itb-print-mode .itb-proto-company h3{
+  margin:0 0 1.4mm 0 !important;
+
+  font-size:11.4pt !important;
+  line-height:1.05 !important;
+
+  font-weight:800 !important;
+
+  color:#0d3567 !important;
+
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+
+  letter-spacing:-0.12pt !important;
+}
+
+.itb-print-mode .itb-proto-meta{
+  font-size:7.8pt !important;
+  line-height:1.3 !important;
+
+  color:#536d96 !important;
+
+  overflow-wrap:normal !important;
+  word-break:normal !important;
+}
+
+
+/* ============================================================
+   TAX INVOICE - TOP RIGHT
+   ============================================================ */
+
+.itb-print-mode .itb-proto-title{
+  width:40mm !important;
+  max-width:40mm !important;
+
+  text-align:right !important;
+  justify-self:end !important;
+
+  padding:0 !important;
+  margin:0 !important;
+}
+
+.itb-print-mode .itb-proto-title .doc{
+  margin:0 0 1.8mm 0 !important;
+
+  font-size:18pt !important;
+  line-height:1 !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+
+  text-align:right !important;
+
+  letter-spacing:0 !important;
+  white-space:nowrap !important;
+}
+
+.itb-print-mode .itb-proto-title .no{
+  margin:0 !important;
+
+  font-size:7.6pt !important;
+  line-height:1.12 !important;
+
+  color:#526b92 !important;
+
+  text-align:right !important;
+
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+
+  letter-spacing:-0.08pt !important;
+}
+
+
+/* ============================================================
+   BILL TO + INVOICE INFORMATION
+   ============================================================ */
+
+.itb-print-mode .itb-proto-top{
+  display:grid !important;
+
+  grid-template-columns:
+    minmax(0,1.06fr)
+    minmax(0,.94fr) !important;
+
+  gap:3.5mm !important;
+
+  margin-top:4mm !important;
+
+  align-items:stretch !important;
+}
+
+.itb-print-mode .itb-proto-panel{
+  min-height:47mm !important;
+  height:auto !important;
+
+  align-self:stretch !important;
+
+  padding:3.5mm !important;
+
+  border:1px solid #d6e3f3 !important;
+  border-radius:3.5mm !important;
+
+  background:#fff !important;
+
+  box-sizing:border-box !important;
+}
+
+.itb-print-mode .itb-proto-panel h4{
+  margin:0 0 2.4mm 0 !important;
+
+  font-size:10pt !important;
+  line-height:1 !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+}
+
+
+/* Bill To */
+
+.itb-print-mode .itb-preview-billto-name{
+  margin:0 0 2mm 0 !important;
+
+  font-size:12pt !important;
+  line-height:1.16 !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+
+  text-align:left !important;
+
+  white-space:normal !important;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+}
+
+.itb-print-mode .itb-preview-billto-body{
+  margin-top:0 !important;
+
+  font-size:8.6pt !important;
+  line-height:1.36 !important;
+
+  color:#536d96 !important;
+}
+
+
+/* Invoice information */
+
+.itb-print-mode .itb-info-grid{
+  display:grid !important;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr)) !important;
+
+  gap:2.5mm !important;
+}
+
+.itb-print-mode .itb-info-box{
+  min-height:16.5mm !important;
+
+  padding:2.5mm 3mm !important;
+
+  border:1px solid #d6e3f3 !important;
+  border-radius:3.5mm !important;
+
+  background:#f4f8fd !important;
+
+  justify-content:center !important;
+
+  gap:1.2mm !important;
+
+  box-sizing:border-box !important;
+}
+
+.itb-print-mode .itb-info-box-label{
+  margin:0 !important;
+
+  font-size:7.8pt !important;
+  line-height:1.05 !important;
+
+  font-weight:900 !important;
+
+  color:#536d96 !important;
+}
+
+.itb-print-mode .itb-info-box .itb-print-value{
+  margin:0 !important;
+
+  font-size:9.4pt !important;
+  line-height:1.05 !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+}
+
+
+/* Invoice number inside Invoice Information */
+
+.itb-print-mode
+.itb-runtime-invoice-number-box
+.itb-print-value{
+  font-size:10pt !important;
+  line-height:1.12 !important;
+
+  font-weight:900 !important;
+
+  white-space:normal !important;
+
+  word-break:normal !important;
+  overflow-wrap:anywhere !important;
+
+  letter-spacing:-0.05pt !important;
+}
+
+/* ============================================================
+   ITEM TABLE
+   ============================================================ */
+
+.itb-print-mode .itb-proto-table{
+  margin-top:4mm !important;
+
+  border:1px solid #d6e3f3 !important;
+  border-radius:0 !important;
+
+  overflow:hidden !important;
+
+  background:#fff !important;
+}
+
+.itb-print-mode .itb-proto-table table{
+  width:100% !important;
+
+  table-layout:fixed !important;
+
+  border-collapse:collapse !important;
+}
+
+.itb-print-mode .itb-proto-table th{
+  padding:2.3mm 2.5mm !important;
+
+  font-size:8.4pt !important;
+  line-height:1.05 !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+
+  background:#eaf2fc !important;
+}
+
+.itb-print-mode .itb-proto-table td{
+  padding:2.5mm !important;
+
+  font-size:8.4pt !important;
+  line-height:1.15 !important;
+
+  color:#173d6f !important;
+
+  border-bottom:1px solid #dfe8f4 !important;
+
+  vertical-align:middle !important;
+}
+
+
+/* ============================================================
+   NOTES + TOTALS
+   ============================================================ */
+
+.itb-print-mode .itb-proto-bottom{
+  display:grid !important;
+
+  grid-template-columns:
+    minmax(0,1.13fr)
+    minmax(0,.87fr) !important;
+
+  gap:3.5mm !important;
+
+  margin-top:4mm !important;
+
+  align-items:stretch !important;
+}
+
+.itb-print-mode .itb-notes-box,
+.itb-print-mode .itb-total-box{
+  min-height:38mm !important;
+
+  border:1px solid #d6e3f3 !important;
+  border-radius:3.5mm !important;
+
+  background:#fff !important;
+
+  box-sizing:border-box !important;
+}
+
+.itb-print-mode .itb-notes-box{
+  padding:3.5mm !important;
+}
+
+.itb-print-mode .itb-notes-box h4{
+  margin:0 0 2.4mm 0 !important;
+
+  font-size:10pt !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+}
+
+.itb-print-mode .itb-notes-print{
+  font-size:8.6pt !important;
+  line-height:1.38 !important;
+
+  color:#173d6f !important;
+}
+
+
+/* Totals */
+
+.itb-print-mode .itb-total-box{
+  overflow:hidden !important;
+}
+
+.itb-print-mode .itb-total-row{
+  min-height:8.7mm !important;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    30mm !important;
+
+  gap:2mm !important;
+
+  padding:2.1mm 3mm !important;
+
+  box-sizing:border-box !important;
+
+  font-size:8.6pt !important;
+
+  border-bottom:1px solid #e2eaf4 !important;
+}
+
+.itb-print-mode .itb-total-row span:first-child{
+  font-weight:700 !important;
+  color:#536d96 !important;
+}
+
+.itb-print-mode .itb-total-row .itb-print-value{
+  font-size:9.6pt !important;
+
+  font-weight:900 !important;
+
+  text-align:right !important;
+
+  color:#0d3567 !important;
+}
+
+.itb-print-mode .itb-total-row.grand{
+  background:#0d3567 !important;
+}
+
+.itb-print-mode .itb-total-row.grand span,
+.itb-print-mode .itb-total-row.grand .itb-print-value{
+  color:#fff !important;
+}
+
+
+/* ============================================================
+   TERMS & CONDITIONS
+   ============================================================ */
+
+.itb-print-mode .itb-approved-terms{
+  margin-top:4mm !important;
+
+  padding:0 !important;
+
+  border:1px solid #d6e3f3 !important;
+  border-radius:3.5mm !important;
+
+  overflow:hidden !important;
+
+  background:#fff !important;
+
+  page-break-inside:avoid !important;
+}
+
+.itb-print-mode .itb-approved-terms-title{
+  padding:2.5mm 3.5mm !important;
+
+  background:#edf4fc !important;
+
+  font-size:9.4pt !important;
+
+  font-weight:900 !important;
+
+  color:#0d3567 !important;
+}
+
+.itb-print-mode .itb-approved-terms ol{
+  margin:2.5mm 4mm 3mm 8mm !important;
+  padding:0 !important;
+
+  font-size:7.7pt !important;
+  line-height:1.42 !important;
+
+  color:#304f7c !important;
+}
+
+.itb-print-mode .itb-approved-terms li{
+  padding-left:.8mm !important;
+}
+
+
+/* ============================================================
+   THANK YOU
+   ============================================================ */
+
+.itb-print-mode .itb-approved-thankyou{
+  margin-top:3.5mm !important;
+
+  text-align:center !important;
+
+  page-break-inside:avoid !important;
+}
+
+.itb-print-mode .itb-approved-thankyou-line{
+  display:grid !important;
+
+  grid-template-columns:
+    1fr
+    auto
+    1fr !important;
+
+  align-items:center !important;
+
+  gap:5mm !important;
+}
+
+.itb-print-mode .itb-approved-thankyou-line span{
+  height:0 !important;
+  background:transparent !important;
+  border-top:1px solid #4f82bc !important;
+}
+
+.itb-print-mode .itb-approved-thankyou-line strong{
+  font-size:11pt !important;
+
+  color:#0d3567 !important;
+
+  white-space:nowrap !important;
+}
+
+.itb-print-mode .itb-approved-company-footer{
+  margin-top:1.2mm !important;
+
+  font-size:8.8pt !important;
+
+  color:#536d96 !important;
+}
+
+
+/* ============================================================
+   BOTTOM WEBSITE + TAGLINE
+   Lifted safely above blue wave
+   ============================================================ */
+
+.itb-print-mode .itb-approved-page-footer{
+  margin-top:auto !important;
+
+  padding:4mm 1mm 10mm 1mm !important;
+
+  display:flex !important;
+
+  justify-content:space-between !important;
+
+  align-items:flex-end !important;
+
+  position:relative !important;
+
+  z-index:5 !important;
+
+  font-size:8.2pt !important;
+
+  color:#1e5a96 !important;
+}
+
+.itb-print-mode .itb-approved-website{
+  text-align:left !important;
+
+  white-space:nowrap !important;
+}
+
+.itb-print-mode .itb-approved-tagline{
+  text-align:right !important;
+
+  font-weight:700 !important;
+
+  white-space:nowrap !important;
+}
+
+
+/* ============================================================
+   DECORATIVE BLUE FOOTER WAVES
+   ============================================================ */
+
+.itb-print-mode .itb-approved-wave{
+  position:absolute !important;
+
+  left:0 !important;
+
+  width:100% !important;
+
+  pointer-events:none !important;
+}
+
+.itb-print-mode .itb-approved-wave-one{
+  bottom:-8mm !important;
+
+  height:14mm !important;
+
+  background:#dcecff !important;
+
+  border-radius:
+    50% 45% 0 0 /
+    55% 45% 0 0 !important;
+
+  transform:rotate(-1.5deg) !important;
+
+  z-index:1 !important;
+}
+
+.itb-print-mode .itb-approved-wave-two{
+  bottom:-11mm !important;
+
+  height:13mm !important;
+
+  background:#326aa5 !important;
+
+  border-radius:
+    55% 45% 0 0 /
+    70% 40% 0 0 !important;
+
+  transform:rotate(1deg) !important;
+
+  z-index:2 !important;
+}
+
+
+/* ============================================================
+   PRINT SAFETY
+   ============================================================ */
+
+.itb-print-mode .itb-proto-header,
+.itb-print-mode .itb-proto-top,
+.itb-print-mode .itb-proto-bottom,
+.itb-print-mode .itb-approved-terms,
+.itb-print-mode .itb-approved-thankyou{
+  page-break-inside:avoid !important;
+}
+
+@media print{
+  .itb-print-mode .itb-a4{
+    margin:0 !important;
+  }
+}
+
+/* CADUPIUS PDF GEOMETRY FIX - 2026-09-14 */
+
+/*
+   WeasyPrint renders invoice_template_builder.html through base.html.
+   Therefore reset the parent .content wrapper during PRINT/PDF rendering.
+*/
+@media print {
+
+  html,
+  body{
+    margin:0 !important;
+    padding:0 !important;
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+    background:#fff !important;
+  }
+
+  .content{
+    margin:0 !important;
+    padding:0 !important;
+
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    flex:none !important;
+    display:block !important;
+
+    overflow:visible !important;
+    background:#fff !important;
+  }
+
+  .invoice-template-page.itb-print-mode{
+    margin:0 !important;
+    padding:0 !important;
+
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    background:#fff !important;
+  }
+
+  .itb-print-mode .itb-a4{
+    margin:0 !important;
+
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    height:297mm !important;
+    min-height:297mm !important;
+    max-height:297mm !important;
+
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+  }
+}
+
+
+/* ---------- HEADER RIGHT SIDE ---------- */
+
+.itb-print-mode .itb-proto-header{
+  grid-template-columns:minmax(0,1fr) 46mm !important;
+}
+
+.itb-print-mode .itb-proto-title{
+  width:46mm !important;
+  max-width:46mm !important;
+  overflow:hidden !important;
+}
+
+.itb-print-mode .itb-proto-title .doc{
+  font-size:15.5pt !important;
+  line-height:1 !important;
+
+  white-space:nowrap !important;
+  overflow:visible !important;
+
+  text-align:right !important;
+}
+
+.itb-print-mode .itb-proto-title .no{
+  font-size:6.5pt !important;
+  line-height:1.05 !important;
+
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+
+  text-align:right !important;
+}
+
+
+/* ---------- BILL TO PARTNER NAME ---------- */
+
+.itb-print-mode .itb-preview-billto-name{
+  font-size:9.8pt !important;
+  line-height:1.1 !important;
+
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+
+  overflow:visible !important;
+}
+
+
+/* ---------- INVOICE NUMBER INFORMATION BOX ---------- */
+
+.itb-print-mode
+.itb-runtime-invoice-number-box
+.itb-print-value{
+  font-size:10pt !important;
+  line-height:1.12 !important;
+
+  font-weight:900 !important;
+
+  white-space:normal !important;
+  word-break:normal !important;
+  overflow-wrap:anywhere !important;
+
+  letter-spacing:-0.05pt !important;
+
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+/* Give the website/tagline a protected area above the blue footer */
+.itb-print-mode .itb-approved-page-footer{
+  padding-bottom:11mm !important;
+  z-index:10 !important;
+}
+
+.itb-print-mode .itb-approved-wave-one,
+.itb-print-mode .itb-approved-wave-two{
+  display:block !important;
+}
+/* ============================================================
+   CADUPIUS INVOICE - FINAL MULTI-PAGE PRINT OVERRIDES
+   Desktop Sandbox - 2026-09-14
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   WEASYPRINT A4 PAGINATION
+   ------------------------------------------------------------ */
+
+@page {
+  size: A4 portrait;
+
+  /* continuation pages reserve space for compact header + page no */
+  margin: 10mm 0 8mm 0;
+
+  @top-left {
+    content: "CADUPIUS HEALTHASSIST PVT. LTD.";
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #536d96;
+    padding-left: 12.5mm;
+    vertical-align: middle;
+  }
+
+  @top-right {
+    content: "TAX INVOICE  |  " string(cadupiusInvoiceNumber);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #0d3567;
+    padding-right: 12.5mm;
+    text-align: right;
+    vertical-align: middle;
+  }
+
+  @bottom-center {
+    content: "Page | " counter(page);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #ffffff;
+    vertical-align: middle;
+  }
+}
+
+
+/* First page already contains the full approved invoice header */
+@page :first {
+  margin-top: 0;
+  margin-bottom: 8mm;
+
+  @top-left {
+    content: none;
+  }
+
+  @top-right {
+    content: none;
+  }
+}
+
+
+/* Capture invoice number for continuation-page header */
+.itb-print-mode .itb-proto-title .no{
+  string-set: cadupiusInvoiceNumber content();
+}
+
+
+/* ------------------------------------------------------------
+   ALLOW THE A4 DOCUMENT TO CONTINUE TO PAGE 2 / 3 / ETC.
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-a4{
+  height:auto !important;
+
+  min-height:289mm !important;
+
+  max-height:none !important;
+
+  overflow:visible !important;
+}
+
+
+/* ------------------------------------------------------------
+   LARGE INVOICE NUMBER INSIDE INVOICE INFORMATION
+   This override intentionally comes AFTER the old 6.2pt rule.
+   ------------------------------------------------------------ */
+
+.itb-print-mode
+.itb-runtime-invoice-number-box
+.itb-print-value{
+  font-size:10pt !important;
+  line-height:1.12 !important;
+
+  font-weight:900 !important;
+
+  white-space:normal !important;
+
+  word-break:normal !important;
+  overflow-wrap:anywhere !important;
+
+  letter-spacing:-0.05pt !important;
+
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+
+/* ------------------------------------------------------------
+   ITEM TABLE PAGINATION
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-proto-table{
+  overflow:visible !important;
+
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+
+.itb-print-mode .itb-proto-table table{
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+
+
+/* Repeat Sl / SAC / Description / Qty / Amount on every page */
+.itb-print-mode .itb-proto-table thead{
+  display:table-header-group !important;
+}
+
+
+/* Normal table body pagination */
+.itb-print-mode .itb-proto-table tbody{
+  display:table-row-group !important;
+}
+
+
+/* Never split one invoice item across two pages */
+.itb-print-mode .itb-proto-table tr{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+/* ------------------------------------------------------------
+   FINAL SECTIONS MUST STAY TOGETHER
+   They appear only after the last invoice-item record.
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-proto-bottom{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+.itb-print-mode .itb-approved-terms{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+.itb-print-mode .itb-approved-thankyou{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+.itb-print-mode .itb-approved-page-footer{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+/* ------------------------------------------------------------
+   THANK-YOU HORIZONTAL LINES
+   Avoid the small vertical end marks seen in PDF.
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-approved-thankyou-line span{
+  display:block !important;
+
+  height:0 !important;
+
+  background:none !important;
+
+  border:0 !important;
+  border-top:0.75pt solid #4f82bc !important;
+
+  box-shadow:none !important;
+}
+
+
+/* ------------------------------------------------------------
+   PRINT SAFETY
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-proto-header,
+.itb-print-mode .itb-proto-top{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+/* ============================================================
+   CADUPIUS - DYNAMIC CONTENT HEIGHT CORRECTION
+   Target: up to 10 normal one-line item rows on Page 1
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   ITEM TABLE
+   Grow only according to actual records.
+   Do not reserve blank vertical space.
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-proto-table{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  flex:0 0 auto !important;
+
+  overflow:visible !important;
+}
+
+.itb-print-mode .itb-proto-table table{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+}
+
+
+/* ------------------------------------------------------------
+   NOTES + TOTALS
+   End at the bottom of the Net Amount row.
+   Both columns remain equal height.
+   ------------------------------------------------------------ */
+
+.itb-print-mode .itb-proto-bottom{
+  height:auto !important;
+  min-height:0 !important;
+
+  align-items:stretch !important;
+}
+
+.itb-print-mode .itb-notes-box,
+.itb-print-mode .itb-total-box{
+  min-height:0 !important;
+  height:auto !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+}
+
+
+/* Notes should not create additional artificial height */
+.itb-print-mode .itb-notes-box{
+  box-sizing:border-box !important;
+}
+
+
+/* Total box height is determined by its four actual rows */
+.itb-print-mode .itb-total-box{
+  box-sizing:border-box !important;
+}
+/* ============================================================
+   CADUPIUS - FINAL NATURAL FLOW PAGINATION MODEL
+   Desktop Sandbox - 2026-09-14
+
+   1. Full invoice header repeats on every physical page
+   2. Blue footer repeats on every physical page
+   3. Page number generated dynamically by WeasyPrint
+   4. Transaction rows use natural available space
+   5. Notes/Totals/Terms appear once at the end
+   ============================================================ */
+
+
+/* ============================================================
+   PHYSICAL A4 PAGE GEOMETRY
+
+   Top margin permanently reserves room for:
+   Logo + Company + Tax Invoice
+   Bill To + Invoice Information
+
+   Bottom margin permanently reserves room for:
+   Blue waves + Page number
+   ============================================================ */
+
+@page {
+  size:A4 portrait;
+
+  margin:
+    96mm
+    12.5mm
+    16mm
+    12.5mm;
+
+  /*
+     We no longer use the old compact continuation header.
+     The complete approved header is repeated instead.
+  */
+  @top-left {
+    content:none;
+  }
+
+  @top-right {
+    content:none;
+  }
+
+  /*
+     Dynamic physical page number.
+     It sits over the repeated dark-blue wave.
+  */
+  @bottom-center {
+    content:"Page | " counter(page);
+
+    font-family:Arial, Helvetica, sans-serif;
+    font-size:7.5pt;
+    font-weight:700;
+
+    color:#ffffff;
+
+    text-align:center;
+    vertical-align:middle;
+
+    z-index:100;
+  }
+}
+
+
+/*
+   First page uses exactly the same geometry as every other page.
+   This is required because the FULL header repeats everywhere.
+*/
+@page :first {
+  size:A4 portrait;
+
+  margin:
+    96mm
+    12.5mm
+    16mm
+    12.5mm;
+
+  @top-left {
+    content:none;
+  }
+
+  @top-right {
+    content:none;
+  }
+
+  @bottom-center {
+    content:"Page | " counter(page);
+
+    font-family:Arial, Helvetica, sans-serif;
+    font-size:7.5pt;
+    font-weight:700;
+
+    color:#ffffff;
+
+    text-align:center;
+    vertical-align:middle;
+  }
+}
+
+
+/* ============================================================
+   REMOVE OLD GIANT-A4 CONTAINER BEHAVIOUR
+
+   The document is now allowed to flow naturally from one
+   WeasyPrint physical page to another.
+   ============================================================ */
+
+.invoice-template-page.itb-print-mode{
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  overflow:visible !important;
+
+  background:#ffffff !important;
+}
+
+
+.itb-print-mode .itb-a4{
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  position:static !important;
+
+  overflow:visible !important;
+
+  box-sizing:border-box !important;
+
+  background:#ffffff !important;
+}
+
+
+.itb-print-mode .itb-print-card,
+.itb-print-mode .itb-print-card .itb-card-body,
+.itb-print-mode .itb-prototype-shell{
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  border:0 !important;
+  box-shadow:none !important;
+
+  overflow:visible !important;
+
+  background:#ffffff !important;
+}
+
+
+/* ============================================================
+   FULL REPEATED HEADER
+
+   @page top margin begins 96mm below physical page top.
+
+   top:-83.5mm positions the approved header approximately
+   12.5mm from the physical top edge.
+
+   Because it is position:fixed, WeasyPrint reproduces it on
+   EVERY physical PDF page.
+   ============================================================ */
+
+.itb-print-mode .itb-repeat-header{
+  position:fixed !important;
+
+  top:-83.5mm !important;
+
+  left:0 !important;
+  right:0 !important;
+
+  width:auto !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  z-index:50 !important;
+
+  background:#ffffff !important;
+}
+
+
+/*
+   Protect the two approved parts of the repeated header.
+*/
+.itb-print-mode
+.itb-repeat-header
+.itb-proto-header,
+.itb-print-mode
+.itb-repeat-header
+.itb-proto-top{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+/* ============================================================
+   NATURAL TRANSACTION TABLE
+
+   NO fixed record quantity.
+   NO 10-row maximum.
+   NO 16-row maximum.
+
+   WeasyPrint fills the usable space naturally.
+   ============================================================ */
+
+.itb-print-mode .itb-proto-table{
+  width:100% !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:
+    0
+    0
+    0
+    0 !important;
+
+  overflow:visible !important;
+
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+
+
+.itb-print-mode .itb-proto-table table{
+  width:100% !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+
+
+/*
+   Column heading automatically repeats whenever the same
+   transaction table continues to another page.
+*/
+.itb-print-mode .itb-proto-table thead{
+  display:table-header-group !important;
+}
+
+
+.itb-print-mode .itb-proto-table tbody{
+  display:table-row-group !important;
+}
+
+
+/*
+   Never cut one individual patient/transaction row in half.
+*/
+.itb-print-mode .itb-proto-table tbody tr{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+/* ============================================================
+   IMPORTANT:
+   KEEP THE FINAL TRANSACTION CONNECTED TO THE CLOSING SECTION
+
+   If Notes/Totals/Terms cannot fit beneath the final
+   transaction, WeasyPrint is encouraged to move the last
+   transaction to the next physical page with the closing block.
+
+   This avoids:
+       Page 1 = all transactions
+       Page 2 = only Notes/Totals/Terms
+
+   while still allowing Page 1 to contain as many records as
+   physically possible.
+   ============================================================ */
+
+.itb-print-mode
+.itb-proto-table
+tbody
+tr:last-child{
+  break-after:avoid !important;
+  page-break-after:avoid !important;
+}
+
+
+/* ============================================================
+   FINAL CLOSING SECTION
+
+   Notes + Totals + Terms + Thank You + website/tagline
+   occur only once, after the final transaction.
+   ============================================================ */
+
+.itb-print-mode .itb-final-closing{
+  break-before:avoid !important;
+  page-break-before:avoid !important;
+
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+
+  margin-top:3.5mm !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+}
+
+
+.itb-print-mode
+.itb-final-closing
+.itb-proto-bottom{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin-top:0 !important;
+
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+.itb-print-mode
+.itb-final-closing
+.itb-notes-box,
+.itb-print-mode
+.itb-final-closing
+.itb-total-box{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  box-sizing:border-box !important;
+}
+
+
+.itb-print-mode
+.itb-final-closing
+.itb-approved-terms{
+  margin-top:3mm !important;
+
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+.itb-print-mode
+.itb-final-closing
+.itb-approved-thankyou{
+  margin-top:3mm !important;
+
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+
+
+/*
+   Website and tagline remain final-page content.
+   They are NOT part of the repeating physical blue footer.
+*/
+.itb-print-mode
+.itb-final-closing
+.itb-approved-page-footer{
+  margin-top:3mm !important;
+
+  padding:
+    1mm
+    1mm
+    1mm
+    1mm !important;
+
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+
+  position:relative !important;
+
+  z-index:10 !important;
+}
+
+
+/* ============================================================
+   REPEATING BLUE FOOTER
+
+   These two existing HTML elements become FIXED.
+   WeasyPrint therefore repeats them on every physical page.
+
+   The physical page bottom is 16mm below the content box.
+   ============================================================ */
+
+.itb-print-mode .itb-approved-wave{
+  display:block !important;
+
+  position:fixed !important;
+
+  left:-12.5mm !important;
+  right:-12.5mm !important;
+
+  width:auto !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  pointer-events:none !important;
+}
+
+
+/*
+   Light blue upper curve.
+*/
+.itb-print-mode .itb-approved-wave-one{
+  bottom:-15mm !important;
+
+  height:13mm !important;
+
+  background:#dcecff !important;
+
+  z-index:1 !important;
+}
+
+
+/*
+   Dark blue lower curve.
+*/
+.itb-print-mode .itb-approved-wave-two{
+  bottom:-16mm !important;
+
+  height:11mm !important;
+
+  background:#326aa5 !important;
+
+  z-index:2 !important;
+}
+
+
+/* ============================================================
+   OLD MANUAL PAGE MODEL MUST HAVE NO EFFECT
+   ============================================================ */
+
+.itb-print-mode .itb-print-sheet,
+.itb-print-mode .itb-sheet-page-number,
+.itb-print-mode .itb-hard-page-break,
+.itb-print-mode .itb-item-page-start{
+  break-before:auto !important;
+  break-after:auto !important;
+
+  page-break-before:auto !important;
+  page-break-after:auto !important;
+}
+
+
+/* ============================================================
+   END - CADUPIUS FINAL NATURAL FLOW PAGINATION MODEL
+   ============================================================ */
+
+
+/* ============================================================
+   CADUPIUS - RUNNING HEADER / FOOTER PAGINATION MODEL
+   Desktop Sandbox - 2026-09-14
+   ============================================================ */
+
+
+/* ============================================================
+   SCREEN / BROWSER PREVIEW
+   Keep the invoice header visible when the invoice is opened
+   from the invoice number link.
+   ============================================================ */
+
+@media screen {
+
+  .invoice-template-page.itb-print-mode{
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    margin:0 auto !important;
+    padding:0 !important;
+
+    background:#ffffff !important;
+  }
+
+  .itb-print-mode .itb-a4{
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    height:auto !important;
+    min-height:289mm !important;
+    max-height:none !important;
+
+    margin:0 auto !important;
+
+    padding:
+      12.5mm
+      12.5mm
+      14.5mm
+      12.5mm !important;
+
+    box-sizing:border-box !important;
+
+    overflow:visible !important;
+    position:relative !important;
+  }
+
+  /*
+     Undo the previous fixed-header experiment in browser view.
+  */
+  .itb-print-mode .itb-repeat-header{
+    position:static !important;
+
+    width:100% !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    display:block !important;
+
+    background:#ffffff !important;
+  }
+
+  /*
+     Browser preview is one continuous HTML document.
+     Show the decorative footer once at the end.
+  */
+  .itb-print-mode .itb-running-footer{
+    position:relative !important;
+
+    display:block !important;
+
+    width:100% !important;
+    height:18mm !important;
+
+    margin-top:8mm !important;
+
+    overflow:hidden !important;
+  }
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave{
+    position:absolute !important;
+
+    left:0 !important;
+    right:0 !important;
+
+    width:100% !important;
+  }
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave-one{
+    bottom:0 !important;
+    height:14mm !important;
+  }
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave-two{
+    bottom:-3mm !important;
+    height:12mm !important;
+  }
+
+  /*
+     Physical PDF page numbers are not meaningful in the
+     continuous browser preview.
+  */
+  .itb-print-mode .itb-running-page-number{
+    display:none !important;
+  }
+}
+
+
+/* ============================================================
+   PDF / PRINT MODE
+   ============================================================ */
+
+@media print {
+
+  /*
+     A4 content area:
+       width  = 210 - 12.5 - 12.5 = 185mm
+
+     Top margin reserves the complete approved header.
+     Bottom margin reserves the blue footer.
+  */
+  @page {
+    size:A4 portrait;
+
+    margin:
+      92mm
+      12.5mm
+      18mm
+      12.5mm;
+
+    @top-left {
+      content:none;
+    }
+
+    @top-right {
+      content:none;
+    }
+
+    @bottom-left {
+      content:none;
+    }
+
+    @bottom-right {
+      content:none;
+    }
+
+    /*
+       FULL approved invoice header.
+    */
+    @top-center {
+      content:element(cadupiusRunningHeader);
+
+      vertical-align:middle;
+    }
+
+    /*
+       Full-width blue footer.
+       Page number is generated inside the running footer.
+    */
+    @bottom-center {
+      content:element(cadupiusRunningFooter);
+
+      vertical-align:bottom;
+    }
+  }
+
+
+  @page :first {
+    size:A4 portrait;
+
+    margin:
+      92mm
+      12.5mm
+      18mm
+      12.5mm;
+
+    @top-left {
+      content:none;
+    }
+
+    @top-right {
+      content:none;
+    }
+
+    @bottom-left {
+      content:none;
+    }
+
+    @bottom-right {
+      content:none;
+    }
+
+    @top-center {
+      content:element(cadupiusRunningHeader);
+
+      vertical-align:middle;
+    }
+
+    @bottom-center {
+      content:element(cadupiusRunningFooter);
+
+      vertical-align:bottom;
+    }
+  }
+
+
+  /* ==========================================================
+     RESET ALL OUTER WIDTHS TO THE REAL 185mm CONTENT AREA
+     This fixes clipping on the Amount / totals right side.
+     ========================================================== */
+
+  html,
+  body{
+    margin:0 !important;
+    padding:0 !important;
+
+    width:185mm !important;
+    max-width:185mm !important;
+
+    background:#ffffff !important;
+  }
+
+
+  .content,
+  .invoice-template-page.itb-print-mode,
+  .itb-print-mode .itb-shell,
+  .itb-print-mode .itb-print-card,
+  .itb-print-mode .itb-print-card .itb-card-body,
+  .itb-print-mode .itb-prototype-shell,
+  .itb-print-mode .itb-a4{
+    width:185mm !important;
+    min-width:185mm !important;
+    max-width:185mm !important;
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    box-sizing:border-box !important;
+
+    overflow:visible !important;
+
+    background:#ffffff !important;
+  }
+
+
+  /* ==========================================================
+     RUNNING FULL HEADER
+     WeasyPrint removes this element from normal document flow
+     and places it in @top-center on EVERY physical page.
+     ========================================================== */
+
+  .itb-print-mode .itb-repeat-header{
+    position:running(cadupiusRunningHeader) !important;
+
+    width:185mm !important;
+    min-width:185mm !important;
+    max-width:185mm !important;
+
+    height:auto !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    box-sizing:border-box !important;
+
+    background:#ffffff !important;
+  }
+
+
+  .itb-print-mode
+  .itb-repeat-header
+  .itb-proto-header,
+  .itb-print-mode
+  .itb-repeat-header
+  .itb-proto-top{
+    width:100% !important;
+    max-width:100% !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  /* ==========================================================
+     NATURAL TRANSACTION PAGINATION
+     There is NO numeric row maximum.
+     ========================================================== */
+
+  .itb-print-mode .itb-proto-table{
+    width:185mm !important;
+    min-width:185mm !important;
+    max-width:185mm !important;
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin:0 !important;
+
+    overflow:visible !important;
+
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
+
+  .itb-print-mode .itb-proto-table table{
+    width:100% !important;
+    min-width:100% !important;
+    max-width:100% !important;
+
+    table-layout:fixed !important;
+
+    margin:0 !important;
+
+    box-sizing:border-box !important;
+  }
+
+
+  /*
+     Keep Amount column inside the printable width.
+  */
+  .itb-print-mode .itb-proto-table th,
+  .itb-print-mode .itb-proto-table td{
+    box-sizing:border-box !important;
+
+    overflow:visible !important;
+
+    word-break:normal !important;
+    overflow-wrap:anywhere !important;
+  }
+
+
+  /*
+     Repeat Sl / SAC / Description / Qty / Amount automatically
+     if the table itself crosses onto another physical page.
+  */
+  .itb-print-mode .itb-proto-table thead{
+    display:table-header-group !important;
+  }
+
+
+  .itb-print-mode .itb-proto-table tbody{
+    display:table-row-group !important;
+  }
+
+
+  .itb-print-mode .itb-proto-table tbody tr{
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  /* ==========================================================
+     FINAL PAGE CLUSTER
+     Last transaction + Notes + Totals + Terms + Thank You
+     stay together.
+
+     Result for the current invoice should be approximately:
+       Page 1: records 1-15
+       Page 2: record 16 + closing block
+
+     The number 15 is NOT hard-coded.
+     ========================================================== */
+
+  .itb-print-mode .itb-final-page-cluster{
+    width:185mm !important;
+    max-width:185mm !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-page-cluster
+  .itb-proto-table{
+    margin-bottom:3.5mm !important;
+  }
+
+
+  .itb-print-mode .itb-final-closing{
+    width:185mm !important;
+    max-width:185mm !important;
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-closing
+  .itb-proto-bottom{
+    width:100% !important;
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin-top:0 !important;
+
+    box-sizing:border-box !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-closing
+  .itb-notes-box,
+  .itb-print-mode
+  .itb-final-closing
+  .itb-total-box{
+    min-width:0 !important;
+    max-width:100% !important;
+
+    height:auto !important;
+    min-height:0 !important;
+
+    box-sizing:border-box !important;
+
+    overflow:hidden !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-closing
+  .itb-approved-terms{
+    margin-top:3mm !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-closing
+  .itb-approved-thankyou{
+    margin-top:3mm !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  .itb-print-mode
+  .itb-final-closing
+  .itb-approved-page-footer{
+    width:100% !important;
+    max-width:100% !important;
+
+    margin-top:3mm !important;
+
+    padding:
+      1mm
+      1mm
+      1mm
+      1mm !important;
+
+    box-sizing:border-box !important;
+
+    overflow:hidden !important;
+
+    position:relative !important;
+  }
+
+
+  /* ==========================================================
+     RUNNING BLUE FOOTER
+     ========================================================== */
+
+  .itb-print-mode .itb-running-footer{
+    position:running(cadupiusRunningFooter) !important;
+
+    /*
+       Physical page is 210mm wide.
+       Margin box content width is 185mm.
+       Negative margin expands the blue wave across the full page.
+    */
+    width:210mm !important;
+    min-width:210mm !important;
+    max-width:210mm !important;
+
+    height:18mm !important;
+
+    margin:
+      0
+      0
+      0
+      -12.5mm !important;
+
+    padding:0 !important;
+
+    overflow:visible !important;
+  }
+
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave{
+    display:block !important;
+
+    position:absolute !important;
+
+    left:0 !important;
+    right:0 !important;
+
+    width:210mm !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    pointer-events:none !important;
+  }
+
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave-one{
+    bottom:0 !important;
+
+    height:14mm !important;
+
+    background:#dcecff !important;
+
+    z-index:1 !important;
+  }
+
+
+  .itb-print-mode
+  .itb-running-footer
+  .itb-approved-wave-two{
+    bottom:-3mm !important;
+
+    height:12mm !important;
+
+    background:#326aa5 !important;
+
+    z-index:2 !important;
+  }
+
+
+  /*
+     Dynamic page number.
+     counter(page) is evaluated independently for every
+     physical page by WeasyPrint.
+  */
+  .itb-print-mode .itb-running-page-number{
+    display:block !important;
+
+    position:absolute !important;
+
+    left:0 !important;
+    right:0 !important;
+
+    bottom:3.2mm !important;
+
+    text-align:center !important;
+
+    font-family:Arial, Helvetica, sans-serif !important;
+    font-size:7.5pt !important;
+    font-weight:700 !important;
+
+    line-height:1 !important;
+
+    color:#ffffff !important;
+
+    z-index:20 !important;
+  }
+
+
+  .itb-print-mode .itb-running-page-number::after{
+    content:"Page | " counter(page);
+  }
+
+
+  /* ==========================================================
+     NEUTRALISE ALL PREVIOUS PAGINATION EXPERIMENTS
+     ========================================================== */
+
+  .itb-print-mode .itb-print-sheet,
+  .itb-print-mode .itb-sheet-page-number,
+  .itb-print-mode .itb-hard-page-break,
+  .itb-print-mode .itb-item-page-start{
+    display:none !important;
+
+    break-before:auto !important;
+    break-after:auto !important;
+
+    page-break-before:auto !important;
+    page-break-after:auto !important;
+  }
+
+}
+
+
+/* ============================================================
+   END - CADUPIUS RUNNING HEADER / FOOTER PAGINATION MODEL
+   ============================================================ */
+
+
+
+/* ============================================================
+   CADUPIUS - REMOVE TRAILING BLANK PDF PAGE
+   Running footer is declared before flowing print content.
+   ============================================================ */
+
+@media print {
+
+  /*
+     The footer located at the end of the HTML exists only
+     for browser preview. It must not participate in PDF layout.
+  */
+  .itb-print-mode .itb-screen-only-footer{
+    display:none !important;
+    position:static !important;
+  }
+
+
+  /*
+     This early footer becomes the single WeasyPrint
+     running footer for every physical PDF page.
+  */
+  .itb-print-mode .itb-print-only-footer{
+    display:block !important;
+
+    position:running(cadupiusRunningFooter) !important;
+  }
+
+}
+
+
+@media screen {
+
+  /*
+     The early print footer must not appear above the
+     transaction table in the browser invoice view.
+  */
+  .itb-print-mode .itb-print-only-footer{
+    display:none !important;
+  }
+
+
+  /*
+     Keep the normal browser footer at the end.
+  */
+  .itb-print-mode .itb-screen-only-footer{
+    display:block !important;
+  }
+
+}
+
+
+/* ============================================================
+   END - CADUPIUS REMOVE TRAILING BLANK PDF PAGE
+   ============================================================ */
+
+/* ============================================================
+   CADUPIUS - ADAPTIVE INVOICE ITEM COLUMNS V1 - 2026-09-15
+
+   Compact columns reserve predictable space.
+   Description receives the remaining usable width and wraps.
+   The second/final table header is hidden only on the continuous
+   browser invoice screen. Printed/PDF pagination remains intact.
+   ============================================================ */
+
+.itb-print-mode .itb-proto-table table{
+  table-layout:fixed !important;
+}
+
+
+/* Serial Number */
+.itb-print-mode .itb-proto-table th[data-itb-col="sl"],
+.itb-print-mode .itb-proto-table td[data-itb-col="sl"],
+.itb-print-mode .itb-proto-table th[data-itb-col="si"],
+.itb-print-mode .itb-proto-table td[data-itb-col="si"]{
+  width:6% !important;
+  white-space:nowrap !important;
+}
+
+
+/* SAC */
+.itb-print-mode .itb-proto-table th[data-itb-col="sac"],
+.itb-print-mode .itb-proto-table td[data-itb-col="sac"],
+.itb-print-mode .itb-proto-table th[data-itb-col="hsn/sac"],
+.itb-print-mode .itb-proto-table td[data-itb-col="hsn/sac"]{
+  width:13% !important;
+  white-space:nowrap !important;
+}
+
+
+/* Quantity */
+.itb-print-mode .itb-proto-table th[data-itb-col="qty"],
+.itb-print-mode .itb-proto-table td[data-itb-col="qty"]{
+  width:9% !important;
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+}
+
+
+/* Rate - applies only to templates which contain Rate */
+.itb-print-mode .itb-proto-table th[data-itb-col="rate"],
+.itb-print-mode .itb-proto-table td[data-itb-col="rate"]{
+  width:15% !important;
+  white-space:nowrap !important;
+}
+
+
+/* Amount */
+.itb-print-mode .itb-proto-table th[data-itb-col="amount"],
+.itb-print-mode .itb-proto-table td[data-itb-col="amount"]{
+  width:20% !important;
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+}
+
+
+/*
+   Description has no rigid percentage.
+   With the present 5-column invoice it automatically receives
+   the remaining space: approximately 52%.
+*/
+.itb-print-mode .itb-proto-table th[data-itb-col="description"],
+.itb-print-mode .itb-proto-table td[data-itb-col="description"]{
+  width:auto !important;
+  white-space:normal !important;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+}
+
+
+/*
+   Browser invoice is one continuous visual document.
+   Do not display the artificial second-table heading before
+   the final transaction.
+
+   This does NOT affect Print / Save PDF.
+*/
+@media screen{
+
+  .itb-print-mode
+  .itb-final-page-cluster-continuation
+  > .itb-proto-table
+  > table
+  > thead{
+    display:none !important;
+  }
+
+  .itb-print-mode
+  .itb-final-page-cluster-continuation
+  > .itb-proto-table{
+    margin-top:0 !important;
+    border-top:0 !important;
+  }
+}
+
+/* END - CADUPIUS ADAPTIVE INVOICE ITEM COLUMNS V1 */
+

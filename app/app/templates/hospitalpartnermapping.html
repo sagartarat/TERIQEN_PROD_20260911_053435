@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+{% block title %}Hospital &rarr; Partner Mapping{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/pages/partnerview.css') }}">
+
+<style>
+.hpm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+}
+
+.hpm-field {
+  min-width: 0;
+}
+
+.hpm-help {
+  display: block;
+  margin-top: 6px;
+  color: #7183a0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.hpm-rule {
+  display: inline-block;
+  margin-top: 5px;
+  margin-right: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef5fc;
+  color: #335f8a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.hpm-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.hpm-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.hpm-status-active {
+  background: #e4f7ed;
+  color: #16724d;
+}
+
+.hpm-status-inactive {
+  background: #f8e8e8;
+  color: #a13f3f;
+}
+
+.hpm-inline-form {
+  display: inline;
+}
+
+.hpm-table-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hpm-note {
+  background: #f4f9ff;
+  border-left: 4px solid #2b83b7;
+  padding: 11px 13px;
+  border-radius: 8px;
+  color: #526e8e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 850px) {
+  .hpm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+
+<div class="pv-page">
+
+  <div class="pv-hero">
+    <div class="pv-page-header">
+
+      <div class="pv-title-block">
+        <h1>Hospital &rarr; Partner Mapping</h1>
+
+        <p>
+          Map a treating Hospital to the Partner responsible for
+          hospital coordination and billing.
+        </p>
+      </div>
+
+      <div class="pv-header-actions">
+        <a class="pv-btn pv-btn-light" href="/partner-view">
+          <i class="fa-solid fa-arrow-left"></i>
+          Partner View
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+
+  {% if flashed_messages %}
+
+    {% for category, message in flashed_messages %}
+
+      <div class="pv-alert
+          {% if category == 'success' %}
+            pv-alert-success
+          {% else %}
+            pv-alert-danger
+          {% endif %}">
+
+        <div>{{ message }}</div>
+
+      </div>
+
+    {% endfor %}
+
+  {% endif %}
+
+
+  <div class="pv-panel">
+
+    <div class="pv-panel-header">
+      <div>
+        <h2>
+          {% if edit_mapping %}
+            Modify Hospital Partner Mapping
+          {% else %}
+            Create Hospital Partner Mapping
+          {% endif %}
+        </h2>
+
+        <small>
+          LOV values are read directly from Partner Master
+          based on Partner Role / Capability.
+        </small>
+      </div>
+    </div>
+
+
+    <div class="pv-panel-body">
+
+      <form method="POST"
+            action="{{ url_for('hospital_partner_mapping') }}">
+
+        <input type="hidden"
+               name="csrf_token"
+               value="{{ csrf_token() }}">
+
+        {% if edit_mapping %}
+          <input type="hidden"
+                 name="mapping_id"
+                 value="{{ edit_mapping.mapping_id }}">
+        {% endif %}
+
+        <input type="hidden"
+               name="action"
+               value="save">
+
+
+        <div class="hpm-grid">
+
+
+          <!-- Hospital -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="hospital_short_name">
+
+              Hospital <span style="color:#d84444">*</span>
+
+            </label>
+
+            <select class="pv-select"
+                    id="hospital_short_name"
+                    name="hospital_short_name"
+                    required>
+
+              <option value="">-- Select Hospital --</option>
+
+              {% for p in hospital_lov %}
+
+                <option
+                  value="{{ p.short_name }}"
+                  {% if edit_mapping
+                        and edit_mapping.hospital_short_name
+                            == p.short_name %}
+                    selected
+                  {% endif %}>
+
+                  {{ p.short_name }}
+                  &mdash;
+                  {{ p.legal_name or p.short_name }}
+
+                  {% if p.partner_city %}
+                    &mdash; {{ p.partner_city }}
+                  {% endif %}
+
+                </option>
+
+              {% endfor %}
+
+            </select>
+
+            <span class="hpm-help">
+              Values are dynamically loaded from partner_reg.
+            </span>
+
+            <span class="hpm-rule">
+              Partner Type = Hospital
+            </span>
+
+            <span class="hpm-rule">
+              Direct Treating Hospital = Yes
+            </span>
+
+            <span class="hpm-rule">
+              Status = Active
+            </span>
+
+          </div>
+
+
+          <!-- Coordination Partner -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="coordination_partner_short_name">
+
+              Coordination Partner
+              <span style="color:#d84444">*</span>
+
+            </label>
+
+            <select class="pv-select"
+                    id="coordination_partner_short_name"
+                    name="coordination_partner_short_name"
+                    required>
+
+              <option value="">
+                -- Select Coordination Partner --
+              </option>
+
+              {% for p in coordination_lov %}
+
+                <option
+                  value="{{ p.short_name }}"
+                  {% if edit_mapping
+                        and edit_mapping.coordination_partner_short_name
+                            == p.short_name %}
+                    selected
+                  {% endif %}>
+
+                  {{ p.short_name }}
+                  &mdash;
+                  {{ p.legal_name or p.short_name }}
+
+                  {% if p.partner_type %}
+                    &mdash; {{ p.partner_type }}
+                  {% endif %}
+
+                </option>
+
+              {% endfor %}
+
+            </select>
+
+            <span class="hpm-help">
+              Only Partners having Hospital Coordinator = Yes
+              are available.
+            </span>
+
+            <span class="hpm-rule">
+              Hospital Coordinator = Yes
+            </span>
+
+            <span class="hpm-rule">
+              Status = Active
+            </span>
+
+          </div>
+
+
+          <!-- Billing Partner -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="billing_partner_short_name">
+
+              Billing Partner
+              <span style="color:#d84444">*</span>
+
+            </label>
+
+            <select class="pv-select"
+                    id="billing_partner_short_name"
+                    name="billing_partner_short_name"
+                    required>
+
+              <option value="">
+                -- Select Billing Partner --
+              </option>
+
+              {% for p in billing_lov %}
+
+                <option
+                  value="{{ p.short_name }}"
+                  {% if edit_mapping
+                        and edit_mapping.billing_partner_short_name
+                            == p.short_name %}
+                    selected
+                  {% endif %}>
+
+                  {{ p.short_name }}
+                  &mdash;
+                  {{ p.legal_name or p.short_name }}
+
+                  {% if p.partner_type %}
+                    &mdash; {{ p.partner_type }}
+                  {% endif %}
+
+                </option>
+
+              {% endfor %}
+
+            </select>
+
+            <span class="hpm-help">
+              Only Partners having Invoice Eligible = Yes
+              are available.
+            </span>
+
+            <span class="hpm-rule">
+              Invoice Eligible = Yes
+            </span>
+
+            <span class="hpm-rule">
+              Status = Active
+            </span>
+
+          </div>
+
+
+          <!-- Mapping Status -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="mapping_status">
+
+              Mapping Status
+
+            </label>
+
+            <select class="pv-select"
+                    id="mapping_status"
+                    name="mapping_status">
+
+              <option value="Active"
+                {% if not edit_mapping
+                      or edit_mapping.mapping_status == 'Active' %}
+                  selected
+                {% endif %}>
+                Active
+              </option>
+
+              <option value="Inactive"
+                {% if edit_mapping
+                      and edit_mapping.mapping_status == 'Inactive' %}
+                  selected
+                {% endif %}>
+                Inactive
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- Effective From -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="effective_from">
+
+              Effective From
+              <span style="color:#d84444">*</span>
+
+            </label>
+
+            <input class="pv-input"
+                   type="date"
+                   id="effective_from"
+                   name="effective_from"
+                   value="{% if edit_mapping %}{{ edit_mapping.effective_from }}{% endif %}"
+                   required>
+
+          </div>
+
+
+          <!-- Effective To -->
+          <div class="hpm-field">
+
+            <label class="pv-label"
+                   for="effective_to">
+
+              Effective To
+
+            </label>
+
+            <input class="pv-input"
+                   type="date"
+                   id="effective_to"
+                   name="effective_to"
+                   value="{% if edit_mapping and edit_mapping.effective_to %}{{ edit_mapping.effective_to }}{% endif %}">
+
+            <span class="hpm-help">
+              Leave blank while the mapping remains current.
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="hpm-actions">
+
+          {% if (edit_mapping and hpm_can_edit) or (not edit_mapping and hpm_can_add) %}
+
+          <button class="pv-btn pv-btn-primary"
+                  type="submit">
+
+            <i class="fa-solid fa-floppy-disk"></i>
+
+            {% if edit_mapping %}
+              Update Mapping
+            {% else %}
+              Save Mapping
+            {% endif %}
+
+          </button>
+
+          {% endif %}
+
+
+          {% if edit_mapping %}
+
+            <a class="pv-btn pv-btn-ghost"
+               href="/hospital-partner-mapping">
+
+              <i class="fa-solid fa-xmark"></i>
+              Cancel Modify
+
+            </a>
+
+          {% else %}
+
+            <button class="pv-btn pv-btn-ghost"
+                    type="reset">
+
+              <i class="fa-solid fa-rotate"></i>
+              Reset
+
+            </button>
+
+          {% endif %}
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <div class="pv-panel">
+
+    <div class="pv-panel-header">
+
+      <div>
+        <h2>Existing Hospital Partner Mappings</h2>
+
+        <small>
+          Active and historical mappings are retained for audit
+          and future invoice resolution.
+        </small>
+      </div>
+
+    </div>
+
+
+    <div class="pv-panel-body">
+
+      <div class="hpm-note">
+
+        If a Partner does not appear in a LOV, update the corresponding
+        Partner Role / Capability in Partner Registration / Modify.
+
+      </div>
+
+
+      <div class="pv-table-wrap"
+           style="margin-top:14px">
+
+        <div class="pv-table-scroll">
+
+          <table>
+
+            <thead>
+
+              <tr>
+                <th>Hospital</th>
+                <th>Coordination Partner</th>
+                <th>Billing Partner</th>
+                <th>Effective From</th>
+                <th>Effective To</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              {% if mappings %}
+
+                {% for m in mappings %}
+
+                  <tr>
+
+                    <td>
+                      <strong>{{ m.hospital_short_name }}</strong>
+
+                      {% if m.hospital_name %}
+                        <br>
+                        <small>{{ m.hospital_name }}</small>
+                      {% endif %}
+                    </td>
+
+
+                    <td>
+                      <strong>
+                        {{ m.coordination_partner_short_name }}
+                      </strong>
+
+                      {% if m.coordination_partner_name %}
+                        <br>
+                        <small>
+                          {{ m.coordination_partner_name }}
+                        </small>
+                      {% endif %}
+                    </td>
+
+
+                    <td>
+                      <strong>
+                        {{ m.billing_partner_short_name }}
+                      </strong>
+
+                      {% if m.billing_partner_name %}
+                        <br>
+                        <small>
+                          {{ m.billing_partner_name }}
+                        </small>
+                      {% endif %}
+                    </td>
+
+
+                    <td>
+                      {{ m.effective_from or "" }}
+                    </td>
+
+
+                    <td>
+                      {% if m.effective_to %}{{ m.effective_to }}{% else %}&mdash;{% endif %}
+                    </td>
+
+
+                    <td>
+
+                      {% if m.mapping_status == "Active" %}
+
+                        <span class="hpm-status hpm-status-active">
+                          Active
+                        </span>
+
+                      {% else %}
+
+                        <span class="hpm-status hpm-status-inactive">
+                          Inactive
+                        </span>
+
+                      {% endif %}
+
+                    </td>
+
+
+                    <td>
+
+                      <div class="hpm-table-actions">
+
+                        {% if hpm_can_edit %}
+
+                        <a class="pv-btn pv-btn-ghost"
+                           href="/hospital-partner-mapping?edit={{ m.mapping_id }}">
+
+                          <i class="fa-solid fa-pen"></i>
+                          Modify
+
+                        </a>
+
+                        {% endif %}
+
+
+                        {% if m.mapping_status == "Active" and hpm_can_delete %}
+
+                          <form method="POST"
+                                action="{{ url_for('hospital_partner_mapping') }}"
+                                class="hpm-inline-form"
+                                onsubmit="return confirm('Deactivate this Hospital Partner Mapping?');">
+
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+
+                            <input type="hidden"
+                                   name="mapping_id"
+                                   value="{{ m.mapping_id }}">
+
+                            <input type="hidden"
+                                   name="action"
+                                   value="deactivate">
+
+                            <button class="pv-btn pv-btn-ghost"
+                                    type="submit">
+
+                              <i class="fa-solid fa-ban"></i>
+                              Deactivate
+
+                            </button>
+
+                          </form>
+
+                        {% endif %}
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                {% endfor %}
+
+
+              {% else %}
+
+                <tr>
+
+                  <td colspan="7"
+                      style="text-align:center;padding:24px">
+
+                    No Hospital Partner Mapping configured.
+
+                  </td>
+
+                </tr>
+
+              {% endif %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+[Unit]
+Description=TERIQEN Gunicorn
+After=network.target mysql.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=teriqen
+Group=www-data
+WorkingDirectory=/var/www/teriqen
+EnvironmentFile=/var/www/teriqen/.env
+Environment=ENABLE_BACKGROUND_SCHEDULER=false
+RuntimeDirectory=teriqen
+RuntimeDirectoryMode=0755
+ExecStart=/var/www/teriqen/.venv/bin/gunicorn -c /var/www/teriqen/deploy/gunicorn.conf.py wsgi:app
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+UMask=0027
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

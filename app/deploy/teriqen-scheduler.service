@@ -1,0 +1,32 @@
+[Unit]
+Description=TERIQEN Scheduler
+After=network.target mysql.service teriqen.service
+
+[Service]
+Type=simple
+User=teriqen
+Group=www-data
+WorkingDirectory=/var/www/teriqen
+EnvironmentFile=/var/www/teriqen/.env
+Environment=ENABLE_BACKGROUND_SCHEDULER=true
+ExecStart=/var/www/teriqen/.venv/bin/python /var/www/teriqen/scheduler_worker.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+UMask=0027
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

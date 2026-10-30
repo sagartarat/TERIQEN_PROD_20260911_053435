@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Execution Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/system_monitoring_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sm-page">
+
+  <div class="sm-page-head">
+    <div class="sm-title-wrap">
+      <div class="sm-page-title">Execution {{ execution.execution_id or execution.id }}</div>
+      <div class="sm-breadcrumb">System Monitoring / Execution History / {{ execution.execution_id or execution.id }}</div>
+      <div class="sm-page-subtitle">Complete execution result, counts, technical metadata and associated errors.</div>
+    </div>
+    <div class="sm-actions">
+      <a class="top-btn" href="{{ url_for('system_monitoring.execution_history') }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      {% if execution.scheduler_id %}
+      <a class="top-btn primary" href="{{ url_for('system_monitoring.scheduler_detail', scheduler_id=execution.scheduler_id) }}"><i class="fa-solid fa-clock"></i> Scheduler</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sm-health-banner {{ (execution.execution_status or 'UNKNOWN')|lower }}">
+    <div class="sm-health-main">
+      <div class="sm-health-icon"><i class="fa-solid fa-list-check"></i></div>
+      <div>
+        <div class="sm-health-name">{{ execution.execution_status or 'UNKNOWN' }}</div>
+        <div class="sm-health-message">{{ execution.result_message or execution.error_message or 'No execution message recorded.' }}</div>
+      </div>
+    </div>
+    <div class="sm-health-time">{{ execution.completed_on or execution.started_on or '-' }}</div>
+  </div>
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div><div class="sm-section-title">Execution Summary</div><div class="sm-section-subtitle">Execution metadata and processing counts</div></div>
+    </div>
+
+    <div class="sm-detail-grid">
+      <div class="sm-detail-item"><div class="sm-detail-label">Execution ID</div><div class="sm-detail-value">{{ execution.execution_id or execution.id }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Scheduler</div><div class="sm-detail-value">{{ execution.scheduler_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Scheduler Code</div><div class="sm-detail-value">{{ execution.scheduler_code or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Module</div><div class="sm-detail-value">{{ execution.module_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Started</div><div class="sm-detail-value">{{ execution.started_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Completed</div><div class="sm-detail-value">{{ execution.completed_on or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Duration</div><div class="sm-detail-value">{% if execution.duration_ms is not none %}{{ execution.duration_ms }} ms{% else %}-{% endif %}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Status</div><div class="sm-detail-value"><span class="sm-status {{ (execution.execution_status or 'UNKNOWN')|lower }}">{{ execution.execution_status or 'UNKNOWN' }}</span></div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Records Found</div><div class="sm-detail-value">{{ execution.records_found|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Processed</div><div class="sm-detail-value">{{ execution.records_processed|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Successful</div><div class="sm-detail-value">{{ execution.success_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Failed</div><div class="sm-detail-value">{{ execution.failure_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Skipped</div><div class="sm-detail-value">{{ execution.skipped_count|default(0, true) }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Server</div><div class="sm-detail-value">{{ execution.server_name or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Process ID</div><div class="sm-detail-value">{{ execution.process_id or '-' }}</div></div>
+      <div class="sm-detail-item"><div class="sm-detail-label">Thread</div><div class="sm-detail-value">{{ execution.thread_name or execution.thread_id or '-' }}</div></div>
+    </div>
+  </section>
+
+  {% if execution.error_code or execution.error_message %}
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div><div class="sm-section-title">Execution Error</div><div class="sm-section-subtitle">{{ execution.error_code or 'Exception' }}</div></div>
+    </div>
+    <div class="sm-message-box">{{ execution.error_message or '-' }}</div>
+  </section>
+  {% endif %}
+
+  {% if execution.stack_trace %}
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div><div class="sm-section-title">Stack Trace</div><div class="sm-section-subtitle">Technical exception detail</div></div>
+    </div>
+    <div class="sm-code-box">{{ execution.stack_trace }}</div>
+  </section>
+  {% endif %}
+
+  <section class="sm-section">
+    <div class="sm-section-head">
+      <div><div class="sm-section-title">Associated Process Records</div><div class="sm-section-subtitle">Business records processed in this execution</div></div>
+    </div>
+    <div class="sm-table-wrap">
+      {% if process_rows %}
+      <table class="sm-table">
+        <thead>
+          <tr><th>Process</th><th>Reference</th><th>Status</th><th>Attempt</th><th>Started</th><th>Completed</th><th>Duration</th><th>Error</th></tr>
+        </thead>
+        <tbody>
+          {% for row in process_rows %}
+          <tr>
+            <td>{{ row.process_name or row.process_code or '-' }}</td>
+            <td>{{ row.reference_type or '-' }}{% if row.reference_id %} / {{ row.reference_id }}{% endif %}</td>
+            <td><span class="sm-status {{ (row.process_status or 'UNKNOWN')|lower }}">{{ row.process_status or 'UNKNOWN' }}</span></td>
+            <td>{{ row.attempt_no|default(0, true) }}</td>
+            <td>{{ row.started_on or '-' }}</td>
+            <td>{{ row.completed_on or '-' }}</td>
+            <td>{% if row.duration_ms is not none %}{{ row.duration_ms }} ms{% else %}-{% endif %}</td>
+            <td>{% if row.error_message %}{{ row.error_message|truncate(90, True, '...') }}{% else %}-{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sm-empty"><i class="fa-solid fa-gears"></i><strong>No associated process records</strong>No business process records are linked to this execution.</div>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

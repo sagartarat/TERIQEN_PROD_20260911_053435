@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Invoice Management Reports{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoice_management_reports.css') }}">
+
+<div class="op-report-page">
+
+    <div class="op-page-header">
+        <h1>Invoice Management Reports</h1>
+        <p>Generate invoice, collection, outstanding, ageing and monthly revenue reports</p>
+    </div>
+
+    <div class="op-card">
+        <div class="op-card-header">
+            <h2 id="reportTitle">Invoice Detail Report</h2>
+        </div>
+
+        <div class="op-card-body">
+            <div class="op-filter-grid">
+
+                <div class="op-field">
+                    <label>From Date</label>
+                    <input type="date" id="from_date">
+                </div>
+
+                <div class="op-field">
+                    <label>To Date</label>
+                    <input type="date" id="to_date">
+                </div>
+
+                <div class="op-field">
+                    <label>Hospital</label>
+                    <input type="text" id="hospital_name" placeholder="Hospital name">
+                </div>
+
+                <div class="op-field">
+                    <label>Invoice Number</label>
+                    <input type="text" id="invoice_number" placeholder="Invoice number">
+                </div>
+
+                <div class="op-field">
+                    <label>Print Status</label>
+                    <select id="print_status">
+                        <option value="ALL">All</option>
+                        <option value="PRINTED">Printed</option>
+                        <option value="PENDING">Pending</option>
+                    </select>
+                </div>
+
+                <div class="op-field">
+                    <label>Recon Status</label>
+                    <select id="recon_status">
+                        <option value="ALL">All</option>
+                        <option value="MATCHED">Matched</option>
+                        <option value="PARTIAL MATCH">Partial Match</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="op-actions">
+                <button class="op-btn op-btn-light" onclick="clearInvoiceReportFilters()">Clear</button>
+                <button class="op-btn op-btn-primary" onclick="generateInvoiceReport()">Generate Report</button>
+                <button class="op-btn op-btn-success" onclick="exportInvoiceReportExcel()">Export Excel</button>
+                <button class="op-btn op-btn-danger" onclick="exportInvoiceReportPdf()">Export PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="op-kpi-grid">
+        <div class="op-kpi"><div class="label">Invoices Generated</div><div class="value" id="kpi_invoices_generated">0</div></div>
+        <div class="op-kpi"><div class="label">Printed</div><div class="value" id="kpi_printed_invoices">0</div></div>
+        <div class="op-kpi"><div class="label">Pending Print</div><div class="value" id="kpi_pending_print">0</div></div>
+        <div class="op-kpi"><div class="label">Net Invoice Value</div><div class="value" id="kpi_net_invoice_amount">0</div></div>
+        <div class="op-kpi"><div class="label">Collections</div><div class="value" id="kpi_received_amount">0</div></div>
+        <div class="op-kpi"><div class="label">Outstanding</div><div class="value" id="kpi_outstanding_amount">0</div></div>
+    </div>
+
+    <div class="op-tabs">
+        <button class="op-tab active" data-report="invoice_detail" onclick="changeInvoiceReport(this)">Invoice Detail</button>
+        <button class="op-tab" data-report="collection_report" onclick="changeInvoiceReport(this)">Collection Report</button>
+        <button class="op-tab" data-report="hospital_outstanding" onclick="changeInvoiceReport(this)">Hospital Outstanding</button>
+        <button class="op-tab" data-report="invoice_ageing" onclick="changeInvoiceReport(this)">Invoice Ageing</button>
+        <button class="op-tab" data-report="monthly_revenue" onclick="changeInvoiceReport(this)">Monthly Revenue</button>
+    </div>
+
+    <div class="op-card">
+        <div class="op-card-header">
+            <h2 id="gridTitle">Invoice Detail Report Results</h2>
+        </div>
+
+        <div class="op-table-wrap">
+            <table class="op-table">
+                <thead id="reportHead"></thead>
+                <tbody id="reportBody">
+                    <tr>
+                        <td colspan="20" class="empty-row">
+                            No records available. Select filters and click Generate Report.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/report_helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/invoice_management_reports.js') }}"></script>
+
+{% endblock %}

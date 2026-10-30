@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_screen_access.css') }}">
+
+<div class="he-page">
+
+    <div class="he-header">
+        <h2>User Screen Access Management</h2>
+        <p>Assign ERP menu and button-level permissions user-wise: View, Add, Edit and Delete.</p>
+    </div>
+
+    <div class="he-card">
+        <div class="he-card-title">
+            <span>User Selection</span>
+            <span class="he-hint">System Control → User Screen Access</span>
+        </div>
+
+        <div class="he-filter-body">
+            <div class="he-form-group">
+                <label>User</label>
+                <select id="user_code" class="he-control">
+                    <option value="">-- Select User --</option>
+
+                    {% set user_lov = active_users if active_users is defined else users %}
+
+                    {% for user in user_lov %}
+                    <option value="{{ user.user_code }}"
+                        {% if selected_user_code and selected_user_code == user.user_code %}selected{% endif %}>
+                        {{ user.user_name }} ({{ user.user_code }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="he-form-group">
+                <label>Access Template</label>
+                <select id="access_template" class="he-control" onchange="applyTemplate()">
+                    <option value="">-- Optional Template --</option>
+                    <option value="ADMIN">Full Admin Access</option>
+                    <option value="OPERATIONS">Operations User</option>
+                    <option value="FINANCE">Finance User</option>
+                    <option value="REPORTS">Reports Only</option>
+                    <option value="VIEW_ONLY">View Only</option>
+                </select>
+            </div>
+
+            <div class="he-actions">
+                <button type="button" class="he-btn he-btn-light" onclick="clearAccess()">Clear</button>
+                <button type="button" class="he-btn he-btn-primary" onclick="loadAccess()">Load Access</button>
+                <button type="button" class="he-btn he-btn-success" onclick="saveAccess()">Save Access</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="he-card">
+        <div class="he-card-title">
+            <span>Access Summary</span>
+        </div>
+
+        <div class="he-summary">
+            <div class="he-kpi">
+                <div class="label">View Access</div>
+                <div class="value" id="kpi_view">0</div>
+            </div>
+            <div class="he-kpi">
+                <div class="label">Add Access</div>
+                <div class="value" id="kpi_add">0</div>
+            </div>
+            <div class="he-kpi">
+                <div class="label">Edit Access</div>
+                <div class="value" id="kpi_edit">0</div>
+            </div>
+            <div class="he-kpi">
+                <div class="label">Delete Access</div>
+                <div class="value" id="kpi_delete">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="he-card">
+        <div class="he-card-title">
+            <span>Recommended Menu Access Levels</span>
+            <span class="he-hint">View controls menu visibility. Add/Edit/Delete controls actions.</span>
+        </div>
+
+        <div class="he-table-wrap">
+            <table class="he-access-table">
+                <thead>
+                    <tr>
+                        <th style="width: 38%;">Module / Screen</th>
+                        <th>View</th>
+                        <th>Add</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% set ns = namespace(current_module='') %}
+
+                    {% if screens is defined and screens %}
+                        {% for screen in screens %}
+
+                            {% if ns.current_module != screen.module_name %}
+                                <tr class="module-row">
+                                    <td colspan="6">{{ screen.module_name or 'General' }}</td>
+                                </tr>
+                                {% set ns.current_module = screen.module_name %}
+                            {% endif %}
+
+                            <tr data-screen-code="{{ screen.screen_code }}">
+                                <td>
+                                    <div class="screen-name">{{ screen.screen_name }}</div>
+                                    <div class="screen-code">{{ screen.screen_code }}</div>
+                                </td>
+
+                                <td class="center">
+                                    <input type="checkbox" class="access-check can-view"
+                                        {% if screen.can_view == 'Y' %}checked{% endif %}>
+                                </td>
+
+                                <td class="center">
+                                    <input type="checkbox" class="access-check can-add"
+                                        {% if screen.can_add == 'Y' %}checked{% endif %}>
+                                </td>
+
+                                <td class="center">
+                                    <input type="checkbox" class="access-check can-edit"
+                                        {% if screen.can_edit == 'Y' %}checked{% endif %}>
+                                </td>
+
+                                <td class="center">
+                                    <input type="checkbox" class="access-check can-delete"
+                                        {% if screen.can_delete == 'Y' %}checked{% endif %}>
+                                </td>
+
+                                <td class="center">
+                                    {% if screen.is_active == 'N' %}
+                                        <span class="badge badge-locked">Inactive</span>
+                                    {% else %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="center">
+                                No active screens found. Please check screen_master table.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="he-footer">
+            <div class="he-hint">
+                Best practice: Assign <b>View</b> for screen visibility and use <b>Add/Edit/Delete</b> for button-level control.
+            </div>
+
+            <div class="he-actions">
+                <button type="button" class="he-btn he-btn-light" onclick="selectViewOnly()">View Only</button>
+                <button type="button" class="he-btn he-btn-light" onclick="selectFullAccess()">Full Access</button>
+                <button type="button" class="he-btn he-btn-success" onclick="saveAccess()">Save Access</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/user_screen_access.js') }}"></script>
+{% endblock %}

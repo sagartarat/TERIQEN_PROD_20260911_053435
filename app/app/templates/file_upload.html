@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}File Upload{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/file_upload.css') }}">
+
+<div class="fup-page">
+
+  <div class="fup-hero">
+    <div class="fup-page-header">
+      <div class="fup-title-block">
+        <h1>File Upload</h1>
+        <p>Upload Patient Upload and Patient Workflow Upload files through a modern enterprise workspace with cleaner structure, stronger visual hierarchy, and aligned ERP styling.</p>
+      </div>
+
+      <div class="fup-header-actions">
+        <a href="{{ url_for('file_upload_status') }}" class="fup-btn fup-btn-light">
+          <i class="bi bi-list-check"></i>
+          File Upload Status
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+
+  {% if flashed_messages %}
+    {% for category, message in flashed_messages %}
+      <div class="fup-alert {% if category == 'success' %}fup-alert-success{% else %}fup-alert-danger{% endif %}">
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% elif upload_success %}
+    <div class="fup-alert fup-alert-success">
+      <div>{{ upload_success }}</div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% elif upload_error %}
+    <div class="fup-alert fup-alert-danger">
+      <div>{{ upload_error }}</div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+
+  <div class="fup-panel">
+    <div class="fup-panel-header">
+      <div>
+        <h2>Upload Details</h2>
+        <small>Fill the required information and submit the upload using the same system design language as your ERP screens.</small>
+      </div>
+    </div>
+
+    <div class="fup-panel-body">
+      <div class="fup-panel-note">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Select the upload type first, choose the file, review the live preview, and then continue with upload.</span>
+      </div>
+
+      <form id="fileUploadForm" method="POST" action="{{ url_for('file_upload') }}" enctype="multipart/form-data" novalidate>
+        <div class="fup-section">
+          <div class="fup-section-title">
+            <span>File Selection</span>
+            <div class="fup-section-sub">Cleaner and more premium ERP presentation</div>
+          </div>
+
+          <div class="fup-detail-grid">
+            <div class="fup-detail-item">
+              <label for="upload_type" class="fup-label">Upload Type <span class="text-danger">*</span></label>
+              <select class="fup-select" id="upload_type" name="upload_type" required>
+                <option value="">Select Upload Type</option>
+                <option value="PATIENT_UPLOAD" {% if form_data and form_data.get('upload_type') == 'PATIENT_UPLOAD' %}selected{% endif %}>Patient Upload</option>
+                <option value="PATIENT_WORKFLOW_UPLOAD" {% if form_data and form_data.get('upload_type') == 'PATIENT_WORKFLOW_UPLOAD' %}selected{% endif %}>Patient Workflow Upload</option>
+              </select>
+              <div class="invalid-feedback">Please select Upload Type.</div>
+            </div>
+
+
+            <div class="fup-detail-item fup-span-2">
+              <label for="upload_file" class="fup-label">Choose File <span class="text-danger">*</span></label>
+              <div class="fup-upload-box">
+                <div class="fup-upload-box-top">
+                  <div class="fup-upload-box-title">Upload Source File</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <span class="fup-badge fup-badge-info">One File At A Time</span>
+                    <span class="fup-badge fup-badge-success">Supported</span>
+                    <span class="fup-badge fup-badge-warning">Validated Template</span>
+                  </div>
+                </div>
+
+                <input class="fup-input" type="file" id="upload_file" name="upload_file" accept=".csv,.xlsx,.xls" required>
+                <div class="fup-help-text">Allowed formats: .csv, .xlsx, .xls</div>
+                <div class="invalid-feedback">Please choose a file to upload.</div>
+              </div>
+            </div>
+
+            <div class="fup-detail-item">
+              <label for="file_name_preview" class="fup-label">Selected File</label>
+              <input type="text" class="fup-input" id="file_name_preview" value="" readonly placeholder="No file selected">
+            </div>
+
+            <div class="fup-detail-item">
+              <label class="fup-label">Upload Guidance</label>
+              <div class="fup-guidance-card">
+                <div class="fup-guidance-title">Before You Upload</div>
+                <ul class="fup-guidance-list">
+                  <li>Select the correct upload type first.</li>
+                  <li>Use the expected source template structure.</li>
+                  <li>Verify headers and mandatory values.</li>
+                  <li>Upload only one file per submission.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="fup-detail-item fup-span-3">
+              <label for="remarks" class="fup-label">Remarks</label>
+              <textarea class="fup-textarea" id="remarks" name="remarks" rows="4" placeholder="Enter remarks if any...">{{ form_data.get('remarks', '') if form_data else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="fup-actions">
+          <button type="submit" class="fup-btn fup-btn-primary" id="uploadBtn">
+            <i class="bi bi-upload"></i>
+            Upload File
+          </button>
+
+          <button type="button" class="fup-btn fup-btn-ghost" id="clearBtn">
+            <i class="bi bi-x-circle"></i>
+            Clear
+          </button>
+
+          <a href="{{ url_for('file_upload_status') }}" class="fup-btn fup-btn-dark">
+            <i class="bi bi-clock-history"></i>
+            View Upload Status
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="fup-panel">
+    <div class="fup-panel-header">
+      <div>
+        <h2>Upload Instructions</h2>
+        <small>Review template and validation guidance before final submission.</small>
+      </div>
+    </div>
+
+    <div class="fup-panel-body">
+      <div class="fup-instruction-grid">
+        <div class="fup-instruction-card">
+          <h6><i class="bi bi-person-vcard"></i> Patient Upload</h6>
+          <ul>
+            <li>Use the correct patient template.</li>
+            <li>Keep mandatory columns filled.</li>
+            <li>Do not change template header names.</li>
+            <li>Upload one file at a time.</li>
+          </ul>
+        </div>
+
+        <div class="fup-instruction-card">
+          <h6><i class="bi bi-diagram-3"></i> Patient Workflow Upload</h6>
+          <ul>
+            <li>Ensure workflow values are valid.</li>
+            <li>Check date format consistency.</li>
+            <li>Use supported Excel / CSV file only.</li>
+            <li>Verify file before final upload.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/file_upload.js') }}"></script>
+
+{% endblock %}

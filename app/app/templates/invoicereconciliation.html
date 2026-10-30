@@ -1,0 +1,950 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Reconciliation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/invoicereconciliation.css') }}">
+
+{% set safe_total_invoices = total_invoices if total_invoices is defined else 0 %}
+{% set safe_matched = matched if matched is defined else 0 %}
+{% set safe_partial_matches = partial_matches if partial_matches is defined else 0 %}
+{% set safe_pending = pending if pending is defined else 0 %}
+
+{% set selected_from_date = from_date if from_date is defined and from_date else '' %}
+{% set selected_to_date = to_date if to_date is defined and to_date else '' %}
+{% set safe_today_date = today_date if today_date is defined and today_date else '' %}
+{% set safe_min_filter_date = min_filter_date if min_filter_date is defined and min_filter_date else '' %}
+
+{% set ns = namespace(
+    matched_amount=0.0,
+    total_outstanding=0.0
+) %}
+
+{% for row in reconciliation_rows %}
+    {% set invoice_amount = (row.get('netinv_amount', 0) or 0) | float %}
+    {% set total_received = (row.get('total_received', row.get('received_amount', 0)) or 0) | float %}
+    {% set outstanding_amount = (row.get('outstanding_amount', invoice_amount - total_received) or 0) | float %}
+    {% set recon_status = row.get('recon_status') or 'Pending' %}
+
+    {% if recon_status == 'MATCHED' %}
+        {% set ns.matched_amount = ns.matched_amount + invoice_amount %}
+    {% endif %}
+
+    {% if outstanding_amount > 0 %}
+        {% set ns.total_outstanding = ns.total_outstanding + outstanding_amount %}
+    {% endif %}
+{% endfor %}
+
+<div class="ir-page">
+
+  <div class="ir-topbar">
+    <div class="ir-title-wrap">
+      <h1>Invoice Reconciliation</h1>
+      <div class="ir-subtitle">
+        Track hospital receipts, outstanding balances and final invoice reconciliation.
+      </div>
+    </div>
+  </div>
+
+  <div class="ir-summary-grid">
+
+    <div class="ir-stat">
+      <div class="ir-stat-label">Total Invoices</div>
+      <div class="ir-stat-value" id="summaryTotalInvoices">
+        {{ safe_total_invoices }}
+      </div>
+      <div class="ir-stat-note">Invoices currently loaded</div>
+    </div>
+
+    <div class="ir-stat">
+      <div class="ir-stat-label">Matched</div>
+      <div class="ir-stat-value" id="summaryMatched">
+        {{ safe_matched }}
+      </div>
+      <div class="ir-stat-note">Final reconciliation matched</div>
+    </div>
+
+    <div class="ir-stat">
+      <div class="ir-stat-label">Tolerance Match</div>
+      <div class="ir-stat-value" id="summaryPartial">
+        {{ safe_partial_matches }}
+      </div>
+      <div class="ir-stat-note">Variance accepted within tolerance</div>
+    </div>
+
+    <div class="ir-stat">
+      <div class="ir-stat-label">Pending</div>
+      <div class="ir-stat-value" id="summaryPending">
+        {{ safe_pending }}
+      </div>
+      <div class="ir-stat-note">Awaiting final reconciliation</div>
+    </div>
+
+  </div>
+
+
+  <div class="ir-card">
+
+    <div class="ir-card-head">
+      <div>
+        <h2 class="ir-card-title">Reconciliation Workbench</h2>
+        <div class="ir-card-subtitle">
+          Register multiple hospital payments, monitor outstanding amounts and complete final reconciliation.
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-card-body">
+
+      <form method="GET"
+            action="{{ url_for('invoice_reconciliation') }}"
+            id="irDateFilterForm"
+            class="ir-filter-bar">
+
+        <div class="ir-filter-left">
+
+          <div class="ir-filter-field">
+            <label for="irFromDate">From Date</label>
+            <input
+              type="date"
+              id="irFromDate"
+              name="from_date"
+              class="ir-input"
+              value="{{ selected_from_date }}"
+              min="{{ safe_min_filter_date }}"
+              max="{{ safe_today_date }}"
+            >
+          </div>
+
+          <div class="ir-filter-field">
+            <label for="irToDate">To Date</label>
+            <input
+              type="date"
+              id="irToDate"
+              name="to_date"
+              class="ir-input"
+              value="{{ selected_to_date }}"
+              min="{{ safe_min_filter_date }}"
+              max="{{ safe_today_date }}"
+            >
+          </div>
+
+          <div class="ir-filter-field">
+            <button type="submit" class="ir-btn ir-btn-primary">
+              Apply Filter
+            </button>
+          </div>
+
+          <div class="ir-filter-field">
+            <a href="{{ url_for('invoice_reconciliation') }}"
+               class="ir-btn ir-btn-light">
+              Clear Filter
+            </a>
+          </div>
+
+        </div>
+
+        <div class="ir-filter-note">
+          Maximum allowed period: 1 year
+        </div>
+
+      </form>
+
+
+      <div class="ir-toolbar">
+
+        <div class="ir-toolbar-left" style="flex:1;">
+          <div class="ir-search">
+            <span class="ir-search-icon">&#128269;</span>
+            <input
+              type="text"
+              id="irSearchInput"
+              class="ir-input"
+              placeholder="Search invoice, hospital, payment status or reconciliation status"
+            >
+          </div>
+        </div>
+
+        <div class="ir-toolbar-right">
+          <div class="ir-tabs">
+            <button type="button"
+                    class="ir-tab active"
+                    data-filter="all">
+              All
+            </button>
+
+            <button type="button"
+                    class="ir-tab"
+                    data-filter="matched">
+              Matched
+            </button>
+
+            <button type="button"
+                    class="ir-tab"
+                    data-filter="partial">
+              Tolerance Match
+            </button>
+
+            <button type="button"
+                    class="ir-tab"
+                    data-filter="pending">
+              Pending
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="ir-table-wrap">
+
+        <table class="ir-table ir-recon-table">
+
+          <thead>
+            <tr>
+              <th>Invoice Number</th>
+              <th>Invoice Date</th>
+              <th>Hospital</th>
+              <th>Invoice Amount</th>
+              <th>Total Received</th>
+              <th>Outstanding</th>
+              <th>Payment Status</th>
+              <th>Payments</th>
+              <th>Last Payment</th>
+              <th>Recon Status</th>
+              <th>Workflow</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody id="reconciliationTableBody">
+
+          {% if reconciliation_rows %}
+
+            {% for row in reconciliation_rows %}
+
+              {% set invoice_number = row.get('invoice_number', '') %}
+              {% set invoice_date = row.get('invoice_date') %}
+              {% set hospital_name = row.get('hospital_name', '') %}
+
+              {% set invoice_amount = (row.get('netinv_amount', 0) or 0) | float %}
+              {% set total_received = (row.get('total_received', row.get('received_amount', 0)) or 0) | float %}
+              {% set outstanding_amount = (row.get('outstanding_amount', invoice_amount - total_received) or 0) | float %}
+
+              {% set payment_count = row.get('payment_count', 0) or 0 %}
+              {% set last_payment_date = row.get('last_payment_date') %}
+              {% set payment_status = row.get('payment_status') or 'UNPAID' %}
+
+              {% set recon_status = row.get('recon_status') or 'Pending' %}
+              {% set workflow_status = row.get('workflow_status') or 'INVOICE GENERATED' %}
+              {% set already_reconciled = row.get('already_reconciled', False) %}
+
+              {% set recon_status_upper = recon_status | string | upper %}
+
+              {% if recon_status_upper == 'MATCHED' %}
+                {% set row_filter_status = 'matched' %}
+                {% set recon_badge_class = 'ir-badge-success' %}
+                {% set recon_display = 'MATCHED' %}
+
+              {% elif recon_status_upper == 'PARTIAL MATCH' %}
+                {% set row_filter_status = 'partial' %}
+                {% set recon_badge_class = 'ir-badge-warning' %}
+                {% set recon_display = 'TOLERANCE MATCH' %}
+
+              {% else %}
+                {% set row_filter_status = 'pending' %}
+                {% set recon_badge_class = 'ir-badge-danger' %}
+                {% set recon_display = 'PENDING' %}
+              {% endif %}
+
+
+              {% set workflow_upper = workflow_status | string | upper %}
+
+              {% if workflow_upper == 'RECONCILED' %}
+                {% set workflow_badge_class = 'ir-badge-success' %}
+              {% elif 'GENERATED' in workflow_upper %}
+                {% set workflow_badge_class = 'ir-badge-warning' %}
+              {% else %}
+                {% set workflow_badge_class = 'ir-badge-info' %}
+              {% endif %}
+
+
+              {% set payment_status_upper = payment_status | string | upper %}
+
+              {% if payment_status_upper == 'FULLY RECEIVED' %}
+                {% set payment_badge_class = 'ir-badge-success' %}
+
+              {% elif payment_status_upper == 'PARTIALLY RECEIVED' %}
+                {% set payment_badge_class = 'ir-badge-warning' %}
+
+              {% elif payment_status_upper == 'OVERPAID' %}
+                {% set payment_badge_class = 'ir-badge-info' %}
+
+              {% else %}
+                {% set payment_badge_class = 'ir-badge-danger' %}
+              {% endif %}
+
+
+              <tr
+                class="ir-data-row"
+
+                data-status="{{ row_filter_status }}"
+
+                data-invoice-number="{{ invoice_number }}"
+                data-hospital-name="{{ hospital_name }}"
+
+                data-invoice-amount="{{ '%.2f' | format(invoice_amount) }}"
+                data-total-received="{{ '%.2f' | format(total_received) }}"
+                data-outstanding="{{ '%.2f' | format(outstanding_amount) }}"
+
+                data-payment-count="{{ payment_count }}"
+                data-payment-status="{{ payment_status }}"
+                data-recon-status="{{ recon_display }}"
+
+                data-already-reconciled="{{ 'true' if already_reconciled else 'false' }}"
+
+                data-search="{{ (
+                  invoice_number ~ ' ' ~
+                  hospital_name ~ ' ' ~
+                  payment_status ~ ' ' ~
+                  recon_display ~ ' ' ~
+                  workflow_status
+                ) | lower }}"
+              >
+
+                <td>
+                  <span class="ir-link">
+                    {{ invoice_number or '-' }}
+                  </span>
+                </td>
+
+                <td>
+                  {% if invoice_date %}
+                    {{ invoice_date.strftime('%d-%b-%Y') if invoice_date.strftime is defined else invoice_date }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>
+                  {{ hospital_name or '-' }}
+                </td>
+
+                <td class="ir-money">
+                  &#8377; {{ "{:,.2f}".format(invoice_amount) }}
+                </td>
+
+                <td class="ir-money ir-total-received">
+                  &#8377; {{ "{:,.2f}".format(total_received) }}
+                </td>
+
+                <td class="ir-money ir-outstanding-value {% if outstanding_amount > 0 %}ir-outstanding-open{% else %}ir-outstanding-clear{% endif %}">
+                  &#8377; {{ "{:,.2f}".format(outstanding_amount) }}
+                </td>
+
+                <td>
+                  <span class="ir-badge {{ payment_badge_class }}">
+                    {{ payment_status }}
+                  </span>
+                </td>
+
+                <td class="ir-payment-count">
+                  {{ payment_count }}
+                </td>
+
+                <td>
+                  {% if last_payment_date %}
+                    {{ last_payment_date.strftime('%d-%b-%Y') if last_payment_date.strftime is defined else last_payment_date }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>
+                  <span class="ir-badge {{ recon_badge_class }}">
+                    {{ recon_display }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="ir-badge {{ workflow_badge_class }}">
+                    {{ workflow_status }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="ir-action-stack">
+
+                    {% if not already_reconciled %}
+                      <button
+                        type="button"
+                        class="ir-btn ir-btn-primary ir-btn-small ir-record-payment-btn">
+                        Record Payment
+                      </button>
+                    {% endif %}
+
+                    <button
+                      type="button"
+                      class="ir-btn ir-btn-light ir-btn-small ir-payment-history-btn">
+                      History
+                    </button>
+
+                    {% if not already_reconciled and payment_count > 0 %}
+                      <button
+                        type="button"
+                        class="ir-btn ir-btn-light ir-btn-small ir-final-recon-btn">
+                        Final Recon
+                      </button>
+                    {% endif %}
+
+                    {% if already_reconciled %}
+                      <span class="ir-finalized-label">
+                        Finalized
+                      </span>
+                    {% endif %}
+
+                  </div>
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          {% else %}
+
+            <tr id="irNoRecordsRow">
+              <td colspan="12" class="ir-empty">
+                No invoice reconciliation records found.
+              </td>
+            </tr>
+
+          {% endif %}
+
+            <tr id="irNoSearchMatchRow" class="ir-hidden-row">
+              <td colspan="12" class="ir-empty">
+                No matching records found.
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="ir-footer">
+
+        <div class="ir-meta">
+          Showing
+          <span id="visibleRecordCount">0</span>
+          of
+          <span id="footerTotalCount">{{ safe_total_invoices }}</span>
+          reconciliation records
+        </div>
+
+        <div class="ir-pagination">
+
+          <div class="ir-page-size">
+            <label for="irPageSize">Rows</label>
+
+            <select id="irPageSize" class="ir-select">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+
+          <button type="button"
+                  class="ir-page-btn"
+                  id="irPrevPageBtn">
+            Prev
+          </button>
+
+          <div id="irPageButtons"
+               style="display:flex;gap:8px;flex-wrap:wrap;">
+          </div>
+
+          <button type="button"
+                  class="ir-page-btn"
+                  id="irNextPageBtn">
+            Next
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <div class="ir-note-grid">
+
+    <div class="ir-card">
+
+      <div class="ir-card-head">
+        <div>
+          <h2 class="ir-card-title">
+            Reconciliation Notes
+          </h2>
+
+          <div class="ir-card-subtitle">
+            Capture finance observations or follow-up notes.
+          </div>
+        </div>
+      </div>
+
+      <div class="ir-card-body">
+
+        <div class="ir-field">
+          <label for="recon_notes">
+            Notes / Comments
+          </label>
+
+          <textarea
+            id="recon_notes"
+            class="ir-textarea"
+            placeholder="Enter finance notes or payment clarification..."></textarea>
+        </div>
+
+        <div class="ir-filter-actions"
+             style="margin-top:14px;">
+          <button
+            type="button"
+            class="ir-btn ir-btn-light"
+            id="resetNotesBtn">
+            Reset
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+
+    <div class="ir-card">
+
+      <div class="ir-card-head">
+        <div>
+          <h2 class="ir-card-title">
+            Quick Insights
+          </h2>
+
+          <div class="ir-card-subtitle">
+            Current reconciliation exposure.
+          </div>
+        </div>
+      </div>
+
+      <div class="ir-card-body">
+
+        <div class="ir-highlight">
+
+          <div class="ir-mini">
+            <div class="ir-mini-label">
+              Matched Amount
+            </div>
+
+            <div class="ir-mini-value">
+              &#8377; {{ "{:,.2f}".format(ns.matched_amount) }}
+            </div>
+          </div>
+
+          <div class="ir-mini">
+            <div class="ir-mini-label">
+              Open Outstanding
+            </div>
+
+            <div class="ir-mini-value ir-outstanding-open">
+              &#8377; {{ "{:,.2f}".format(ns.total_outstanding) }}
+            </div>
+          </div>
+
+        </div>
+
+        <ul class="ir-list" style="margin-top:16px;">
+          <li>
+            Hospital receipts are recorded separately for every payment.
+          </li>
+
+          <li>
+            Partial payment does not mark an invoice as reconciled.
+          </li>
+
+          <li>
+            Final reconciliation uses cumulative posted payments from the payment ledger.
+          </li>
+        </ul>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- RECORD PAYMENT MODAL -->
+
+<div id="irPaymentModal"
+     class="ir-modal"
+     aria-hidden="true">
+
+  <div class="ir-modal-card ir-payment-modal-card">
+
+    <div class="ir-modal-head">
+      <div class="ir-modal-icon ir-modal-money-icon">&#8377;</div>
+
+      <div>
+        <h3 class="ir-modal-title">
+          Record Hospital Payment
+        </h3>
+
+        <div class="ir-modal-subtitle"
+             id="irPaymentModalInvoice">
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-modal-body">
+
+      <div class="ir-payment-summary">
+
+        <div>
+          <span>Invoice Amount</span>
+          <strong id="irPayInvoiceAmount">&#8377; 0.00</strong>
+        </div>
+
+        <div>
+          <span>Already Received</span>
+          <strong id="irPayAlreadyReceived">&#8377; 0.00</strong>
+        </div>
+
+        <div>
+          <span>Current Outstanding</span>
+          <strong id="irPayCurrentOutstanding"
+                  class="ir-outstanding-open">
+            &#8377; 0.00
+          </strong>
+        </div>
+
+      </div>
+
+
+      <div class="ir-payment-form-grid">
+
+        <div class="ir-field">
+          <label for="irPayReceivedNow">
+            Received Now <span class="ir-required">*</span>
+          </label>
+
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            id="irPayReceivedNow"
+            class="ir-input">
+        </div>
+
+        <div class="ir-field">
+          <label for="irPayDate">
+            Payment Date <span class="ir-required">*</span>
+          </label>
+
+          <input
+            type="date"
+            id="irPayDate"
+            class="ir-input"
+            value="{{ safe_today_date }}">
+        </div>
+
+        <div class="ir-field">
+          <label for="irPayUTR">
+            UTR / Reference <span class="ir-required">*</span>
+          </label>
+
+          <input
+            type="text"
+            id="irPayUTR"
+            class="ir-input"
+            maxlength="120">
+        </div>
+
+        <div class="ir-field">
+          <label for="irPayRemarks">
+            Payment Remarks
+          </label>
+
+          <input
+            type="text"
+            id="irPayRemarks"
+            class="ir-input"
+            maxlength="255">
+        </div>
+
+      </div>
+
+
+      <div class="ir-payment-preview">
+
+        <div>
+          <span>New Total Received</span>
+          <strong id="irPayPreviewTotal">&#8377; 0.00</strong>
+        </div>
+
+        <div>
+          <span>New Outstanding</span>
+          <strong id="irPayPreviewOutstanding"
+                  class="ir-outstanding-open">
+            &#8377; 0.00
+          </strong>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="ir-modal-footer">
+
+      <button
+        type="button"
+        class="ir-btn ir-btn-light"
+        id="irPaymentCancelBtn">
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        class="ir-btn ir-btn-primary"
+        id="irPaymentSaveBtn">
+        Record Payment
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- PAYMENT HISTORY MODAL -->
+
+<div id="irHistoryModal"
+     class="ir-modal"
+     aria-hidden="true">
+
+  <div class="ir-modal-card ir-history-modal-card">
+
+    <div class="ir-modal-head">
+
+      <div class="ir-modal-icon ir-modal-money-icon">
+        &#8377;
+      </div>
+
+      <div>
+        <h3 class="ir-modal-title">
+          Payment History
+        </h3>
+
+        <div class="ir-modal-subtitle"
+             id="irHistoryInvoice">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ir-modal-body">
+
+      <div id="irHistorySummary"
+           class="ir-payment-summary">
+      </div>
+
+      <div class="ir-history-table-wrap">
+
+        <table class="ir-history-table">
+
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>UTR / Ref</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+
+          <tbody id="irHistoryBody">
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+    <div class="ir-modal-footer">
+
+      <button
+        type="button"
+        class="ir-btn ir-btn-light"
+        id="irHistoryCloseBtn">
+        Close
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- FINAL RECON MODAL -->
+
+<div id="irFinalReconModal"
+     class="ir-modal"
+     aria-hidden="true">
+
+  <div class="ir-modal-card">
+
+    <div class="ir-modal-head">
+
+      <div class="ir-modal-icon ir-modal-money-icon">
+        &#10003;
+      </div>
+
+      <div>
+        <h3 class="ir-modal-title">
+          Final Reconciliation
+        </h3>
+
+        <div class="ir-modal-subtitle"
+             id="irFinalReconInvoice">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ir-modal-body">
+
+      <div class="ir-payment-summary">
+
+        <div>
+          <span>Invoice Amount</span>
+          <strong id="irFinalInvoiceAmount">
+            &#8377; 0.00
+          </strong>
+        </div>
+
+        <div>
+          <span>Total Received</span>
+          <strong id="irFinalTotalReceived">
+            &#8377; 0.00
+          </strong>
+        </div>
+
+        <div>
+          <span>Current Outstanding</span>
+          <strong id="irFinalOutstanding"
+                  class="ir-outstanding-open">
+            &#8377; 0.00
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="ir-field"
+           style="margin-top:16px;">
+
+        <label for="irFinalRemarks">
+          Final Reconciliation Remarks
+        </label>
+
+        <input
+          type="text"
+          id="irFinalRemarks"
+          class="ir-input"
+          maxlength="50"
+          placeholder="Optional - maximum 50 characters">
+
+      </div>
+
+      <div class="ir-final-warning">
+        TERIQEN will calculate the final difference from all posted hospital payments and apply the configured reconciliation tolerance rules.
+      </div>
+
+    </div>
+
+    <div class="ir-modal-footer">
+
+      <button
+        type="button"
+        class="ir-btn ir-btn-light"
+        id="irFinalCancelBtn">
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        class="ir-btn ir-btn-primary"
+        id="irFinalConfirmBtn">
+        Complete Final Reconciliation
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- GENERAL RESULT POPUP -->
+
+<div id="irPopupModal"
+     class="ir-modal"
+     aria-hidden="true">
+
+  <div id="irPopupCard"
+       class="ir-modal-card ir-modal-success">
+
+    <div class="ir-modal-head">
+
+      <div id="irPopupIcon"
+           class="ir-modal-icon">
+        &#10003;
+      </div>
+
+      <div>
+        <h3 id="irPopupTitle"
+            class="ir-modal-title">
+          Success
+        </h3>
+
+        <div id="irPopupSubtitle"
+             class="ir-modal-subtitle">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ir-modal-body">
+      <ul id="irPopupList"
+          class="ir-modal-list">
+      </ul>
+    </div>
+
+    <div class="ir-modal-footer">
+      <button
+        type="button"
+        class="ir-btn ir-btn-light"
+        id="irPopupCloseBtn">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<script src="{{ url_for('static', filename='js/pages/invoicereconciliation.js') }}"></script>
+
+{% endblock %}

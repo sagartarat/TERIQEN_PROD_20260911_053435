@@ -1,0 +1,1123 @@
+{% extends "base.html" %}
+
+{% block title %}Round Robin Assignment{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/pages/round_robin_assignment.css') }}">
+
+<style>
+    .rr-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid #d7e0ec;
+        flex-wrap: wrap;
+    }
+
+    .rr-tab-button {
+        border: 0;
+        border-bottom: 3px solid transparent;
+        background: transparent;
+        color: #53657d;
+        padding: 12px 18px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .rr-tab-button.active {
+        color: #153f73;
+        border-bottom-color: #246fbd;
+    }
+
+    .rr-tab-panel {
+        display: none;
+    }
+
+    .rr-tab-panel.active {
+        display: block;
+    }
+
+    .rr-two-column {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 0.72fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .rr-rule-flow {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .rr-flow-card {
+        position: relative;
+        border: 1px solid #d8e2ee;
+        border-radius: 10px;
+        background: #ffffff;
+        padding: 15px;
+        min-height: 92px;
+    }
+
+    .rr-flow-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #e8f1fb;
+        color: #15589c;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .rr-flow-title {
+        color: #173a65;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .rr-flow-text {
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .rr-pool-preview {
+        border: 1px solid #d8e2ee;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #ffffff;
+    }
+
+    .rr-pool-preview-header {
+        padding: 14px 16px;
+        background: #f5f8fc;
+        border-bottom: 1px solid #d8e2ee;
+    }
+
+    .rr-preview-title {
+        font-weight: 800;
+        color: #173a65;
+    }
+
+    .rr-preview-subtitle {
+        color: #64748b;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    .rr-member-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .rr-member-item {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 16px;
+        border-bottom: 1px solid #edf1f6;
+    }
+
+    .rr-member-item:last-child {
+        border-bottom: 0;
+    }
+
+    .rr-priority-bubble {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #edf4fc;
+        color: #15589c;
+        font-weight: 800;
+    }
+
+    .rr-member-name {
+        color: #173a65;
+        font-weight: 700;
+    }
+
+    .rr-member-code {
+        color: #718096;
+        font-size: 12px;
+        margin-top: 2px;
+    }
+
+    .rr-member-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .rr-icon-button {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #cbd8e6;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #315a87;
+        cursor: pointer;
+    }
+
+    .rr-icon-button.danger {
+        color: #b42318;
+    }
+
+    .rr-inline-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 130px auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .rr-help-box {
+        border-left: 4px solid #2f79c7;
+        background: #edf5fe;
+        color: #315f91;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        border-radius: 0 6px 6px 0;
+        margin-top: 14px;
+    }
+
+    .rr-table-note {
+        font-size: 12px;
+        color: #718096;
+        margin-top: 4px;
+    }
+
+    .rr-next-user {
+        font-weight: 800;
+        color: #14532d;
+    }
+
+    .rr-empty-pool {
+        padding: 28px 18px;
+        text-align: center;
+        color: #718096;
+    }
+
+    @media (max-width: 980px) {
+        .rr-two-column,
+        .rr-rule-flow {
+            grid-template-columns: 1fr;
+        }
+
+        .rr-inline-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+{% set active_tab = active_tab or 'rules' %}
+{% set rule_form = rule_form or {} %}
+{% set pool_form = pool_form or {} %}
+
+<div class="sla-page">
+
+    <!-- PAGE HEADER -->
+    <div class="sla-header-card">
+        <div class="sla-header-top">
+            <div>
+                <div class="sla-header-subtitle">
+                    System Control / Assignment Management
+                </div>
+
+                <h1 class="sla-header-title">Round Robin Assignment</h1>
+
+                <p class="sla-header-desc">
+                    Configure reusable user pools and map them to Default,
+                    Agency, or Country assignment rules.
+                </p>
+
+                <div class="sla-mode-chip">Configuration Console</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="sla-stats-row">
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Active Rules</div>
+            <div class="sla-stat-value">{{ active_rule_count or 0 }}</div>
+        </div>
+
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Assignment Pools</div>
+            <div class="sla-stat-value">{{ pool_count or 0 }}</div>
+        </div>
+
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Mapped Users</div>
+            <div class="sla-stat-value">{{ mapped_user_count or 0 }}</div>
+        </div>
+
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Assignments Today</div>
+            <div class="sla-stat-value">{{ assignments_today or 0 }}</div>
+        </div>
+    </div>
+
+    <div class="sla-card">
+        <div class="sla-card-body">
+
+            <div class="rr-tabs" role="tablist">
+                <button type="button"
+                        class="rr-tab-button {% if active_tab == 'rules' %}active{% endif %}"
+                        data-tab="rules">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    Assignment Rules
+                </button>
+
+                <button type="button"
+                        class="rr-tab-button {% if active_tab == 'pools' %}active{% endif %}"
+                        data-tab="pools">
+                    <i class="fa-solid fa-users-gear"></i>
+                    Assignment Pools
+                </button>
+
+                <button type="button"
+                        class="rr-tab-button {% if active_tab == 'status' %}active{% endif %}"
+                        data-tab="status">
+                    <i class="fa-solid fa-rotate"></i>
+                    Assignment Status
+                </button>
+            </div>
+
+            <!-- =========================================================
+                 TAB 1: ASSIGNMENT RULES
+            ========================================================== -->
+            <section id="rr-tab-rules"
+                     class="rr-tab-panel {% if active_tab == 'rules' %}active{% endif %}">
+
+                <div class="rr-rule-flow">
+                    <div class="rr-flow-card">
+                        <div class="rr-flow-number">1</div>
+                        <div class="rr-flow-title">Agency Match</div>
+                        <div class="rr-flow-text">
+                            The Agency rule is checked first for the incoming record.
+                        </div>
+                    </div>
+
+                    <div class="rr-flow-card">
+                        <div class="rr-flow-number">2</div>
+                        <div class="rr-flow-title">Country Match</div>
+                        <div class="rr-flow-text">
+                            If no Agency rule matches, the Country rule is checked.
+                        </div>
+                    </div>
+
+                    <div class="rr-flow-card">
+                        <div class="rr-flow-number">3</div>
+                        <div class="rr-flow-title">Default Fallback</div>
+                        <div class="rr-flow-text">
+                            The Default pool is used when no specific rule is found.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sla-card">
+                    <div class="sla-card-header">
+                        <h2 class="sla-card-title">Assignment Rule</h2>
+                        <div class="sla-card-subtitle">
+                            Link one rule to one reusable assignment pool.
+                        </div>
+                    </div>
+
+                    <div class="sla-card-body">
+                        {% if rule_error %}
+                            <div class="sla-alert">{{ rule_error }}</div>
+                        {% endif %}
+
+                        {% if rule_success %}
+                            <div class="sla-success">{{ rule_success }}</div>
+                        {% endif %}
+
+                        <form method="post"
+                              id="assignmentRuleForm"
+                              autocomplete="off">
+
+                            <input type="hidden" name="form_section" value="rule">
+                            <input type="hidden"
+                                   id="rule_id"
+                                   name="rule_id"
+                                   value="{{ rule_form.id or '' }}">
+
+                            <div class="sla-form-grid">
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="rule_name">
+                                        Rule Name
+                                    </label>
+                                    <input type="text"
+                                           id="rule_name"
+                                           name="rule_name"
+                                           class="sla-input"
+                                           maxlength="150"
+                                           value="{{ rule_form.rule_name or '' }}"
+                                           placeholder="Example: Bangladesh Agency Rule"
+                                           required>
+                                    <div class="sla-inline-note">
+                                        Use a meaningful name for easy identification.
+                                    </div>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="rule_type">
+                                        Rule Type
+                                    </label>
+                                    <select id="rule_type"
+                                            name="rule_type"
+                                            class="sla-select"
+                                            required>
+                                        <option value="">Select Rule Type</option>
+                                        <option value="DEFAULT"
+                                            {% if (rule_form.rule_type or '')|upper == 'DEFAULT' %}selected{% endif %}>
+                                            Default
+                                        </option>
+                                        <option value="AGENCY"
+                                            {% if (rule_form.rule_type or '')|upper == 'AGENCY' %}selected{% endif %}>
+                                            Agency
+                                        </option>
+                                        <option value="COUNTRY"
+                                            {% if (rule_form.rule_type or '')|upper == 'COUNTRY' %}selected{% endif %}>
+                                            Country
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="rule_value">
+                                        Rule Value
+                                    </label>
+                                    <select id="rule_value"
+                                            name="rule_value"
+                                            class="sla-select">
+                                        <option value="">Select Rule Value</option>
+
+                                        {% for agency in agency_options or [] %}
+                                            {% set agency_value = agency.short_name if agency.short_name is defined else agency %}
+                                            {% set agency_label = agency.partner_name if agency.partner_name is defined else agency_value %}
+                                            <option value="{{ agency_value }}"
+                                                    data-rule-type="AGENCY"
+                                                {% if (rule_form.rule_type or '')|upper == 'AGENCY' and rule_form.rule_value == agency_value %}selected{% endif %}>
+                                                {{ agency_label }}{% if agency_label != agency_value %} ({{ agency_value }}){% endif %}
+                                            </option>
+                                        {% endfor %}
+
+                                        {% for country in country_options or [] %}
+                                            {% set country_value = country.country_name if country.country_name is defined else country %}
+                                            <option value="{{ country_value }}"
+                                                    data-rule-type="COUNTRY"
+                                                {% if (rule_form.rule_type or '')|upper == 'COUNTRY' and rule_form.rule_value == country_value %}selected{% endif %}>
+                                                {{ country_value }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="sla-inline-note" id="ruleValueHelp">
+                                        Select Rule Type first.
+                                    </div>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="pool_id">
+                                        Assignment Pool
+                                    </label>
+                                    <select id="pool_id"
+                                            name="pool_id"
+                                            class="sla-select"
+                                            required>
+                                        <option value="">Select Assignment Pool</option>
+                                        {% for pool in assignment_pools or [] %}
+                                            <option value="{{ pool.id }}"
+                                                {% if (rule_form.pool_id|string) == (pool.id|string) %}selected{% endif %}>
+                                                {{ pool.pool_name }}
+                                                {% if pool.member_count is defined %}
+                                                    ({{ pool.member_count }} Users)
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="sla-inline-note">
+                                        User order is maintained inside the selected pool.
+                                    </div>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="rule_priority">
+                                        Rule Priority
+                                    </label>
+                                    <input type="number"
+                                           id="rule_priority"
+                                           name="priority_order"
+                                           class="sla-input"
+                                           min="1"
+                                           step="1"
+                                           value="{{ rule_form.priority_order or 1 }}"
+                                           required>
+                                    <div class="sla-inline-note">
+                                        Lower numbers are evaluated first among similar rules.
+                                    </div>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label" for="rule_active_flag">
+                                        Rule Status
+                                    </label>
+                                    <select id="rule_active_flag"
+                                            name="active_flag"
+                                            class="sla-select">
+                                        <option value="1"
+                                            {% if rule_form.active_flag is not defined or rule_form.active_flag|string == '1' %}selected{% endif %}>
+                                            Active
+                                        </option>
+                                        <option value="0"
+                                            {% if rule_form.active_flag is defined and rule_form.active_flag|string == '0' %}selected{% endif %}>
+                                            Inactive
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="rr-help-box">
+                                Recommended evaluation sequence: <strong>Agency → Country → Default</strong>.
+                                A Default rule should always be maintained as the final fallback.
+                            </div>
+
+                            <div class="sla-form-actions">
+                                <button type="button"
+                                        class="sla-btn"
+                                        onclick="clearRuleForm()">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                    Clear
+                                </button>
+
+                                <button type="submit"
+                                        class="sla-btn sla-btn-primary">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                    Save Rule
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="sla-card">
+                    <div class="sla-card-header">
+                        <h2 class="sla-card-title">Configured Assignment Rules</h2>
+                        <div class="sla-card-subtitle">
+                            Rules determine which assignment pool is used for each record.
+                        </div>
+                    </div>
+
+                    <div class="sla-card-body">
+                        <div class="sla-table-wrap">
+                            <table class="sla-table">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Rule Name</th>
+                                        <th>Rule Type</th>
+                                        <th>Rule Value</th>
+                                        <th>Assignment Pool</th>
+                                        <th>Users</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if configured_rules %}
+                                        {% for rule in configured_rules %}
+                                            <tr>
+                                                <td>{{ rule.priority_order or 1 }}</td>
+                                                <td><strong>{{ rule.rule_name }}</strong></td>
+                                                <td>
+                                                    <span class="sla-badge {% if rule.rule_type == 'DEFAULT' %}sla-badge-draft{% elif rule.rule_type == 'AGENCY' %}sla-badge-active{% else %}sla-badge-running{% endif %}">
+                                                        {{ rule.rule_type }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ rule.rule_value or 'Not Applicable' }}</td>
+                                                <td>{{ rule.pool_name or '-' }}</td>
+                                                <td>{{ rule.member_count or 0 }}</td>
+                                                <td>
+                                                    {% if rule.active_flag|string == '1' %}
+                                                        <span class="sla-badge sla-badge-active">ACTIVE</span>
+                                                    {% else %}
+                                                        <span class="sla-badge sla-badge-inactive">INACTIVE</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="sla-row-actions">
+                                                        <a href="{{ url_for('round_robin_assignment', tab='rules', rule_id=rule.id, mode='edit') }}"
+                                                           class="sla-btn-mini">
+                                                            <i class="fa-solid fa-pen"></i> Edit
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="sla-empty-state">
+                                                    No assignment rules have been configured.
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =========================================================
+                 TAB 2: ASSIGNMENT POOLS
+            ========================================================== -->
+            <section id="rr-tab-pools"
+                     class="rr-tab-panel {% if active_tab == 'pools' %}active{% endif %}">
+
+                <div class="rr-two-column">
+                    <div class="sla-card">
+                        <div class="sla-card-header">
+                            <h2 class="sla-card-title">Assignment Pool</h2>
+                            <div class="sla-card-subtitle">
+                                Create a reusable team and maintain user sequence only once.
+                            </div>
+                        </div>
+
+                        <div class="sla-card-body">
+                            {% if pool_error %}
+                                <div class="sla-alert">{{ pool_error }}</div>
+                            {% endif %}
+
+                            {% if pool_success %}
+                                <div class="sla-success">{{ pool_success }}</div>
+                            {% endif %}
+
+                            <form method="post"
+                                  id="assignmentPoolForm"
+                                  autocomplete="off">
+
+                                <input type="hidden" name="form_section" value="pool">
+                                <input type="hidden"
+                                       id="pool_master_id"
+                                       name="pool_id"
+                                       value="{{ pool_form.id or '' }}">
+
+                                <div class="sla-form-grid">
+                                    <div class="sla-form-group">
+                                        <label class="sla-form-label" for="pool_name">
+                                            Pool Name
+                                        </label>
+                                        <input type="text"
+                                               id="pool_name"
+                                               name="pool_name"
+                                               class="sla-input"
+                                               maxlength="150"
+                                               value="{{ pool_form.pool_name or '' }}"
+                                               placeholder="Example: General Operations Team"
+                                               required>
+                                    </div>
+
+                                    <div class="sla-form-group">
+                                        <label class="sla-form-label" for="pool_status">
+                                            Pool Status
+                                        </label>
+                                        <select id="pool_status"
+                                                name="pool_active_flag"
+                                                class="sla-select">
+                                            <option value="1"
+                                                {% if pool_form.active_flag is not defined or pool_form.active_flag|string == '1' %}selected{% endif %}>
+                                                Active
+                                            </option>
+                                            <option value="0"
+                                                {% if pool_form.active_flag is defined and pool_form.active_flag|string == '0' %}selected{% endif %}>
+                                                Inactive
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="sla-form-group sla-form-group-full">
+                                        <label class="sla-form-label" for="pool_description">
+                                            Description
+                                        </label>
+                                        <textarea id="pool_description"
+                                                  name="description"
+                                                  class="sla-input"
+                                                  rows="3"
+                                                  maxlength="255"
+                                                  placeholder="Describe where this pool will be used">{{ pool_form.description or '' }}</textarea>
+                                    </div>
+                                </div>
+
+                                <hr style="border:0;border-top:1px solid #dbe4ef;margin:22px 0;">
+
+                                <h3 class="sla-card-title" style="font-size:16px;">
+                                    Add Pool Member
+                                </h3>
+
+                                <div class="rr-inline-row">
+                                    <div class="sla-form-group">
+                                        <label class="sla-form-label" for="member_user_code">
+                                            User
+                                        </label>
+                                        <select id="member_user_code" class="sla-select">
+                                            <option value="">Select User</option>
+                                            {% for user in user_options or [] %}
+                                                {% set user_code = user.user_code if user.user_code is defined else user %}
+                                                {% set user_name = user.user_name if user.user_name is defined else user_code %}
+                                                <option value="{{ user_code }}"
+                                                        data-user-name="{{ user_name }}">
+                                                    {{ user_name }}{% if user_name != user_code %} ({{ user_code }}){% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="sla-form-group">
+                                        <label class="sla-form-label" for="member_priority">
+                                            Priority
+                                        </label>
+                                        <input type="number"
+                                               id="member_priority"
+                                               class="sla-input"
+                                               min="1"
+                                               step="1"
+                                               value="1">
+                                    </div>
+
+                                    <button type="button"
+                                            class="sla-btn sla-btn-primary"
+                                            onclick="addPoolMember()">
+                                        <i class="fa-solid fa-user-plus"></i>
+                                        Add User
+                                    </button>
+                                </div>
+
+                                <div class="rr-help-box">
+                                    User priority is maintained inside this pool. Every rule linked
+                                    to this pool will automatically use the same ordered user list.
+                                </div>
+
+                                <input type="hidden"
+                                       id="pool_members_json"
+                                       name="pool_members_json"
+                                       value='{{ pool_members_json or "[]" }}'>
+
+                                <div class="sla-form-actions">
+                                    <button type="button"
+                                            class="sla-btn"
+                                            onclick="clearPoolForm()">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                        Clear
+                                    </button>
+
+                                    <button type="submit"
+                                            class="sla-btn sla-btn-primary">
+                                        <i class="fa-solid fa-floppy-disk"></i>
+                                        Save Pool
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="rr-pool-preview">
+                        <div class="rr-pool-preview-header">
+                            <div class="rr-preview-title">Pool Member Sequence</div>
+                            <div class="rr-preview-subtitle">
+                                Use the arrows to change assignment order.
+                            </div>
+                        </div>
+
+                        <ul class="rr-member-list" id="poolMemberList"></ul>
+
+                        <div class="rr-empty-pool" id="emptyPoolMessage">
+                            No users added to this pool.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sla-card" style="margin-top:20px;">
+                    <div class="sla-card-header">
+                        <h2 class="sla-card-title">Configured Assignment Pools</h2>
+                        <div class="sla-card-subtitle">
+                            Reusable teams available for Default, Agency, and Country rules.
+                        </div>
+                    </div>
+
+                    <div class="sla-card-body">
+                        <div class="sla-table-wrap">
+                            <table class="sla-table">
+                                <thead>
+                                    <tr>
+                                        <th>Pool Name</th>
+                                        <th>Description</th>
+                                        <th>Users</th>
+                                        <th>Used By Rules</th>
+                                        <th>Status</th>
+                                        <th>Updated On</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if assignment_pools %}
+                                        {% for pool in assignment_pools %}
+                                            <tr>
+                                                <td><strong>{{ pool.pool_name }}</strong></td>
+                                                <td>{{ pool.description or '-' }}</td>
+                                                <td>{{ pool.member_count or 0 }}</td>
+                                                <td>{{ pool.rule_count or 0 }}</td>
+                                                <td>
+                                                    {% if pool.active_flag|string == '1' %}
+                                                        <span class="sla-badge sla-badge-active">ACTIVE</span>
+                                                    {% else %}
+                                                        <span class="sla-badge sla-badge-inactive">INACTIVE</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ pool.updated_on or '-' }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('round_robin_assignment', tab='pools', pool_id=pool.id, mode='edit') }}"
+                                                       class="sla-btn-mini">
+                                                        <i class="fa-solid fa-pen"></i> Edit
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="sla-empty-state">
+                                                    No assignment pools have been configured.
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =========================================================
+                 TAB 3: ASSIGNMENT STATUS
+            ========================================================== -->
+            <section id="rr-tab-status"
+                     class="rr-tab-panel {% if active_tab == 'status' %}active{% endif %}">
+
+                <div class="sla-card">
+                    <div class="sla-card-header">
+                        <h2 class="sla-card-title">Current Round Robin Status</h2>
+                        <div class="sla-card-subtitle">
+                            Displays the last assigned user and calculated next user for every rule.
+                        </div>
+                    </div>
+
+                    <div class="sla-card-body">
+                        <div class="sla-table-wrap">
+                            <table class="sla-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rule Name</th>
+                                        <th>Rule Type</th>
+                                        <th>Rule Value</th>
+                                        <th>Assignment Pool</th>
+                                        <th>Last Assigned User</th>
+                                        <th>Last Assigned On</th>
+                                        <th>Next User</th>
+                                        <th>Pool Users</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if round_robin_statuses %}
+                                        {% for status in round_robin_statuses %}
+                                            <tr>
+                                                <td><strong>{{ status.rule_name }}</strong></td>
+                                                <td>{{ status.rule_type }}</td>
+                                                <td>{{ status.rule_value or 'Not Applicable' }}</td>
+                                                <td>{{ status.pool_name or '-' }}</td>
+                                                <td>{{ status.last_user_name or status.last_user_code or 'Not Started' }}</td>
+                                                <td>{{ status.last_assigned_on or '-' }}</td>
+                                                <td>
+                                                    <span class="rr-next-user">
+                                                        {{ status.next_user_name or status.next_user_code or '-' }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ status.member_count or 0 }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="sla-empty-state">
+                                                    No Round Robin status is available. Status will be created after the first assignment.
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const initialPoolMembers = (() => {
+        try {
+            return JSON.parse(document.getElementById("pool_members_json")?.value || "[]");
+        } catch (error) {
+            return [];
+        }
+    })();
+
+    let poolMembers = Array.isArray(initialPoolMembers) ? initialPoolMembers : [];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        initializeTabs();
+        initializeRuleValueFilter();
+        normalizePoolMemberPriorities();
+        renderPoolMembers();
+    });
+
+    function initializeTabs() {
+        const buttons = document.querySelectorAll(".rr-tab-button");
+        const panels = document.querySelectorAll(".rr-tab-panel");
+
+        buttons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                const tabName = button.dataset.tab;
+
+                buttons.forEach(item => item.classList.remove("active"));
+                panels.forEach(item => item.classList.remove("active"));
+
+                button.classList.add("active");
+                document.getElementById("rr-tab-" + tabName)?.classList.add("active");
+            });
+        });
+    }
+
+    function initializeRuleValueFilter() {
+        const ruleType = document.getElementById("rule_type");
+        const ruleValue = document.getElementById("rule_value");
+        const help = document.getElementById("ruleValueHelp");
+
+        if (!ruleType || !ruleValue) {
+            return;
+        }
+
+        const typedOptions = Array.from(
+            ruleValue.querySelectorAll("option[data-rule-type]")
+        );
+
+        function applyFilter(clearCurrentValue) {
+            const selectedType = (ruleType.value || "").toUpperCase();
+            const currentValue = ruleValue.value;
+
+            typedOptions.forEach(function (option) {
+                const matches = option.dataset.ruleType === selectedType;
+                option.hidden = !matches;
+                option.disabled = !matches;
+            });
+
+            if (selectedType === "DEFAULT") {
+                ruleValue.value = "";
+                ruleValue.disabled = true;
+                ruleValue.required = false;
+                help.textContent = "Rule Value is not required for the Default rule.";
+                return;
+            }
+
+            ruleValue.disabled = selectedType === "";
+            ruleValue.required = selectedType === "AGENCY" || selectedType === "COUNTRY";
+
+            if (clearCurrentValue) {
+                ruleValue.value = "";
+            } else {
+                const selectedOption = typedOptions.find(function (option) {
+                    return option.value === currentValue && !option.disabled;
+                });
+
+                if (!selectedOption) {
+                    ruleValue.value = "";
+                }
+            }
+
+            if (selectedType === "AGENCY") {
+                help.textContent = "Select an Agency from partner_reg.";
+            } else if (selectedType === "COUNTRY") {
+                help.textContent = "Select a Country from country_master.";
+            } else {
+                help.textContent = "Select Rule Type first.";
+            }
+        }
+
+        ruleType.addEventListener("change", function () {
+            applyFilter(true);
+        });
+
+        applyFilter(false);
+    }
+
+    function addPoolMember() {
+        const userSelect = document.getElementById("member_user_code");
+        const priorityInput = document.getElementById("member_priority");
+
+        if (!userSelect || !priorityInput || !userSelect.value) {
+            alert("Please select a user.");
+            return;
+        }
+
+        const userCode = userSelect.value;
+        const selectedOption = userSelect.options[userSelect.selectedIndex];
+        const userName = selectedOption.dataset.userName || selectedOption.textContent.trim();
+        let priority = parseInt(priorityInput.value, 10);
+
+        if (!Number.isInteger(priority) || priority < 1) {
+            priority = poolMembers.length + 1;
+        }
+
+        const duplicate = poolMembers.some(member => member.user_code === userCode);
+
+        if (duplicate) {
+            alert("This user is already part of the pool.");
+            return;
+        }
+
+        poolMembers.push({
+            user_code: userCode,
+            user_name: userName,
+            priority_order: priority,
+            active_flag: 1
+        });
+
+        poolMembers.sort((a, b) => a.priority_order - b.priority_order);
+        normalizePoolMemberPriorities();
+        renderPoolMembers();
+
+        userSelect.value = "";
+        priorityInput.value = poolMembers.length + 1;
+    }
+
+    function movePoolMember(index, direction) {
+        const targetIndex = index + direction;
+
+        if (targetIndex < 0 || targetIndex >= poolMembers.length) {
+            return;
+        }
+
+        const temporaryMember = poolMembers[index];
+        poolMembers[index] = poolMembers[targetIndex];
+        poolMembers[targetIndex] = temporaryMember;
+
+        normalizePoolMemberPriorities();
+        renderPoolMembers();
+    }
+
+    function removePoolMember(index) {
+        poolMembers.splice(index, 1);
+        normalizePoolMemberPriorities();
+        renderPoolMembers();
+    }
+
+    function normalizePoolMemberPriorities() {
+        poolMembers.forEach(function (member, index) {
+            member.priority_order = index + 1;
+        });
+    }
+
+    function renderPoolMembers() {
+        const list = document.getElementById("poolMemberList");
+        const emptyMessage = document.getElementById("emptyPoolMessage");
+        const hiddenInput = document.getElementById("pool_members_json");
+
+        if (!list || !emptyMessage || !hiddenInput) {
+            return;
+        }
+
+        list.innerHTML = "";
+        emptyMessage.style.display = poolMembers.length ? "none" : "block";
+
+        poolMembers.forEach(function (member, index) {
+            const item = document.createElement("li");
+            item.className = "rr-member-item";
+
+            item.innerHTML = `
+                <span class="rr-priority-bubble">${index + 1}</span>
+                <div>
+                    <div class="rr-member-name">${escapeHtml(member.user_name || member.user_code)}</div>
+                    <div class="rr-member-code">${escapeHtml(member.user_code)}</div>
+                </div>
+                <div class="rr-member-actions">
+                    <button type="button" class="rr-icon-button"
+                            title="Move Up" onclick="movePoolMember(${index}, -1)">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="rr-icon-button"
+                            title="Move Down" onclick="movePoolMember(${index}, 1)">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+                    <button type="button" class="rr-icon-button danger"
+                            title="Remove" onclick="removePoolMember(${index})">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            list.appendChild(item);
+        });
+
+        hiddenInput.value = JSON.stringify(poolMembers);
+    }
+
+    function clearRuleForm() {
+        const form = document.getElementById("assignmentRuleForm");
+        if (!form) return;
+
+        form.reset();
+        document.getElementById("rule_id").value = "";
+        document.getElementById("rule_value").value = "";
+        document.getElementById("rule_value").disabled = true;
+        document.getElementById("rule_priority").value = "1";
+        document.getElementById("ruleValueHelp").textContent = "Select Rule Type first.";
+    }
+
+    function clearPoolForm() {
+        const form = document.getElementById("assignmentPoolForm");
+        if (!form) return;
+
+        form.reset();
+        document.getElementById("pool_master_id").value = "";
+        poolMembers = [];
+        renderPoolMembers();
+        document.getElementById("member_priority").value = "1";
+    }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+</script>
+
+{% endblock %}

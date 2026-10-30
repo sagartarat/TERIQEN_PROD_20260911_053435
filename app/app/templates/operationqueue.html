@@ -1,0 +1,820 @@
+{% extends "base.html" %}
+
+{% block title %}Operation Queue{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/operationqueue.css') }}">
+
+<div class="opq-page">
+
+  <div class="opq-page-header">
+    <div class="opq-title-block">
+      <h1>Operation Queue</h1>
+      <p>Enterprise queue with Channel Thread grouping, latest patient communication visibility, and side-view case handling.</p>
+    </div>
+
+    <div class="opq-header-actions">
+      <button class="opq-btn opq-btn-light" type="button">Export</button>
+      <button class="opq-btn opq-btn-light" type="button" onclick="window.location.reload();">Refresh</button>
+      <button class="opq-btn opq-btn-primary" type="button">Create Queue Item</button>
+    </div>
+  </div>
+
+  <div class="opq-stats">
+    <div class="opq-stat-card opq-stat-card-clickable" id="opqThreadGroupsCard" data-dashboard-filter="">
+      <div class="opq-stat-label">Thread Groups</div>
+      <div class="opq-stat-value" id="opqThreadCount">0</div>
+    </div>
+    <div class="opq-stat-card opq-stat-card-clickable" id="opqNearBreachCard" data-dashboard-filter="NEAR BREACH">
+      <div class="opq-stat-label">Near Breach</div>
+      <div class="opq-stat-value" id="opqNearBreachCount">0</div>
+    </div>
+    <div class="opq-stat-card opq-stat-card-danger opq-stat-card-clickable" id="opqBreachedCard" data-dashboard-filter="BREACHED">
+      <div class="opq-stat-label">Breached</div>
+      <div class="opq-stat-value" id="opqBreachedCount">0</div>
+    </div>
+    <div class="opq-stat-card opq-stat-card-danger opq-stat-card-clickable" id="opqEscalatedCard" data-dashboard-filter="ESCALATED">
+      <div class="opq-stat-label">Escalated</div>
+      <div class="opq-stat-value" id="opqEscalatedCount">0</div>
+    </div>
+  </div>
+
+  <div class="opq-filters">
+    <div class="opq-field">
+      <label>ALL LIKE SEARCH</label>
+      <input type="text" id="opqSearchInput" placeholder="Like Search..." />
+    </div>
+
+    <div class="opq-field">
+      <label>Status</label>
+      <select id="opqStatusFilter">
+        <option value="">All</option>
+        <option value="OPEN">Open</option>
+        <option value="ASSIGNED">Assigned</option>
+        <option value="IN PROGRESS">In Progress</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+    </div>
+
+    <div class="opq-field">
+      <label>Priority</label>
+      <select id="opqPriorityFilter">
+        <option value="">All</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+        <option value="NORMAL">Normal</option>
+      </select>
+    </div>
+
+    <div class="opq-field">
+      <label>Assigned To</label>
+      <select id="opqAssignedFilter">
+        <option value="">All Users</option>
+        {% for user_row in users_lov %}
+        <option value="{{ user_row.user_code }}">{{ user_row.user_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="opq-field">
+      <label>Department</label>
+      <select id="opqDeptFilter">
+        <option value="">All</option>
+        {% for dept in department_lov %}
+        <option value="{{ dept }}">{{ dept }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:flex;align-items:end;">
+      <button class="opq-btn opq-btn-primary" style="width:100%;" type="button" onclick="applyGridFilters()">Apply</button>
+    </div>
+  </div>
+
+  <div class="opq-panel">
+    <div class="opq-panel-header">
+      <div>
+        <h2>Grid View</h2>
+        <small>One row per Channel Thread ID with operational details and Agent Name visibility.</small>
+      </div>
+      <div>
+        <small id="opqGridShowingText">Showing 0 thread groups</small>
+      </div>
+    </div>
+
+    <div class="opq-table-toolbar">
+      <div class="opq-table-toolbar-left">
+        <div class="opq-selected-count" id="opqSelectedCount">Selected Records: 0</div>
+        <div class="opq-selected-count" id="opqDashboardFilterIndicator" style="display:none;">Dashboard Filter: All</div>
+      </div>
+      <div class="opq-table-toolbar-right">
+        <button class="opq-btn opq-btn-light" type="button" onclick="toggleSelectAll(true)">Select All</button>
+        <button class="opq-btn opq-btn-light" type="button" onclick="toggleSelectAll(false)">Clear Selection</button>
+        <button class="opq-btn opq-btn-primary" type="button" onclick="saveSelectedThreads()">Save Selected</button>
+        <button class="opq-btn opq-btn-success" type="button" onclick="resolveSelectedThreads()">Resolve Query Selected</button>
+      </div>
+    </div>
+
+    <div class="opq-table-wrap">
+      <table class="opq-table">
+        <thead>
+          <tr>
+            <th class="opq-grid-select"><input type="checkbox" id="opqMasterCheckbox" /></th>
+            <th>CHANNEL THREAD ID</th>
+            <th>MESSAGE COUNT</th>
+            <th>PATIENT PASSPORT</th>
+            <th>PATIENT NAME</th>
+            <th>NATIONALITY</th>
+            <th>HOSPITAL</th>
+            <th>DEPARTMENT</th>
+            <th>DOCTOR</th>
+            <th>REQUEST FOR</th>
+            <th>AGENCY</th>
+            <th>LAST MESSAGE ON</th>
+            <th>ASSIGNED TO</th>
+            <th>PRIORITY</th>
+            <th>STATUS</th>
+            <th>SLA STATUS</th>
+            <th>ELAPSED (MINS)</th>
+            <th>ESC LEVEL</th>
+            <th>EMAIL STATUS</th>
+            <th>TEMPLATE USED</th>
+            <th>OPERATION REMARKS</th>
+          </tr>
+        </thead>
+        <tbody id="opqGridBody">
+          <tr>
+            <td colspan="21" style="text-align:center;">Loading thread groups...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="opq-grid-pagination" id="opqGridPagination">
+      <div class="opq-grid-pagination-left">
+        <div class="opq-page-size-wrap">
+          <span>Rows per page</span>
+          <select id="opqPageSizeSelect">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="opq-pagination-summary" id="opqPaginationSummary">Showing 0 to 0 of 0</div>
+      </div>
+
+      <div class="opq-grid-pagination-right">
+        <div class="opq-pagination-buttons" id="opqPaginationButtons"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="opq-side-overlay" id="opqSideOverlay" onclick="closeSidePanel()"></div>
+
+<div class="opq-side-panel" id="opqSidePanel">
+  <div class="opq-side-header">
+    <div class="opq-side-header-left">
+      <h3 id="detailHeaderThreadId">No Record</h3>
+      <p>Grouped communication view by Channel Thread ID</p>
+      <div class="opq-side-header-meta">
+        <span class="opq-badge opq-badge-open" id="detailWorkflowBadge">Workflow: Open</span>
+        <span class="opq-badge opq-badge-high" id="detailPriorityBadge">Priority: High</span>
+        <span class="opq-badge opq-badge-assigned" id="detailMetaAssignedBadge">Assigned: Unassigned</span>
+        <span class="opq-badge opq-badge-msg" id="detailMsgCountBadge">Messages: 0</span>
+        <span class="opq-badge opq-badge-sla-none" id="detailSlaStatusBadge">SLA: -</span>
+        <span class="opq-badge opq-badge-unsaved" id="opqUnsavedBadge" style="display:none;">Unsaved Changes</span>
+      </div>
+    </div>
+    <button class="opq-side-close" type="button" onclick="closeSidePanel()">&times</button>
+  </div>
+
+  <div class="opq-side-body">
+    <div class="opq-side-sticky-shell">
+      <div class="opq-side-top-summary">
+        <div class="opq-mini-card">
+          <div class="k">Patient</div>
+          <div class="v" id="miniPatientName">-</div>
+        </div>
+        <div class="opq-mini-card">
+          <div class="k">Passport</div>
+          <div class="v" id="miniPassport">-</div>
+        </div>
+        <div class="opq-mini-card">
+          <div class="k">Last Message</div>
+          <div class="v" id="miniLastMessageOn">-</div>
+        </div>
+        <div class="opq-mini-card">
+          <div class="k">Assigned To</div>
+          <div class="v" id="miniAssignedTo">Unassigned</div>
+        </div>
+        <div class="opq-mini-card">
+          <div class="k">SLA Status</div>
+          <div class="v" id="miniSlaStatus">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opq-section" id="opqSlaAlertSection" style="display:none;">
+      <div class="opq-section-title">
+        <span>SLA Alert</span>
+        <span class="opq-badge opq-badge-sla-none" id="opqSlaAlertPill">No SLA</span>
+      </div>
+      <div class="opq-section-body">
+        <div class="opq-sla-alert-card opq-sla-alert-running" id="opqSlaAlertCard">
+          <div class="opq-detail-grid">
+            <div class="opq-detail-item">
+              <label class="opq-label">RULE CODE</label>
+              <input type="text" id="detail_sla_rule_code" readonly />
+            </div>
+
+            <div class="opq-detail-item">
+              <label class="opq-label">SLA STATUS</label>
+              <input type="text" id="detail_sla_status" readonly />
+            </div>
+
+            <div class="opq-detail-item">
+              <label class="opq-label">ESCALATION LEVEL</label>
+              <input type="text" id="detail_sla_escalation_level" readonly />
+            </div>
+
+            <div class="opq-detail-item">
+              <label class="opq-label">START TIME</label>
+              <input type="text" id="detail_sla_start_time" readonly />
+            </div>
+
+            <div class="opq-detail-item">
+              <label class="opq-label">TARGET TIME</label>
+              <input type="text" id="detail_sla_target_time" readonly />
+            </div>
+
+            <div class="opq-detail-item">
+              <label class="opq-label">ELAPSED (MINS)</label>
+              <input type="text" id="detail_sla_elapsed_mins" readonly />
+            </div>
+
+            <div class="opq-detail-item opq-span-3">
+              <label class="opq-label">ESCALATED TO</label>
+              <input type="text" id="detail_sla_escalated_to" readonly />
+            </div>
+
+            <div class="opq-detail-item opq-span-3">
+              <label class="opq-label">SLA REMARKS</label>
+              <textarea id="detail_sla_remarks" rows="3" readonly></textarea>
+              <div class="opq-sla-inline-note" id="detail_sla_note">SLA details for the selected thread will appear here.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opq-enterprise-workspace">
+      <div class="opq-enterprise-main">
+        <div class="opq-section" id="opqLastMessageSection">
+          <div class="opq-section-title">
+            <span>Last Message</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-message-card">
+              <div class="opq-message-top">
+                <div>
+                  <div class="opq-message-title" id="detail_latest_message_title">Last message in this thread</div>
+                  <div class="opq-doc-viewer-sub" id="detail_latest_message_meta">-</div>
+                </div>
+                <div class="opq-message-meta">
+                  <span class="opq-badge opq-badge-msg" id="detail_latest_message_date_badge">-</span>
+                  <span class="opq-badge opq-badge-open" id="detail_latest_message_channel_badge">Channel Message</span>
+                </div>
+              </div>
+              <div class="opq-message-text" id="detail_latest_message_preview">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqEmailLauncherSection">
+          <div class="opq-section-title">
+            <span>Email Communication</span>
+            <span class="opq-badge opq-badge-msg">Open In New Window</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-message-card">
+              <div class="opq-message-top">
+                <div>
+                  <div class="opq-message-title">Email Communication Section</div>
+                  <div class="opq-doc-viewer-sub">Click the button below to open the email composer in a new window.</div>
+                </div>
+                <div class="opq-message-meta">
+                  <button
+                    class="opq-btn opq-btn-primary opq-btn-sm"
+                    type="button"
+                    id="opqOpenEmailWindowBtn"
+                    onclick="openEmailCommunicationWindow(getSelectedQueueId())"
+                  >Open Email Communication Window</button>
+                  <button
+                    class="opq-btn opq-btn-primary opq-btn-sm"
+                    type="button"
+                    id="opqProcessWithoutEmailBtn"
+                    onclick="processWithoutEmail(getSelectedQueueId())"
+                  >Process Without Email</button>
+                </div>
+              </div>
+              <div class="opq-email-helper">The existing email functionality is preserved. The composer will open in a separate window and continue using the same backend email sending flow.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqAttachmentSection" style="display:none;">
+          <div class="opq-section-title">
+            <span>Documents Uploaded For This Thread</span>
+            <span class="opq-badge opq-badge-msg" id="opqAttachmentCountBadge">0 Documents</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-doc-workspace">
+              <div class="opq-doc-rail" id="opqAttachmentRail">
+                <div class="opq-empty">No documents available.</div>
+              </div>
+              <div class="opq-doc-viewer">
+                <div class="opq-doc-viewer-header">
+                  <div class="opq-doc-viewer-title">
+                    <div class="opq-doc-viewer-name" id="opqAttachmentPreviewName">No document selected</div>
+                    <div class="opq-doc-viewer-sub" id="opqAttachmentPreviewSub">Select a document from the left panel to preview it here.</div>
+                  </div>
+                  <div class="opq-doc-viewer-actions" id="opqAttachmentPreviewActions">
+                    <span class="opq-attachment-link" style="cursor:default;color:#6c7f99;">No Action Available</span>
+                  </div>
+                </div>
+                <div class="opq-doc-preview-area">
+                  <div class="opq-empty" id="opqAttachmentPreviewEmpty">Preview will appear here after selecting a document.</div>
+                  <iframe class="opq-doc-preview-frame" id="opqAttachmentPreviewFrame" title="Document Preview" style="display:none;"></iframe>
+                  <img class="opq-doc-preview-image" id="opqAttachmentPreviewImage" alt="Document Preview" />
+                </div>
+                <div class="opq-doc-meta-grid" id="opqAttachmentMeta">
+                  <div class="opq-doc-meta-card">
+                    <div class="k">File Type</div>
+                    <div class="v">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="opq-attachment-list" id="opqAttachmentContainer" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqTimelineSection" style="display:none;">
+          <div class="opq-section-title">
+            <span>Past Communication Timeline</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-timeline-toolbar">
+              <div class="opq-timeline-summary-text" id="opqTimelineSummaryText">No timeline available.</div>
+              <button class="opq-btn opq-btn-light opq-btn-sm" type="button" id="opqTimelineToggleBtn" style="display:none;" onclick="toggleTimelineExpanded()">View Full Timeline</button>
+            </div>
+            <div class="opq-timeline-wrap">
+              <div class="opq-timeline" id="opqTimelineContainer">
+                <div class="opq-empty">No timeline available.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="opq-enterprise-side">
+        <div class="opq-section" id="opqCoreDetailsSection">
+          <div class="opq-section-title">
+            <span>Core Details Section</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">THREAD ID</label>
+                <div class="opq-readonly-text" id="detail_channel_thread_id_text">-</div>
+                <input type="hidden" id="detail_channel_thread_id" />
+                <input type="hidden" id="detail_row_id" />
+                <input type="hidden" name="request_id" id="request_id" value="{{ request.args.get('request_id', '') }}" />
+                <input type="hidden" name="queue_id" id="queue_id" value="{{ request.args.get('queue_id', '') }}" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">RECEIVED ON</label>
+                <input type="text" id="detail_updated_on_core" readonly />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">MESSAGE COUNT</label>
+                <input type="text" id="detail_message_count" readonly />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">LATEST MESSAGE DATE</label>
+                <input type="text" id="detail_latest_message_on" readonly />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqPatientDetailsSection">
+          <div class="opq-section-title">
+            <span>Patient Details</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT GIVEN NAME</label>
+                <input type="text" id="detail_patgiven_nm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT SUR NAME</label>
+                <input type="text" id="detail_patsur_nm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT PASSPORT</label>
+                <input type="text" id="detail_patpassport_no" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT PASSPORT EXPIRY DATE</label>
+                <input type="date" id="detail_patpass_expirydt" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT COUNTRY</label>
+                <input type="text" id="detail_patient_country" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT DOB</label>
+                <input type="date" id="detail_patient_dob" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT GENDER</label>
+                <input type="text" id="detail_patient_gender" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT ADDRESS</label>
+                <textarea id="detail_patient_address" rows="3"></textarea>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT CONTACT</label>
+                <input type="text" id="detail_patient_contno" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PATIENT EMAIL</label>
+                <input type="text" id="detail_patient_email" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqAttender1Section" style="display:none;">
+          <div class="opq-section-title">
+            <span>Attender 1 Details</span>
+            <div class="opq-attender-summary" id="summary_attender1"></div>
+            <button type="button" class="opq-section-toggle" id="toggleAttender1">+</button>
+          </div>
+          <div class="opq-section-body" id="bodyAttender1" style="display:none;">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 GIVEN NAME</label>
+                <input type="text" id="detail_attn1_givennm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 SUR NAME</label>
+                <input type="text" id="detail_attn1_surnm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 PASSPORT</label>
+                <input type="text" id="detail_attn1passport_no" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">RELATION</label>
+                <input type="text" id="detail_attn1pat_relation" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 COUNTRY</label>
+                <input type="text" id="detail_attn1_country" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 DOB</label>
+                <input type="date" id="detail_attn1_dob" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 GENDER</label>
+                <input type="text" id="detail_attn1_gender" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 ADDRESS</label>
+                <textarea id="detail_attn1_address" rows="3"></textarea>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER1 CONTACT</label>
+                <input type="text" id="detail_attn1_contno" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqAttender2Section" style="display:none;">
+          <div class="opq-section-title">
+            <span>Attender 2 Details</span>
+            <div class="opq-attender-summary" id="summary_attender2"></div>
+            <button type="button" class="opq-section-toggle" id="toggleAttender2">+</button>
+          </div>
+          <div class="opq-section-body" id="bodyAttender2" style="display:none;">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 GIVEN NAME</label>
+                <input type="text" id="detail_attn2_givennm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 SUR NAME</label>
+                <input type="text" id="detail_attn2_surnm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 PASSPORT</label>
+                <input type="text" id="detail_attn2passport_no" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">RELATION</label>
+                <input type="text" id="detail_attn2pat_relation" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 COUNTRY</label>
+                <input type="text" id="detail_attn2_country" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 DOB</label>
+                <input type="date" id="detail_attn2_dob" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 GENDER</label>
+                <input type="text" id="detail_attn2_gender" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 ADDRESS</label>
+                <textarea id="detail_attn2_address" rows="3"></textarea>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER2 CONTACT</label>
+                <input type="text" id="detail_attn2_contno" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqAttender3Section" style="display:none;">
+          <div class="opq-section-title">
+            <span>Attender 3 Details</span>
+            <div class="opq-attender-summary" id="summary_attender3"></div>
+            <button type="button" class="opq-section-toggle" id="toggleAttender3">+</button>
+          </div>
+          <div class="opq-section-body" id="bodyAttender3" style="display:none;">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 GIVEN NAME</label>
+                <input type="text" id="detail_attn3_givennm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 SUR NAME</label>
+                <input type="text" id="detail_attn3_surnm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 PASSPORT</label>
+                <input type="text" id="detail_attn3passport_no" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">RELATION</label>
+                <input type="text" id="detail_attn3pat_relation" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 COUNTRY</label>
+                <input type="text" id="detail_attn3_country" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 DOB</label>
+                <input type="date" id="detail_attn3_dob" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 GENDER</label>
+                <input type="text" id="detail_attn3_gender" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 ADDRESS</label>
+                <textarea id="detail_attn3_address" rows="3"></textarea>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ATTENDER3 CONTACT</label>
+                <input type="text" id="detail_attn3_contno" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="opq-section" id="opqRequestWorkflowSection">
+          <div class="opq-section-title">
+            <span>Request & Workflow Details</span>
+          </div>
+          <div class="opq-section-body">
+            <div class="opq-detail-grid">
+              <div class="opq-detail-item">
+                <label class="opq-label">EMBASSY (IVAC)</label>
+                <select id="detail_ivac_center">
+                  <option value="">Select Embassy / IVAC</option>
+                  {% for item in ivac_lov %}
+                  <option value="{{ item }}">{{ item }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">HOSPITAL</label>
+                <select id="detail_hospital_shrtnm">
+                  <option value="">Select Hospital</option>
+                </select>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">DEPARTMENT</label>
+
+                <div class="opq-dept-control" id="detail_hospital_dept_control">
+                  <button
+                    type="button"
+                    class="opq-dept-summary"
+                    id="detail_hospital_dept_summary"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="detail_hospital_dept_dropdown"
+                  >
+                    <span class="opq-dept-chip-wrap" id="detail_hospital_dept_chips">
+                      <span class="opq-dept-placeholder" id="detail_hospital_dept_placeholder">Select Department</span>
+                    </span>
+                    <span class="opq-dept-chevron" aria-hidden="true">&#9662;</span>
+                  </button>
+
+                  <select
+                    id="detail_hospital_dept"
+                    class="opq-dept-native-select"
+                    multiple
+                    aria-label="Selected Departments"
+                  >
+                    {% for dept in department_lov %}
+                    <option value="{{ dept }}">{{ dept }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <div
+                    class="opq-dept-dropdown"
+                    id="detail_hospital_dept_dropdown"
+                    role="listbox"
+                    aria-multiselectable="true"
+                    hidden
+                  >
+                    <div class="opq-dept-search-wrap">
+                      <input
+                        type="text"
+                        id="detail_hospital_dept_search"
+                        class="opq-dept-search"
+                        placeholder="Search Department..."
+                        autocomplete="off"
+                      />
+                    </div>
+
+                    <div class="opq-dept-options" id="detail_hospital_dept_options"></div>
+
+                    <div class="opq-dept-actions">
+                      <button
+                        type="button"
+                        class="opq-btn opq-btn-light opq-btn-sm"
+                        id="detail_hospital_dept_cancel"
+                      >Cancel</button>
+                      <button
+                        type="button"
+                        class="opq-btn opq-btn-primary opq-btn-sm"
+                        id="detail_hospital_dept_apply"
+                      >Apply</button>
+                    </div>
+                  </div>
+
+                  <div class="opq-dept-count" id="detail_hospital_dept_count" style="display:none;"></div>
+                  <div class="opq-dept-warning" id="detail_hospital_dept_warning" style="display:none;"></div>
+                </div>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">DOCTOR</label>
+                <input type="text" id="detail_doctor_nm" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">REQUEST FOR</label>
+                <select id="detail_request_for">
+                  <option value="">Select Request</option>
+                  <option value="VIL">VIL</option>
+                  <option value="APPOINTMENT">APPOINTMENT</option>
+                  <option value="FOLLOW UP">FOLLOW UP</option>
+                  <option value="ENQUIRY">ENQUIRY</option>
+                </select>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">PRIORITY STATUS</label>
+                <input type="text" id="detail_priority_status" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">VIL DATE</label>
+                <input type="date" id="detail_vil_date" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">APPOINTMENT DATE</label>
+                <input type="date" id="detail_appointment_dt" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">WORKFLOW STATUS</label>
+                <input type="text" id="detail_wrkflw_status" />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ASSIGNED TO</label>
+                <select id="detail_assigned_to">
+                  <option value="">Select User</option>
+                  {% for user_row in users_lov %}
+                  <option value="{{ user_row.user_code }}">{{ user_row.user_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">ASSIGNED ON</label>
+                <input type="text" id="detail_assigned_at" readonly />
+              </div>
+
+              <div class="opq-detail-item">
+                <label class="opq-label">AGENCY</label>
+                <select id="detail_agent_shrtnm">
+                  <option value="">Select Agency</option>
+                  {% for agency_row in agency_lov %}
+                  <option value="{{ agency_row.short_name }}">{{ agency_row.short_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="opq-detail-item opq-span-3">
+                <label class="opq-label">OPERATION REMARKS</label>
+                <input type="text" id="detail_parse_remarks" class="opq-operation-remarks-singleline" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="opq-side-footer">
+    <div class="opq-footer-actions">
+      <button class="opq-btn opq-btn-light" type="button" onclick="closeSidePanel()">Close</button>
+      <button class="opq-btn opq-btn-primary" type="button" id="opqSaveBtn" onclick="saveCurrentThread()">Save</button>
+      <button class="opq-btn opq-btn-success" type="button" id="opqResolveBtn" onclick="resolveCurrentThread()">Resolve Query</button>
+    </div>
+  </div>
+</div>
+
+<script id="opqQueueRowsData" type="application/json">{{ queue_rows|tojson|safe }}</script>
+<script id="opqUsersLovData" type="application/json">{{ users_lov|tojson|safe }}</script>
+
+<script src="{{ url_for('static', filename='js/operationqueue.js') }}"></script>
+
+{% endblock %}

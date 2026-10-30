@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Review Queue{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/manual_review.css') }}">
+
+<div class="mrq-page">
+
+  <div class="mrq-page-header">
+    <div class="mrq-title-block">
+      <h1>Manual Review Queue</h1>
+      <p>Review WhatsApp messages that could not be automatically classified, linked, or parsed.</p>
+    </div>
+
+    <div class="mrq-header-actions">
+      <button class="mrq-btn mrq-btn-light" type="button">Export</button>
+      <button class="mrq-btn mrq-btn-light" type="button" onclick="window.location.reload();">Refresh</button>
+    </div>
+  </div>
+
+  <div class="mrq-stats">
+    <div class="mrq-stat-card" onclick="applyQuickFilter('')">
+      <div class="mrq-stat-label">Total Manual Review</div>
+      <div class="mrq-stat-value" id="mrqTotalCount">0</div>
+    </div>
+
+    <div class="mrq-stat-card mrq-stat-warning" onclick="applyQuickFilter('ATTACHMENT_ONLY')">
+      <div class="mrq-stat-label">Attachment Review</div>
+      <div class="mrq-stat-value" id="mrqAttachmentCount">0</div>
+    </div>
+
+    <div class="mrq-stat-card mrq-stat-danger" onclick="applyQuickFilter('NO_THREAD_FOUND')">
+      <div class="mrq-stat-label">Thread Not Found</div>
+      <div class="mrq-stat-value" id="mrqNoThreadCount">0</div>
+    </div>
+
+    <div class="mrq-stat-card mrq-stat-danger" onclick="applyQuickFilter('FAILED')">
+      <div class="mrq-stat-label">Parser Failed</div>
+      <div class="mrq-stat-value" id="mrqFailedCount">0</div>
+    </div>
+
+    <div class="mrq-stat-card" onclick="applyQuickFilter('RESOLVED')">
+      <div class="mrq-stat-label">Reviewed Today</div>
+      <div class="mrq-stat-value" id="mrqReviewedTodayCount">0</div>
+    </div>
+  </div>
+
+  <div class="mrq-filters">
+    <div class="mrq-field">
+      <label>All Like Search</label>
+      <input type="text" id="mrqSearchInput" placeholder="Search message, passport, mobile, reason..." />
+    </div>
+
+
+    <div class="mrq-field">
+      <label>Message Type</label>
+      <select id="mrqMessageTypeFilter">
+        <option value="">All</option>
+        <option value="UNKNOWN">Unknown</option>
+        <option value="ATTACHMENT_ONLY">Attachment Only</option>
+        <option value="FOLLOWUP_TEXT">Follow-up Text</option>
+        <option value="STRUCTURED_REQUEST">Structured Request</option>
+      </select>
+    </div>
+
+    <div class="mrq-field">
+      <label>Reason</label>
+      <select id="mrqReasonFilter">
+        <option value="">All</option>
+        <option value="NO_THREAD_FOUND">No Thread Found</option>
+        <option value="Unable to classify">Unable to Classify</option>
+        <option value="Attachment received">Attachment Missing Context</option>
+        <option value="Parser failed">Parser Failed</option>
+      </select>
+    </div>
+
+    <div class="mrq-field">
+      <label>Assigned To</label>
+      <select id="mrqAssignedFilter">
+        <option value="">All Users</option>
+        {% for user_row in users_lov %}
+        <option value="{{ user_row.user_code }}">{{ user_row.user_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:flex;align-items:end;">
+      <button class="mrq-btn mrq-btn-primary" style="width:100%;" type="button" onclick="applyManualReviewFilters()">Apply</button>
+    </div>
+  </div>
+
+  <div class="mrq-panel">
+    <div class="mrq-panel-header">
+      <div>
+        <h2>Manual Review Grid</h2>
+        <small>One row per WhatsApp message pending human review.</small>
+      </div>
+      <small id="mrqShowingText">Showing 0 records</small>
+    </div>
+
+    <div class="mrq-table-toolbar">
+      <div class="mrq-selected-count" id="mrqSelectedCount">Selected Records: 0</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="mrq-btn mrq-btn-light" type="button" onclick="toggleManualSelectAll(true)">Select All</button>
+        <button class="mrq-btn mrq-btn-light" type="button" onclick="toggleManualSelectAll(false)">Clear Selection</button>
+      </div>
+    </div>
+
+    <div class="mrq-table-wrap">
+      <table class="mrq-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="mrqMasterCheckbox" /></th>
+            <th>Message Log ID</th>
+            <th>Received On</th>
+            <th>Sender Mobile</th>
+            <th>Message Type</th>
+            <th>Parse Status</th>
+            <th>Classifier Reason</th>
+            <th>Thread Status</th>
+            <th>Attachment Count</th>
+            <th>Possible Passport</th>
+            <th>Linked Queue ID</th>
+            <th>Assigned To</th>
+            <th>Message Preview</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="mrqGridBody">
+          <tr>
+            <td colspan="14" style="text-align:center;">Loading manual review records...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mrq-side-overlay" id="mrqSideOverlay" onclick="closeManualSidePanel()"></div>
+
+<div class="mrq-side-panel" id="mrqSidePanel">
+  <div class="mrq-side-header">
+    <div>
+      <h3 id="mrqDetailHeader">No Record</h3>
+      <p>Manual review and correction workspace</p>
+      <div class="mrq-side-meta">
+        <span class="mrq-badge mrq-badge-manual" id="mrqDetailParseBadge">MANUAL REVIEW</span>
+        <span class="mrq-badge mrq-badge-unknown" id="mrqDetailMessageTypeBadge">UNKNOWN</span>
+        <span class="mrq-badge mrq-badge-danger" id="mrqDetailThreadBadge">NO THREAD</span>
+      </div>
+    </div>
+    <button class="mrq-side-close" type="button" onclick="closeManualSidePanel()">×</button>
+  </div>
+
+  <div class="mrq-side-body">
+
+    <div class="mrq-top-summary">
+      <div class="mrq-mini-card">
+        <div class="k">Sender Mobile</div>
+        <div class="v" id="miniSenderMobile">—</div>
+      </div>
+      <div class="mrq-mini-card">
+        <div class="k">Received On</div>
+        <div class="v" id="miniReceivedOn">—</div>
+      </div>
+      <div class="mrq-mini-card">
+        <div class="k">Attachment Count</div>
+        <div class="v" id="miniAttachmentCount">0</div>
+      </div>
+      <div class="mrq-mini-card">
+        <div class="k">Possible Passport</div>
+        <div class="v" id="miniPossiblePassport">—</div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Review Reason</span>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item">
+            <label>Message Log ID</label>
+            <input type="text" id="detail_message_log_id" readonly />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Message Type</label>
+            <input type="text" id="detail_message_type" readonly />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Parse Status</label>
+            <input type="text" id="detail_parse_status" readonly />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Thread Resolution Status</label>
+            <input type="text" id="detail_thread_resolution_status" readonly />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Linked Queue ID</label>
+            <input type="text" id="detail_linked_queue_id" readonly />
+          </div>
+          <div class="mrq-detail-item mrq-span-3">
+            <label>Classifier Reason</label>
+            <textarea id="detail_classifier_reason" rows="3" readonly></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Raw WhatsApp Message</span>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-message-text" id="detail_raw_message_text">—</div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Extracted Patient Details</span>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item">
+            <label>Patient Given Name</label>
+            <input type="text" id="detail_patient_given_name" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Short Name</label>
+            <input type="text" id="detail_patient_short_name" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Passport Number</label>
+            <input type="text" id="detail_patient_passport_number" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Passport Expiry Date</label>
+            <input type="date" id="detail_patient_passport_expiry_date" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Gender</label>
+            <select id="detail_patient_gender">
+              <option value="">Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient DOB</label>
+            <input type="date" id="detail_patient_dob" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Age</label>
+            <input type="text" id="detail_patient_age" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Contact Number</label>
+            <input type="text" id="detail_patient_contact_number" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Email</label>
+            <input type="text" id="detail_patient_email" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Patient Nationality</label>
+            <select id="detail_patient_nationality">
+              <option value="">Select</option>
+              {% for country_row in country_lov|default([]) %}
+              <option value="{{ country_row.country_name }}">{{ country_row.country_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mrq-detail-item mrq-span-2">
+            <label>Patient Address</label>
+            <textarea id="detail_patient_address" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Attender 1 Details</span>
+        <button class="mrq-collapse-btn" type="button" id="attender1Toggle" onclick="toggleMrqSection('attender1Body', 'attender1Toggle')">+</button>
+      </div>
+      <div class="mrq-section-body mrq-collapsible-body collapsed" id="attender1Body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item"><label>Attender1 Given Name</label><input type="text" id="detail_attender1_given_name" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Short Name</label><input type="text" id="detail_attender1_short_name" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Passport Number</label><input type="text" id="detail_attender1_passport_number" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Passport Expiry Date</label><input type="date" id="detail_attender1_passport_expiry_date" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Gender</label><select id="detail_attender1_gender"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Others">Others</option></select></div>
+          <div class="mrq-detail-item"><label>Attender1 DOB</label><input type="date" id="detail_attender1_dob" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Age</label><input type="text" id="detail_attender1_age" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Nationality</label><select id="detail_attender1_nationality"><option value="">Select</option>{% for country_row in country_lov|default([]) %}<option value="{{ country_row.country_name }}">{{ country_row.country_name }}</option>{% endfor %}</select></div>
+          <div class="mrq-detail-item"><label>Attender1 Contact Number</label><input type="text" id="detail_attender1_contact_number" /></div>
+          <div class="mrq-detail-item"><label>Attender1 Relationship With Patient</label><input type="text" id="detail_attender1_relationship" /></div>
+          <div class="mrq-detail-item mrq-span-2"><label>Attender1 Address</label><textarea id="detail_attender1_address" rows="2"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Attender 2 Details</span>
+        <button class="mrq-collapse-btn" type="button" id="attender2Toggle" onclick="toggleMrqSection('attender2Body', 'attender2Toggle')">+</button>
+      </div>
+      <div class="mrq-section-body mrq-collapsible-body collapsed" id="attender2Body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item"><label>Attender2 Given Name</label><input type="text" id="detail_attender2_given_name" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Short Name</label><input type="text" id="detail_attender2_short_name" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Passport Number</label><input type="text" id="detail_attender2_passport_number" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Passport Expiry Date</label><input type="date" id="detail_attender2_passport_expiry_date" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Gender</label><select id="detail_attender2_gender"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Others">Others</option></select></div>
+          <div class="mrq-detail-item"><label>Attender2 DOB</label><input type="date" id="detail_attender2_dob" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Age</label><input type="text" id="detail_attender2_age" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Nationality</label><select id="detail_attender2_nationality"><option value="">Select</option>{% for country_row in country_lov|default([]) %}<option value="{{ country_row.country_name }}">{{ country_row.country_name }}</option>{% endfor %}</select></div>
+          <div class="mrq-detail-item"><label>Attender2 Contact Number</label><input type="text" id="detail_attender2_contact_number" /></div>
+          <div class="mrq-detail-item"><label>Attender2 Relationship With Patient</label><input type="text" id="detail_attender2_relationship" /></div>
+          <div class="mrq-detail-item mrq-span-2"><label>Attender2 Address</label><textarea id="detail_attender2_address" rows="2"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Attender 3 Details</span>
+        <button class="mrq-collapse-btn" type="button" id="attender3Toggle" onclick="toggleMrqSection('attender3Body', 'attender3Toggle')">+</button>
+      </div>
+      <div class="mrq-section-body mrq-collapsible-body collapsed" id="attender3Body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item"><label>Attender3 Given Name</label><input type="text" id="detail_attender3_given_name" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Short Name</label><input type="text" id="detail_attender3_short_name" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Passport Number</label><input type="text" id="detail_attender3_passport_number" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Passport Expiry Date</label><input type="date" id="detail_attender3_passport_expiry_date" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Gender</label><select id="detail_attender3_gender"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Others">Others</option></select></div>
+          <div class="mrq-detail-item"><label>Attender3 DOB</label><input type="date" id="detail_attender3_dob" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Age</label><input type="text" id="detail_attender3_age" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Nationality</label><select id="detail_attender3_nationality"><option value="">Select</option>{% for country_row in country_lov|default([]) %}<option value="{{ country_row.country_name }}">{{ country_row.country_name }}</option>{% endfor %}</select></div>
+          <div class="mrq-detail-item"><label>Attender3 Contact Number</label><input type="text" id="detail_attender3_contact_number" /></div>
+          <div class="mrq-detail-item"><label>Attender3 Relationship With Patient</label><input type="text" id="detail_attender3_relationship" /></div>
+          <div class="mrq-detail-item mrq-span-2"><label>Attender3 Address</label><textarea id="detail_attender3_address" rows="2"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Hospital / Request Details</span>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-detail-grid">
+          <div class="mrq-detail-item">
+            <label>Agency</label>
+            <select id="detail_agent_shrtnm">
+              <option value="">Select Agency</option>
+              {% for agency_row in agency_lov %}
+              <option value="{{ agency_row.short_name }}">{{ agency_row.short_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Hospital Name</label>
+            <select id="detail_hospital_name" onchange="filterDepartmentByHospital(this.value)">
+              <option value="">Select</option>
+              {% for hospital_row in hospital_lov|default([]) %}
+              <option value="{{ hospital_row.short_name }}">{{ hospital_row.short_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Department</label>
+
+            <div class="mrq-dept-control" id="detail_department_control">
+              <button
+                type="button"
+                class="mrq-dept-summary"
+                id="detail_department_summary"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="detail_department_dropdown"
+              >
+                <span class="mrq-dept-chip-wrap" id="detail_department_chips">
+                  <span class="mrq-dept-placeholder" id="detail_department_placeholder">Select Department</span>
+                </span>
+                <span class="mrq-dept-chevron" aria-hidden="true">&#9662;</span>
+              </button>
+
+              <select
+                id="detail_department"
+                class="mrq-dept-native-select"
+                multiple
+                size="4"
+                aria-label="Selected Departments"
+              >
+                <option value="">Select</option>
+                {% for dept_row in hospital_department_lov|default([]) %}
+                <option value="{{ dept_row.hospital_dept }}" data-hospital="{{ dept_row.hospital_shrtnm or dept_row.hospital_short_name or dept_row.short_name or dept_row.partner_short_name or dept_row.hospital_name }}">{{ dept_row.hospital_dept }}</option>
+                {% endfor %}
+              </select>
+
+              <div
+                class="mrq-dept-dropdown"
+                id="detail_department_dropdown"
+                role="listbox"
+                aria-multiselectable="true"
+                hidden
+              >
+                <div class="mrq-dept-search-wrap">
+                  <input
+                    type="text"
+                    id="detail_department_search"
+                    class="mrq-dept-search"
+                    placeholder="Search Department..."
+                    autocomplete="off"
+                  />
+                </div>
+
+                <div class="mrq-dept-options" id="detail_department_options"></div>
+
+                <div class="mrq-dept-actions">
+                  <button
+                    type="button"
+                    class="mrq-btn mrq-btn-light mrq-btn-sm"
+                    id="detail_department_cancel"
+                  >Cancel</button>
+                  <button
+                    type="button"
+                    class="mrq-btn mrq-btn-primary mrq-btn-sm"
+                    id="detail_department_apply"
+                  >Apply</button>
+                </div>
+              </div>
+
+              <div class="mrq-dept-count" id="detail_department_count" style="display:none;"></div>
+              <div class="mrq-dept-warning" id="detail_department_warning" style="display:none;"></div>
+            </div>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Doctor's Name</label>
+            <input type="text" id="detail_doctor_name" />
+          </div>
+          <div class="mrq-detail-item">
+            <label>Nationality</label>
+            <select id="detail_request_nationality">
+              <option value="">Select</option>
+              {% for country_row in country_lov|default([]) %}
+              <option value="{{ country_row.country_name }}">{{ country_row.country_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Embassy</label>
+            <select id="detail_embassy">
+              <option value="">Select</option>
+              {% for ivac_row in ivac_lov|default([]) %}
+              <option value="{{ ivac_row.ivac_centre }}">{{ ivac_row.ivac_centre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Intent</label>
+            <select id="detail_intent">
+              <option value="">Select</option>
+              <option value="VIL">VIL</option>
+              <option value="APPOINTMENT">APPOINTMENT</option>
+            </select>
+          </div>
+          <div class="mrq-detail-item">
+            <label>Approximate Date</label>
+            <input type="date" id="detail_approximate_date" />
+          </div>
+          <div class="mrq-detail-item mrq-span-2">
+            <label>Missing / Review Notes</label>
+            <textarea id="detail_missing_fields" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section">
+      <div class="mrq-section-title">
+        <span>Possible Matching Threads</span>
+        <button class="mrq-btn mrq-btn-light mrq-btn-sm" type="button" onclick="searchMatchingThreads()">Search Matches</button>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-match-list" id="mrqMatchList">
+          <div class="mrq-empty">No matching thread searched yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrq-section" id="mrqAttachmentSection">
+      <div class="mrq-section-title">
+        <span>Attachments</span>
+        <span class="mrq-badge mrq-badge-attach" id="mrqAttachmentBadge">0 Files</span>
+      </div>
+      <div class="mrq-section-body">
+        <div class="mrq-doc-workspace">
+          <div class="mrq-doc-rail" id="mrqAttachmentRail">
+            <div class="mrq-empty">No attachment available.</div>
+          </div>
+
+          <div class="mrq-doc-viewer">
+            <div class="mrq-doc-viewer-header">
+              <div>
+                <div class="mrq-match-title" id="mrqAttachmentPreviewName">No document selected</div>
+                <div class="mrq-doc-sub" id="mrqAttachmentPreviewSub">Select a document to preview.</div>
+              </div>
+              <div id="mrqAttachmentActions">
+                <span class="mrq-badge mrq-badge-unknown">No Action</span>
+              </div>
+            </div>
+
+            <div class="mrq-doc-preview-area">
+              <div class="mrq-empty" id="mrqAttachmentPreviewEmpty">Preview will appear here.</div>
+              <iframe class="mrq-doc-frame" id="mrqAttachmentFrame" style="display:none;"></iframe>
+              <img class="mrq-doc-image" id="mrqAttachmentImage" style="display:none;" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:none;">
+      <input type="hidden" id="detail_reviewer_decision" />
+      <input type="hidden" id="detail_selected_thread_id" />
+      <input type="hidden" id="detail_assigned_to" />
+      <textarea id="detail_reviewer_remarks"></textarea>
+    </div>
+
+  </div>
+
+  <div class="mrq-side-footer">
+    <div class="mrq-footer-actions">
+      <button class="mrq-btn mrq-btn-light" type="button" onclick="closeManualSidePanel()">Close</button>
+      <button class="mrq-btn mrq-btn-primary" type="button" onclick="saveManualReview()">Submit Record</button>
+      <button class="mrq-btn mrq-btn-danger" type="button" onclick="markCurrentAsJunk()">Mark Junk</button>
+    </div>
+  </div>
+</div>
+
+<script id="manualReviewRowsData" type="application/json">{{ queue_rows_json | safe }}</script>
+<script id="manualReviewUsersData" type="application/json">{{ users_lov|tojson|safe }}</script>
+
+<script src="{{ url_for('static', filename='js/pages/manual_review.js') }}"></script>
+
+{% endblock %}

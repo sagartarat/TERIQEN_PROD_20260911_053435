@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Broadcast History{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('broadcast_management.broadcast_asset', filename='broadcast_management.css') }}?v=1.3.1">{% endblock %}
+{% block content %}
+<div class="bc-page bc-history-page">
+  <div class="bc-header">
+    <div><h1>Broadcast History</h1><p>Recent broadcast campaigns and recipient-level delivery results.</p></div>
+    <a class="bc-btn bc-primary" href="{{ url_for('broadcast_management.broadcast_centre') }}">New Broadcast</a>
+  </div>
+
+  <div class="bc-history-tabs" role="tablist" aria-label="Broadcast history sections">
+    <a class="bc-history-tab {% if active_tab == 'history' %}active{% endif %}" href="{{ url_for('broadcast_management.broadcast_history', tab='history', page=1, page_size=page_size) }}">
+      <i class="fa-solid fa-clock-rotate-left"></i> Broadcast History <span>{{ history_total }}</span>
+    </a>
+    <a class="bc-history-tab {% if active_tab == 'drafts' %}active{% endif %}" href="{{ url_for('broadcast_management.broadcast_history', tab='drafts', page=1, page_size=page_size) }}">
+      <i class="fa-solid fa-file-pen"></i> Drafts <span>{{ draft_total }}</span>
+    </a>
+  </div>
+
+  <section class="bc-card bc-history-main-card">
+    <div class="bc-card-head bc-history-card-head">
+      <div>
+        <h3>{% if active_tab == 'drafts' %}Saved Drafts{% else %}Broadcast History{% endif %}</h3>
+        <p class="bc-help">
+          {% if active_tab == 'drafts' %}
+            Drafts are kept outside the delivery queue until you explicitly choose Send Now.
+          {% else %}
+            Sent, completed and interrupted broadcasts. Active/queued broadcasts cannot be deleted.
+          {% endif %}
+        </p>
+      </div>
+      <div class="bc-history-range">{% if total %}Showing {{ start_row }}–{{ end_row }} of {{ total }}{% else %}0 records{% endif %}</div>
+    </div>
+
+    <div class="bc-card-body">
+      <div class="bc-history-toolbar">
+        <div class="bc-help">Use View Details for recipient-level results.</div>
+        <form class="bc-page-size-form" method="get" action="{{ url_for('broadcast_management.broadcast_history') }}">
+          <input type="hidden" name="tab" value="{{ active_tab }}">
+          <input type="hidden" name="page" value="1">
+          <label>Rows per page
+            <select name="page_size" aria-label="Rows per page">
+              {% for size in [25,50,100] %}<option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="bc-btn" type="submit">Apply</button>
+        </form>
+      </div>
+
+      <div class="bc-table-wrap bc-history-table bc-history-paged-table"><table>
+        {% if active_tab == 'drafts' %}
+          <thead><tr><th>ID</th><th>Name</th><th>Channel</th><th>Status</th><th>Total</th><th>Valid</th><th>Created</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for c in rows %}
+            <tr>
+              <td>{{ c.id }}</td><td>{{ c.campaign_name }}</td><td>{{ c.channel_code }}</td><td><span class="bc-delivery-badge queued">DRAFT</span></td>
+              <td>{{ c.total_count }}</td><td>{{ c.valid_count }}</td><td>{{ c.created_on }}</td>
+              <td><div class="bc-actions bc-history-row-actions">
+                <button class="bc-btn bc-view-history" type="button" data-campaign-id="{{ c.id }}"><i class="fa-solid fa-eye"></i> View Details</button>
+                <button class="bc-btn bc-primary bc-send-campaign" type="button" data-campaign-id="{{ c.id }}"><i class="fa-solid fa-paper-plane"></i> Send Now</button>
+                <button class="bc-btn bc-danger bc-delete-history" type="button" data-campaign-id="{{ c.id }}" data-status="DRAFT"><i class="fa-solid fa-trash"></i> Delete</button>
+              </div></td>
+            </tr>
+            {% else %}<tr><td colspan="8" class="bc-empty">No saved drafts.</td></tr>{% endfor %}
+          </tbody>
+        {% else %}
+          <thead><tr><th>ID</th><th>Name</th><th>Channel</th><th>Status</th><th>Total</th><th>Success</th><th>Failed</th><th>Skipped</th><th>Created</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for c in rows %}
+            <tr>
+              <td>{{ c.id }}</td><td>{{ c.campaign_name }}</td><td>{{ c.channel_code }}</td><td>{{ c.campaign_status }}</td>
+              <td>{{ c.total_count }}</td><td>{{ c.success_count }}</td>
+              <td>{% if c.failed_count %}<span class="bc-failed-count">{{ c.failed_count }}</span>{% else %}0{% endif %}</td>
+              <td>{{ c.skipped_count }}</td><td>{{ c.created_on }}</td>
+              <td><div class="bc-actions bc-history-row-actions">
+                <button class="bc-btn bc-view-history" type="button" data-campaign-id="{{ c.id }}"><i class="fa-solid fa-eye"></i> View Details</button>
+                {% if c.campaign_status in ['QUEUED','IN_PROGRESS'] %}
+                  <button class="bc-btn bc-primary bc-send-campaign" type="button" data-campaign-id="{{ c.id }}"><i class="fa-solid fa-paper-plane"></i> Resume Sending</button>
+                {% else %}
+                  <button class="bc-btn bc-danger bc-delete-history" type="button" data-campaign-id="{{ c.id }}" data-status="{{ c.campaign_status }}"><i class="fa-solid fa-trash"></i> Delete</button>
+                {% endif %}
+              </div></td>
+            </tr>
+            {% else %}<tr><td colspan="10" class="bc-empty">No sent or active broadcasts yet.</td></tr>{% endfor %}
+          </tbody>
+        {% endif %}
+      </table></div>
+
+      <nav class="bc-pagination" aria-label="Broadcast history pages">
+        <div class="bc-pagination-summary">Page {{ page }} of {{ pages }}</div>
+        <div class="bc-pagination-buttons">
+          {% if page > 1 %}<a class="bc-btn" href="{{ url_for('broadcast_management.broadcast_history', tab=active_tab, page=page-1, page_size=page_size) }}"><i class="fa-solid fa-chevron-left"></i> Previous</a>{% else %}<span class="bc-btn disabled"><i class="fa-solid fa-chevron-left"></i> Previous</span>{% endif %}
+          {% for n in page_numbers %}
+            {% if loop.index > 1 and n > page_numbers[loop.index0-1] + 1 %}<span class="bc-page-gap">…</span>{% endif %}
+            <a class="bc-page-number {% if n == page %}active{% endif %}" href="{{ url_for('broadcast_management.broadcast_history', tab=active_tab, page=n, page_size=page_size) }}">{{ n }}</a>
+          {% endfor %}
+          {% if page < pages %}<a class="bc-btn" href="{{ url_for('broadcast_management.broadcast_history', tab=active_tab, page=page+1, page_size=page_size) }}">Next <i class="fa-solid fa-chevron-right"></i></a>{% else %}<span class="bc-btn disabled">Next <i class="fa-solid fa-chevron-right"></i></span>{% endif %}
+        </div>
+      </nav>
+    </div>
+  </section>
+</div>
+
+<div id="bcHistoryModal" class="bc-modal hidden">
+  <div class="bc-history-modal">
+    <div class="bc-modal-head">
+      <div><h3 id="bcHistoryTitle">Broadcast Details</h3><p id="bcHistorySubtitle" class="bc-help"></p></div>
+      <button class="bc-icon-btn" type="button" data-close aria-label="Close">&times;</button>
+    </div>
+    <div id="bcHistorySummary" class="bc-history-summary"></div>
+    <div id="bcHistoryNote" class="bc-note"><b>Failure Reason:</b> TERIQEN records the provider/SMTP/API error returned for each failed receiver.</div>
+    <div class="bc-history-detail-toolbar">
+      <div id="bcHistoryCount" class="bc-help"></div>
+      <label>Recipients per page
+        <select id="bcHistoryPageSize"><option>25</option><option selected>50</option><option>100</option></select>
+      </label>
+    </div>
+    <div class="bc-table-wrap bc-history-detail-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Receiver</th><th>Destination</th><th>Status</th><th>Attempts</th><th>Provider Ref.</th><th>Failure Reason</th><th>Sent / Updated</th></tr></thead>
+        <tbody id="bcHistoryRecipients"><tr><td colspan="8" class="bc-empty">Select a broadcast to view delivery details.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="bc-modal-footer bc-history-modal-footer">
+      <div class="bc-detail-pagination">
+        <button id="bcHistoryPrev" class="bc-btn" type="button"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+        <span id="bcHistoryPageInfo" class="bc-help">Page 1 of 1</span>
+        <button id="bcHistoryNext" class="bc-btn" type="button">Next <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div class="bc-actions">
+        <button id="bcHistoryDelete" class="bc-btn bc-danger hidden" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
+        <button class="bc-btn" type="button" data-close>Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="bcToast" class="bc-toast"></div>
+{% endblock %}
+{% block extra_js %}<script src="{{ url_for('broadcast_management.broadcast_asset', filename='broadcast_history.js') }}?v=1.3.8"></script>{% endblock %}

@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}SLA Rule Builder{% endblock %}
+
+{% block content %}
+{% set page_mode = page_mode or 'add' %}
+{% set is_view_mode = is_view_mode or false %}
+{% set is_edit_mode = is_edit_mode or false %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/sla_rule_builder.css') }}">
+
+<div class="sla-page">
+    <div class="sla-header-card">
+        <div class="sla-header-top">
+            <div>
+                <div class="sla-header-subtitle">System Control / SLA Rule Builder</div>
+                <h1 class="sla-header-title">SLA Rule Builder</h1>
+                <p class="sla-header-desc">
+                    Configure SLA rules, escalation matrix, and runtime monitoring for operation queue workflows.
+                </p>
+
+                {% if is_view_mode %}
+                    <div class="sla-mode-chip">View Mode</div>
+                {% elif is_edit_mode %}
+                    <div class="sla-mode-chip">Edit Mode</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="sla-stats-row">
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Total Rules</div>
+            <div class="sla-stat-value">{{ total_rules or 0 }}</div>
+        </div>
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Active Rules</div>
+            <div class="sla-stat-value">{{ active_rules or 0 }}</div>
+        </div>
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Breached Today</div>
+            <div class="sla-stat-value">{{ breached_today or 0 }}</div>
+        </div>
+        <div class="sla-stat-card">
+            <div class="sla-stat-label">Escalation Levels</div>
+            <div class="sla-stat-value">{{ escalations_triggered or 0 }}</div>
+        </div>
+    </div>
+
+    <div class="sla-section-stack">
+        <div class="sla-card">
+            <div class="sla-card-header">
+                <h2 class="sla-card-title">SLA Rule Master & Escalation Matrix</h2>
+                <div class="sla-card-subtitle">
+                    Maintain SLA rule and escalation matrix together and save both using one common save button.
+                </div>
+            </div>
+
+            <div class="sla-card-body">
+                {% if save_error %}
+                    <div class="sla-alert">{{ save_error }}</div>
+                {% endif %}
+
+                {% if success_message %}
+                    <div class="sla-success">{{ success_message }}</div>
+                {% endif %}
+
+                <form method="post" id="slaRuleForm">
+                    <input type="hidden" id="rule_id" name="rule_id" value="{{ selected_rule_id or (form_data.id if form_data and form_data.id is defined else '') }}">
+                    <input type="hidden" id="form_action" name="form_action" value="{% if is_edit_mode %}update{% else %}save{% endif %}">
+                    <input type="hidden" id="linked_sla_rule" name="linked_sla_rule" value="{{ selected_rule_id or (form_data.id if form_data and form_data.id is defined else '') }}">
+
+                    <fieldset class="sla-form-fieldset" {% if is_view_mode %}disabled{% endif %}>
+                        <div class="sla-form-grid">
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Rule Code</label>
+                                <input type="text" id="rule_code" name="rule_code" class="sla-input" value="{{ form_data.rule_code if form_data else '' }}" placeholder="Enter rule code">
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Rule Name</label>
+                                <input type="text" id="rule_name" name="rule_name" class="sla-input" value="{{ form_data.rule_name if form_data else '' }}" placeholder="Enter rule name">
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Rule Status</label>
+                                <select name="active_flag" class="sla-select">
+                                    <option value="">Select Rule Status</option>
+                                    <option value="ACTIVE" {% if form_data and (form_data.active_flag|string|upper) == 'ACTIVE' %}selected{% endif %}>Active</option>
+                                    <option value="INACTIVE" {% if form_data and (form_data.active_flag|string|upper) == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                                    <option value="DRAFT" {% if form_data and (form_data.active_flag|string|upper) == 'DRAFT' %}selected{% endif %}>Draft</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Module Name</label>
+                                <select name="module_name" class="sla-select">
+                                    <option value="">Select Module</option>
+                                    <option value="Operation Queue" {% if form_data and form_data.module_name == 'Operation Queue' %}selected{% endif %}>Operation Queue</option>
+                                    <option value="Finance" {% if form_data and form_data.module_name == 'Finance' %}selected{% endif %}>Finance</option>
+                                    <option value="Patient Workflow" {% if form_data and form_data.module_name == 'Patient Workflow' %}selected{% endif %}>Patient Workflow</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Priority</label>
+                                <select name="priority_status" class="sla-select">
+                                    <option value="">Select Priority</option>
+                                    <option value="ALL" {% if form_data and (form_data.priority_status|string|upper) == 'ALL' %}selected{% endif %}>All</option>
+                                    <option value="HIGH" {% if form_data and (form_data.priority_status|string|upper) == 'HIGH' %}selected{% endif %}>High</option>
+                                    <option value="MEDIUM" {% if form_data and (form_data.priority_status|string|upper) == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                                    <option value="LOW" {% if form_data and (form_data.priority_status|string|upper) == 'LOW' %}selected{% endif %}>Low</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Trigger Event</label>
+                                <select name="trigger_event" class="sla-select">
+                                    <option value="">Select Trigger Event</option>
+                                    <option value="VIL" {% if form_data and (form_data.trigger_event|string|upper) == 'VIL' %}selected{% endif %}>VIL</option>
+                                    <option value="APPOINTMENT" {% if form_data and (form_data.trigger_event|string|upper) == 'APPOINTMENT' %}selected{% endif %}>APPOINTMENT</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Start Basis</label>
+                                <select name="start_event" class="sla-select">
+                                    <option value="">Select Start Basis</option>
+                                    <option value="OPEN" {% if form_data and (form_data.start_event|string|upper) == 'OPEN' %}selected{% endif %}>OPEN</option>
+                                    <option value="ASSIGNED" {% if form_data and (form_data.start_event|string|upper) == 'ASSIGNED' %}selected{% endif %}>ASSIGNED</option>
+                                    <option value="IN PROGRESS" {% if form_data and (form_data.start_event|string|upper) == 'IN PROGRESS' %}selected{% endif %}>IN PROGRESS</option>
+                                    <option value="CLOSED" {% if form_data and (form_data.start_event|string|upper) == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Stop Basis</label>
+                                <select name="stop_basis" class="sla-select">
+                                    <option value="">Select Stop Basis</option>
+                                    <option value="CLOSED" {% if form_data and (form_data.stop_basis|string|upper) == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+                                    <option value="STATUS CHANGE" {% if form_data and (form_data.stop_basis|string|upper) == 'STATUS CHANGE' %}selected{% endif %}>STATUS CHANGE</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Target Duration(Mins)</label>
+                                <input type="number" min="0" name="target_duration_mins" class="sla-input" value="{{ form_data.target_duration_mins if form_data else '' }}" placeholder="Enter target duration in mins">
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Near Breach(Mins)</label>
+                                <input type="number" min="0" name="near_breach_mins" class="sla-input" value="{{ form_data.near_breach_mins if form_data else '' }}" placeholder="Enter near breach mins">
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Calendar Type</label>
+                                <select name="calendar_type" class="sla-select">
+                                    <option value="">Select Calendar Type</option>
+                                    <option value="24X7" {% if form_data and form_data.calendar_type == '24X7' %}selected{% endif %}>24X7</option>
+                                    <option value="Business Calendar" {% if form_data and form_data.calendar_type == 'Business Calendar' %}selected{% endif %}>Business Calendar</option>
+                                    <option value="Holiday Calendar" {% if form_data and form_data.calendar_type == 'Holiday Calendar' %}selected{% endif %}>Holiday Calendar</option>
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Applicable Country</label>
+                                <select name="applicable_country" class="sla-select">
+                                    <option value="All" {% if not form_data or not form_data.applicable_country or form_data.applicable_country == 'All' %}selected{% endif %}>All</option>
+                                    {% for country in country_options or [] %}
+                                        {% set country_value = country.country_name if country.country_name is defined else country %}
+                                        <option value="{{ country_value }}" {% if form_data and form_data.applicable_country == country_value %}selected{% endif %}>{{ country_value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Applicable Hospital</label>
+                                <select name="hospital_shrtnm" class="sla-select">
+                                    <option value="All" {% if not form_data or not form_data.hospital_shrtnm or form_data.hospital_shrtnm == 'All' %}selected{% endif %}>All</option>
+                                    {% for hospital in hospital_options or [] %}
+                                        {% set hospital_value = hospital.short_name if hospital.short_name is defined else hospital %}
+                                        <option value="{{ hospital_value }}" {% if form_data and form_data.hospital_shrtnm == hospital_value %}selected{% endif %}>{{ hospital_value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Applicable IVAC Center</label>
+                                <select name="ivac_center" class="sla-select">
+                                    <option value="All" {% if not form_data or not form_data.ivac_center or form_data.ivac_center == 'All' %}selected{% endif %}>All</option>
+                                    {% for ivac in ivac_options or [] %}
+                                        {% set ivac_value = ivac.ivac_centre if ivac.ivac_centre is defined else ivac %}
+                                        <option value="{{ ivac_value }}" {% if form_data and form_data.ivac_center == ivac_value %}selected{% endif %}>{{ ivac_value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="sla-form-group">
+                                <label class="sla-form-label">Applicable Agent</label>
+                                <select name="agent_shrtnm" class="sla-select">
+                                    <option value="All" {% if not form_data or not form_data.agent_shrtnm or form_data.agent_shrtnm == 'All' %}selected{% endif %}>All</option>
+                                    {% for agent in agent_options or [] %}
+                                        {% set agent_value = agent.short_name if agent.short_name is defined else agent %}
+                                        <option value="{{ agent_value }}" {% if form_data and form_data.agent_shrtnm == agent_value %}selected{% endif %}>{{ agent_value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="sla-section-divider">
+                            <div class="sla-section-mini-title">Escalation Matrix</div>
+                            <div class="sla-inline-note">
+                                Configure escalation details together with the SLA Rule and save both using the common save button below.
+                            </div>
+
+                            <div class="sla-form-grid" style="margin-top: 14px;">
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Escalation Basis</label>
+                                    <select name="escalation_basis" class="sla-select">
+                                        <option value="">Select Escalation Basis</option>
+                                        <option value="% of SLA" {% if form_data and form_data.escalation_basis == '% of SLA' %}selected{% endif %}>% of SLA</option>
+                                        <option value="After Breach" {% if form_data and form_data.escalation_basis == 'After Breach' %}selected{% endif %}>After Breach</option>
+                                        <option value="Fixed Time" {% if form_data and form_data.escalation_basis == 'Fixed Time' %}selected{% endif %}>Fixed Time</option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Escalation Level</label>
+                                    <input type="number" min="1" name="escalation_level" class="sla-input" value="{{ form_data.escalation_level if form_data else '' }}" placeholder="Enter escalation level">
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Trigger After Value</label>
+                                    <input type="number" min="0" name="trigger_after_value" class="sla-input" value="{{ form_data.trigger_after_value if form_data else '' }}" placeholder="Enter trigger value">
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Trigger After Unit</label>
+                                    <select name="trigger_after_unit" class="sla-select">
+                                        <option value="">Select Trigger Unit</option>
+                                        <option value="Percent" {% if form_data and form_data.trigger_after_unit == 'Percent' %}selected{% endif %}>Percent</option>
+                                        <option value="Minutes" {% if form_data and form_data.trigger_after_unit == 'Minutes' %}selected{% endif %}>Minutes</option>
+                                        <option value="Hours" {% if form_data and form_data.trigger_after_unit == 'Hours' %}selected{% endif %}>Hours</option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Recipient Type</label>
+                                    <select name="recipient_type" class="sla-select">
+                                        <option value="">Select Recipient Type</option>
+                                        <option value="Assigned To" {% if form_data and form_data.recipient_type == 'Assigned To' %}selected{% endif %}>Assigned To</option>
+                                        <option value="Team Lead" {% if form_data and form_data.recipient_type == 'Team Lead' %}selected{% endif %}>Team Lead</option>
+                                        <option value="Manager" {% if form_data and form_data.recipient_type == 'Manager' %}selected{% endif %}>Manager</option>
+                                        <option value="Role Based" {% if form_data and form_data.recipient_type == 'Role Based' %}selected{% endif %}>Role Based</option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Recipient Value</label>
+                                    <input type="text" name="recipient_value" class="sla-input" value="{{ form_data.recipient_value if form_data else '' }}" placeholder="Enter recipient value">
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Action Type</label>
+                                    <select name="action_type" class="sla-select">
+                                        <option value="">Select Action Type</option>
+                                        <option value="Notify" {% if form_data and form_data.action_type == 'Notify' %}selected{% endif %}>Notify</option>
+                                        <option value="Reassign" {% if form_data and form_data.action_type == 'Reassign' %}selected{% endif %}>Reassign</option>
+                                        <option value="Mark High Priority" {% if form_data and form_data.action_type == 'Mark High Priority' %}selected{% endif %}>Mark High Priority</option>
+                                        <option value="Notify + Reassign" {% if form_data and form_data.action_type == 'Notify + Reassign' %}selected{% endif %}>Notify + Reassign</option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group">
+                                    <label class="sla-form-label">Notification Channel</label>
+                                    <select name="notification_channel" class="sla-select">
+                                        <option value="">Select Notification Channel</option>
+                                        <option value="In-App" {% if form_data and form_data.notification_channel == 'In-App' %}selected{% endif %}>In-App</option>
+                                        <option value="Email" {% if form_data and form_data.notification_channel == 'Email' %}selected{% endif %}>Email</option>
+                                        <option value="SMS" {% if form_data and form_data.notification_channel == 'SMS' %}selected{% endif %}>SMS</option>
+                                        <option value="Email + Dashboard" {% if form_data and form_data.notification_channel == 'Email + Dashboard' %}selected{% endif %}>Email + Dashboard</option>
+                                    </select>
+                                </div>
+
+                                <div class="sla-form-group sla-form-group-span-3">
+                                    <label class="sla-form-label">Escalation Message Template</label>
+                                    <textarea name="escalation_message_template" class="sla-textarea" placeholder="Enter escalation message template">{{ form_data.escalation_message_template if form_data else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sla-form-actions">
+                            {% if is_view_mode %}
+                                <a href="{{ url_for('sla_rule_builder', rule_id=selected_rule_id, mode='edit') }}" class="sla-btn sla-btn-primary">Edit SLA Rule</a>
+                                <a href="{{ url_for('sla_rule_builder') }}" class="sla-btn">Back</a>
+                            {% else %}
+                                <button type="button" class="sla-btn" onclick="clearSlaRuleForm()">Clear</button>
+                                <button type="submit" class="sla-btn sla-btn-primary" onclick="document.getElementById('form_action').value='{% if is_edit_mode %}update{% else %}save{% endif %}'">
+                                    Save SLA Rule & Escalation Matrix
+                                </button>
+                            {% endif %}
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+
+        <div class="sla-card">
+            <div class="sla-card-header">
+                <div class="sla-grid-header-row">
+                    <div>
+                        <h2 class="sla-card-title">Configured Rules</h2>
+                        <div class="sla-card-subtitle">Saved SLA master records.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="sla-card-body">
+                <div class="sla-table-wrap">
+                    <table class="sla-table">
+                        <thead>
+                            <tr>
+                                <th>Rule Code</th>
+                                <th>Rule Name</th>
+                                <th>Module</th>
+                                <th>Trigger Event</th>
+                                <th>Priority</th>
+                                <th>Start Basis</th>
+                                <th>Target(Mins)</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if configured_rules %}
+                                {% for rule in configured_rules %}
+                                    <tr>
+                                        <td><span class="sla-code-text">{{ rule.rule_code }}</span></td>
+                                        <td>{{ rule.rule_name }}</td>
+                                        <td>{{ rule.module_name }}</td>
+                                        <td>{{ rule.trigger_event or '-' }}</td>
+                                        <td>{{ rule.priority_status or '-' }}</td>
+                                        <td>{{ rule.start_event or '-' }}</td>
+                                        <td>{{ rule.target_duration_mins or 0 }}</td>
+                                        <td>
+                                            {% set status_value = (rule.active_flag or '')|upper %}
+                                            {% if status_value == 'ACTIVE' %}
+                                                <span class="sla-badge sla-badge-active">ACTIVE</span>
+                                            {% elif status_value == 'DRAFT' %}
+                                                <span class="sla-badge sla-badge-draft">DRAFT</span>
+                                            {% else %}
+                                                <span class="sla-badge sla-badge-inactive">{{ status_value or 'INACTIVE' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('sla_rule_builder', rule_id=rule.id, mode='view') }}" class="sla-btn-mini">View</a>
+                                            <a href="{{ url_for('sla_rule_builder', rule_id=rule.id, mode='edit') }}" class="sla-btn-mini">Edit</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="9">
+                                        <div class="sla-empty-state">No SLA rules available.</div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="sla-bottom-grid">
+            <div class="sla-card">
+                <div class="sla-card-header">
+                    <h2 class="sla-card-title">Escalation Preview</h2>
+                    <div class="sla-card-subtitle">All saved escalation records across rules.</div>
+                </div>
+                <div class="sla-card-body">
+                    <div class="sla-table-wrap">
+                        <table class="sla-table">
+                            <thead>
+                                <tr>
+                                    <th>Rule</th>
+                                    <th>Level</th>
+                                    <th>Basis</th>
+                                    <th>Trigger</th>
+                                    <th>Action</th>
+                                    <th>Recipient</th>
+                                    <th>Channel</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if escalation_preview %}
+                                    {% for esc in escalation_preview %}
+                                        <tr>
+                                            <td>{{ esc.rule_code }} - {{ esc.rule_name }}</td>
+                                            <td>{{ esc.escalation_level or '-' }}</td>
+                                            <td>{{ esc.escalation_basis or '-' }}</td>
+                                            <td>{{ (esc.trigger_after_value or 0) ~ ' ' ~ (esc.trigger_after_unit or '') }}</td>
+                                            <td>{{ esc.action_type or '-' }}</td>
+                                            <td>{{ esc.recipient_type or '-' }}{% if esc.recipient_value %} / {{ esc.recipient_value }}{% endif %}</td>
+                                            <td>{{ esc.notification_channel or '-' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="sla-empty-state">No escalation preview records available.</div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sla-card">
+                <div class="sla-card-header">
+                    <h2 class="sla-card-title">Runtime SLA Log</h2>
+                    <div class="sla-card-subtitle">Recent runtime log records.</div>
+                </div>
+                <div class="sla-card-body">
+                    <div class="sla-table-wrap">
+                        <table class="sla-table">
+                            <thead>
+                                <tr>
+                                    <th>Thread ID</th>
+                                    <th>Rule Code</th>
+                                    <th>Status</th>
+                                    <th>Elapsed(Mins)</th>
+                                    <th>Escalated To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if runtime_sla_logs %}
+                                    {% for log in runtime_sla_logs %}
+                                        <tr>
+                                            <td>{{ log.channel_thread_id or '-' }}</td>
+                                            <td>{{ log.rule_code or '-' }}</td>
+                                            <td>
+                                                {% set log_status = (log.status or '')|upper %}
+                                                {% if log_status == 'BREACHED' %}
+                                                    <span class="sla-badge sla-badge-breached">BREACHED</span>
+                                                {% else %}
+                                                    <span class="sla-badge sla-badge-running">{{ log.status or 'RUNNING' }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ log.elapsed_mins if log.elapsed_mins is not none else '-' }}</td>
+                                            <td>{{ log.escalated_to or '-' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="sla-empty-state">No runtime SLA logs available.</div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/pages/sla_rule_builder.js') }}"></script>
+{% endblock %}
